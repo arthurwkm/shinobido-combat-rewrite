@@ -21,11 +21,11 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (docs/missing_values.md) List values the files don't hold (movement speeds not in root motion, gravity, cancel rules, input windows). For each: targeted executable lookup or `ESTIMATE`.
 
 ## Milestone 3 — Extraction pipeline
-- [ ] `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
+- [x] (partial: name, frames, raw root keys, raw events; no hit/cancel windows yet, event types unnamed; `cargo test -q` → 3 passed) `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
 - [ ] `tools/setup.py` runs every generator; `build.rs` explains clearly when generated files are missing (as in the reference).
 
 ## Milestone 4 — Simulation skeleton
-- [ ] Cargo project without Bevy: `src/sim/` engine-free 60 Hz `World::step`, `cargo test -q` green.
+- [ ] (Cargo project, build.rs and 3 data tests exist; `World::step` not written) Cargo project without Bevy: `src/sim/` engine-free 60 Hz `World::step`, `cargo test -q` green.
 - [ ] `tools/compare.py`: runs each action through the simulation (via a test binary or `cargo test` output) and compares timings against the extracted table, printing mismatches.
 
 ## Milestone 5 — Movement
@@ -39,9 +39,11 @@ Update this file before stopping every session. Check an item only with evidence
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- (none)
+- Hit / cancel / input windows: `.nmt` event types are unnamed (3/4 and 5/6 look like start/end pairs by arg). Naming them needs
+  the event dispatch in `SCES_539.31` (targeted disassembly, allowed by AGENTS.md method step 2) — not started; do this next.
+  Until then M3's windows, M4 `compare.py` and M5/M6 tests have nothing to compare against.
 
 ## Log
 - (newest first, one line per session)
-- 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. Next: rws.py, wpdata.
+- 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). Next: event-type dispatch in the executable, then tools/setup.py.
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.
