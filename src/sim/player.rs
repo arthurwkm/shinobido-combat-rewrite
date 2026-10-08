@@ -214,6 +214,16 @@ impl Player {
         self.advance();
     }
 
+    /// True while the current attack clip's hit window is open (event types 1/2).
+    pub fn attack_active(&self) -> bool {
+        self.state == State::Attack && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
+    }
+
+    /// Damage argument of the current attack clip's first type-35 event, if any.
+    pub fn attack_arg(&self) -> Option<u32> {
+        self.world.action.events.iter().find(|e| e.1 == 35).map(|e| e.2)
+    }
+
     pub fn world_action(&self) -> &'static str {
         self.world.action.name
     }

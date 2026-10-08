@@ -21,3 +21,10 @@ pub const ENEMY_ATTACK_HIT: (u32, u32) = (40, 60);
 pub const ENEMY_ATTACK_RANGE: f32 = 1.5;
 // ESTIMATE: soldier hit points; the executable's health values were not looked up.
 pub const ENEMY_HP: i32 = 100;
+// ESTIMATE: player hit points, attacker power stat for `hit_damage`, enemy swing damage, melee reach (m) and the
+// half-angle (rad) of the frontal cone for hits and guard; none found in the files.
+pub const PLAYER_HP: i32 = 100;
+pub const PLAYER_POWER: f32 = 1.0;
+pub const ENEMY_DAMAGE: i32 = 20;
+pub const MELEE_REACH: f32 = 2.0;
+pub const FRONT_CONE: f32 = std::f32::consts::FRAC_PI_2;

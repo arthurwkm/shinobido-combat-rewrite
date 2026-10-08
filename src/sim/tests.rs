@@ -530,3 +530,30 @@ fn enemy_guard_blocks_damage_and_patrol_loops() {
     for _ in 0..200 { e.step([0.0, 0.0, 9.0]); }
     assert_eq!((e.state, e.action()), (State::Patrol, "WALK_A07"));
 }
+
+#[test]
+fn hits_land_both_ways_and_guard_blocks() {
+    use super::{data, combat::Fight, enemy::{Enemy, State as ES}, player::{Player, State as PS}};
+    // player swings at an enemy standing in front
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 1.0]));
+    f.step(false, true);
+    for _ in 0..40 { f.step(false, false); }
+    assert!(f.enemy.hp < data::ENEMY_HP, "hp {}", f.enemy.hp);
+    // enemy behind the player is not hit
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, -1.0]));
+    f.step(false, true);
+    for _ in 0..40 { f.step(false, false); }
+    assert_eq!(f.enemy.hp, data::ENEMY_HP);
+    // enemy swing hurts an unguarded player
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 1.0]));
+    f.enemy.alert();
+    for _ in 0..300 { f.step(false, false); }
+    assert!(f.player_hp < data::PLAYER_HP);
+    assert_ne!(f.enemy.state, ES::Dead);
+    // a guarding player takes nothing
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 1.0]));
+    f.player.guard_held = true;
+    f.enemy.alert();
+    for _ in 0..300 { f.step(false, false); }
+    assert_eq!((f.player_hp, f.player.state == PS::Guard), (data::PLAYER_HP, true));
+}
