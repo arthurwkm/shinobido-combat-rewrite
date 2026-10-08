@@ -730,3 +730,18 @@ fn fight_pushes_overlapping_bodies_apart() {
     let (p, e) = (f.player.pos, f.enemy.pos);
     assert!((e[0] - p[0]).hypot(e[2] - p[2]) >= 2.0 * data::BODY_RADIUS - 1e-3);
 }
+
+#[test]
+fn request_gate_refuses_outside_free_state_and_cancel_window() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.step(false, true); // AT_A01 from idle
+    assert_eq!(p.state, State::Attack);
+    assert!(!p.request(State::Dodge, "FRONT01"), "no cancel window for FRONT01 at frame 0 of AT_A01");
+    assert_eq!(p.world_action(), "AT_A01");
+    let mut q = Player::new();
+    q.jump();
+    q.step(false, false);
+    q.step(false, true);
+    assert_eq!(q.state, State::Jump, "attack is refused mid-jump");
+}

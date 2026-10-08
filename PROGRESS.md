@@ -140,7 +140,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   were left out as a hypothesis. The clips show crouching (movement 30–34 s, stealth 6–12 s) and carrying
   (movement 42–44 s). Decide which belong to the player, extract them, update docs/player_motions.md and
   compare.py.
-- [ ] Context and cancel driver: one place that picks the next motion from input + state + terrain contact
+- [x] (evidence: `Player::request` is the single gate for attack/jump/dodge/special: free locomotion starts anything, other states only via an open cancel window; new test `request_gate_refuses_outside_free_state_and_cancel_window`, `cargo test -q` 44 passed, clippy clean; `target/debug/viewer --record target/rec/gate --script tools/scripts/gate.txt --every 10 --ticks 30` -> `target/rec/gate/00020.png`: jump pressed mid-AT_A01 is refused, readout stays `AT_A01 16/55`, mannequin in lunge as before; terrain contact inputs come with the following items) Context and cancel driver: one place that picks the next motion from input + state + terrain contact
   + the extracted cancel windows, replacing hand-picked clip names. Existing behaviour stays and tests stay green.
 - [ ] Crouch: L1 crouch idle, crouch walk and turn, stand up; lower noise and a smaller sight profile in stealth.
 - [ ] Dash, if the `_D` set is the player's.
@@ -283,3 +283,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 M13: reverted the uncommitted skinned-mesh viewer experiment (owner decision); mannequin parts (capsule/box/sphere) on both skeletons, B shows cuboids; radii ESTIMATE.
 - 2026-10-08 M13: katana props on both characters (right hand node 15 when drawn, hip when sheathed); soldier mannequin item closed with it; M13 done.
 - 2026-10-08 Claude: M14 inventory widened with set-05 crouch/carry/dash/hug variants (178 actions); ESTIMATE that they are the player's.
+- 2026-10-08 Claude: M14 cancel driver: `Player::request` gates attack/jump/dodge/special by free state or open cancel window; attack no longer starts mid-jump/fall (old behaviour was a bug).

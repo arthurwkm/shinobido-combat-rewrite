@@ -240,9 +240,7 @@ impl Player {
 
     /// Start an evasive step from idle/run/halt. `dir`: "FRONT01", "BACK01", "RIGHT01" or "LEFT01".
     pub fn dodge(&mut self, dir: &str) {
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
-            self.start(State::Dodge, dir);
-        }
+        self.request(State::Dodge, dir);
     }
 
     /// Take a hit: interrupts any state and plays the given reaction (`HI_BS01`, `HI_US01`, ...) to its end.
@@ -254,15 +252,24 @@ impl Player {
     /// Also used for RUN_RE01/RUN_LE01 and STOP_K01 until wall-state selection is implemented.
     /// Start a one-shot ninja action from idle/run/walk/halt; it plays to its end, then returns to idle (ESTIMATE: no cancels).
     pub fn special(&mut self, name: &str) {
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
-            self.start(State::Special, name);
-        }
+        self.request(State::Special, name);
     }
 
     pub fn jump(&mut self) {
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
-            self.start(State::Jump, "JUMP01");
+        self.request(State::Jump, "JUMP01");
+    }
+
+    /// The one gate for player-chosen actions: free locomotion may start anything; any other state only what the
+    /// current clip's open cancel window (event types 3/4) names. Returns whether the action started.
+    pub fn request(&mut self, state: State, name: &str) -> bool {
+        let f = self.world.frame;
+        let id = ACTIONS.iter().find(|x| x.name == name).map(|x| x.id);
+        let free = matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt);
+        let ok = free || self.world.action.cancels.iter().any(|c| Some(c.0) == id && c.1 <= f && f < c.2);
+        if ok {
+            self.start(state, name);
         }
+        ok
     }
 
     fn start(&mut self, state: State, name: &str) {
@@ -291,7 +298,7 @@ impl Player {
             ACTIONS.iter().find(|x| x.name == "AT_A01")
         };
         if let Some(t) = target {
-            self.start(State::Attack, t.name);
+            self.request(State::Attack, t.name);
         }
     }
 }
