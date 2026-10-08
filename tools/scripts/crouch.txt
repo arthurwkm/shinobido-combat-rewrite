@@ -1,0 +1,5 @@
+# hold crouch, idle, then walk forward, then release
+0 crouch 1
+60 stick 0 1
+150 stick 0 0
+200 crouch 0

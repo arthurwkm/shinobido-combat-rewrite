@@ -7,6 +7,8 @@ pub enum State {
     /// WALK_F02 loop (suffix-02 set; hypothesis: slow stick tilt).
     Walk,
     Halt,
+    /// L1 held: STOP_S05 idle, WALK_F05 moving (set 05 `_S` variants).
+    Crouch,
     Attack,
     /// GU_A01 then GU_B01 while held.
     Guard,
@@ -50,6 +52,8 @@ pub struct Player {
     pub state: State,
     /// Guard button held. Guard is only entered from idle/run/halt, not mid-attack (ESTIMATE).
     pub guard_held: bool,
+    /// Crouch button held (L1); only from free locomotion.
+    pub crouch_held: bool,
     /// Gentle forward input: walk instead of run (ESTIMATE: the game's analog threshold is not decoded).
     pub walk: bool,
     /// Clip used while walking: WALK_F02 (default), WALK_B02, WALK_R02 or WALK_L02 (ESTIMATE: picking by input direction).
@@ -78,7 +82,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -92,7 +96,7 @@ impl Player {
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
         self.step_action(forward, attack);
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
-        if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+        if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
             self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
             self.fall_from = before[1];
             self.start(State::Fall, "FALL01");
@@ -127,14 +131,14 @@ impl Player {
         if attack {
             self.press_attack();
         }
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
             let d = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let max = TURN_RATE * super::DT;
             self.heading += d.clamp(-max, max);
         }
         match (self.state, self.guard_held) {
-            (State::Idle | State::Run | State::Walk | State::Halt, true) => self.start(State::Guard, "GU_A01"),
+            (State::Idle | State::Run | State::Walk | State::Halt | State::Crouch, true) => self.start(State::Guard, "GU_A01"),
             (State::Guard, false) => self.start(State::GuardEnd, "GU_Y01"),
             (State::Guard, true) if self.world.done() && self.world.action.name == "GU_B01" => {
                 self.start(State::Guard, "GU_B01") // loops while held
@@ -185,6 +189,18 @@ impl Player {
                 self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
+        }
+        if self.crouch_held && !self.guard_held {
+            let clip = if forward { "WALK_F05" } else { "STOP_S05" };
+            if self.state != State::Crouch || self.world.action.name != clip {
+                self.start(State::Crouch, clip);
+            } else if self.world.done() {
+                self.world = World::new(clip);
+            }
+            return self.advance();
+        }
+        if self.state == State::Crouch {
+            self.start(State::Idle, self.idle_clip);
         }
         let loco = if self.walk { State::Walk } else { State::Run };
         let next = match (self.state, forward) {
@@ -264,7 +280,7 @@ impl Player {
     pub fn request(&mut self, state: State, name: &str) -> bool {
         let f = self.world.frame;
         let id = ACTIONS.iter().find(|x| x.name == name).map(|x| x.id);
-        let free = matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt);
+        let free = matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch);
         let ok = free || self.world.action.cancels.iter().any(|c| Some(c.0) == id && c.1 <= f && f < c.2);
         if ok {
             self.start(state, name);

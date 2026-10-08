@@ -35,8 +35,12 @@ impl Stealth {
         let (dx, dz) = (player[0] - e.pos[0], player[2] - e.pos[2]);
         let dist = dx.hypot(dz);
         let off = ((dx.atan2(dz) - e.heading + PI).rem_euclid(TAU) - PI).abs();
-        self.seen = dist <= data::SIGHT_RANGE && off <= data::SIGHT_CONE;
-        let noise = if action.starts_with("RUN") {
+        let crouch = action == "STOP_S05" || action.starts_with("WALK_") && action.ends_with("05");
+        let range = if crouch { data::SIGHT_RANGE * data::SIGHT_CROUCH } else { data::SIGHT_RANGE };
+        self.seen = dist <= range && off <= data::SIGHT_CONE;
+        let noise = if crouch {
+            data::HEAR_CROUCH
+        } else if action.starts_with("RUN") {
             data::HEAR_RUN
         } else if action.starts_with("WALK") {
             data::HEAR_WALK
@@ -44,7 +48,7 @@ impl Stealth {
             0.0
         };
         let rate = if self.seen {
-            data::SIGHT_FILL * (1.0 - dist / data::SIGHT_RANGE)
+            data::SIGHT_FILL * (1.0 - dist / range)
         } else if dist <= noise {
             data::HEAR_FILL
         } else {

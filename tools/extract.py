@@ -65,7 +65,7 @@ def main():
     for name in player_names() + enemy_names():
         m = parse((MOTION / f"{name}.nmt").read_bytes())
         assert m["tracks"], name
-        root = ", ".join(f"({k[3]}, [{k[0] / 4096}, {k[1] / 4096}, {k[2] / 4096}])" for k in m["tracks"][0])
+        root = ", ".join(f"({k[3]}, [{k[0] / 4096}, {k[1] / 4096}, {k[2] / 4096}])" for k in m["tracks"][1 if len(m["tracks"]) == 66 else 0])
         evs = ", ".join(f"({round(t * 60)}, {ty}, {a}, {b})" for t, ty, a, b in m["events"])
         hit = ", ".join(f"({a}, {'u32::MAX' if e is None else e})" for _, a, e in windows(m["events"], 1, 2, lambda a, b: 0))
         can = ", ".join(f"({k}, {a}, {'u32::MAX' if e is None else e})" for k, a, e in windows(m["events"], 3, 4, lambda a, b: a))

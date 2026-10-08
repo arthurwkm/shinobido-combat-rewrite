@@ -17,7 +17,7 @@ sim = {l.split()[0]: l.split() for l in out.splitlines()}
 bad = 0
 for name in player_names():
     m = parse((MOTION / f"{name}.nmt").read_bytes())
-    k = m["tracks"][0]
+    k = m["tracks"][1 if len(m["tracks"]) == 66 else 0]
     want = [(k[-1][i] - k[0][i]) / 4096 for i in range(3)] if k else [0.0] * 3
     _, n, *pos = sim[name]
     if int(n) != m["frames"] or any(abs(float(p) - w) > 0.01 for p, w in zip(pos, want)):

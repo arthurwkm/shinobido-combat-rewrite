@@ -31,6 +31,7 @@ impl Input {
         }
         p.walk = mag < STICK_WALK;
         p.guard_held = self.lock;
+        p.crouch_held = self.crouch;
         if self.jump && self.crouch {
             let dir = if !moving || y >= x.abs() { "FRONT01" } else if y <= -x.abs() { "BACK01" } else if x > 0.0 { "RIGHT01" } else { "LEFT01" };
             p.dodge(dir);

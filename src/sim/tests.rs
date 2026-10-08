@@ -745,3 +745,25 @@ fn request_gate_refuses_outside_free_state_and_cancel_window() {
     q.step(false, true);
     assert_eq!(q.state, State::Jump, "attack is refused mid-jump");
 }
+
+#[test]
+fn crouch_holds_walks_and_is_quieter() {
+    use super::{enemy::Enemy, player::{Player, State}, stealth::Stealth};
+    let mut p = Player::new();
+    p.crouch_held = true;
+    p.step(false, false);
+    assert_eq!((p.state, p.world_action()), (State::Crouch, "STOP_S05"));
+    for _ in 0..90 { p.step(true, false); }
+    assert_eq!(p.world_action(), "WALK_F05");
+    assert!(p.pos[2] > 1.0, "crouch walk moves: {}", p.pos[2]);
+    p.crouch_held = false;
+    p.step(false, false);
+    assert_ne!(p.state, State::Crouch, "release stands up");
+    // 2 m behind the soldier: a crouch walk is heard only inside HEAR_CROUCH, a plain walk is heard
+    let heard = |act: &str| {
+        let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
+        (0..60).for_each(|_| s.step(&mut e, [0.0, 0.0, -2.0], act));
+        s.meter
+    };
+    assert!(heard("WALK_F05") == 0.0 && heard("WALK_F02") > 0.0);
+}

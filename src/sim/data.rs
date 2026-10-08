@@ -40,6 +40,9 @@ pub const SIGHT_CONE: f32 = std::f32::consts::FRAC_PI_3;
 pub const SIGHT_FILL: f32 = 1.5;
 pub const HEAR_RUN: f32 = 8.0;
 pub const HEAR_WALK: f32 = 3.0;
+// ESTIMATE: crouching (STOP_S05 / WALK_*05) is quieter and less visible: hearing radius (m) and sight-range factor.
+pub const HEAR_CROUCH: f32 = 1.0;
+pub const SIGHT_CROUCH: f32 = 0.6;
 pub const HEAR_FILL: f32 = 0.5;
 pub const STEALTH_DECAY: f32 = 0.2;
 pub const SUSPICIOUS_AT: f32 = 0.4;
