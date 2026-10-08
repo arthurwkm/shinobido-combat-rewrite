@@ -85,3 +85,13 @@ Little-endian. Replaces the earlier ".nmt hypothesis" above for everything liste
     `FRONT01` +1.5 m, `BACK01` −1.6 m, `LEFT01` +1.6 m x, `RIGHT01` −1.6 m x (forward is +z).
 - 91 files do not end at EOF (e.g. `ALARM07`, `AT_A05`, `AT_A19`, mostly other characters) and 12 have no
   tracks; the player's (suffix 01) files parsed so far are fine.
+
+## weapon\wpdata.bin and wpset.bin — layout confirmed (`python tools/weapon.py`), meaning hypothesis
+
+- `wpdata.bin` (6160 B) = 55 records × 112 B: 8 × u16 header (`id` 103..180, a small number 0..20, a mask
+  like 11/15/27/43/107/127/139, a flag word 0/0x1000/0x3000/0x5000/0x6000/0x7000, then `0, 0xFFFF, 0, 0`) and 6 × vec4 f32
+  (identity-like transforms, a (5, 5, 10, 0)-like extent). No integer that looks like damage; the floats are
+  geometry, hypothesis: attachment / hit-shape transforms per weapon part.
+- `wpset.bin` (472 B) = `u32 count=25`, 25 u32 offsets, then per set u16 `a, b, 0, n`, `n` indices into the 55 wpdata
+  records, one pad u16 when `n` is odd. All indices < 55 for all 25 sets. Which set is Kagetora's katana, and what
+  `a`/`b` mean (a = b in most sets: left/right hand?) is unknown.
