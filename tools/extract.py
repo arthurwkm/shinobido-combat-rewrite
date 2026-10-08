@@ -27,7 +27,7 @@ def player_names():
     n = int.from_bytes(d[:4], "little")
     offs = [int.from_bytes(d[4 + 4 * i : 8 + 4 * i], "little") for i in range(n)]
     names = [d[o : d.index(b"\0", o)].decode() for o in offs]
-    return [x[:-4] for x in names if re.fullmatch(r"([A-Z_]+01|WALK_[FBRL]02|STOP02|JUMP_[FBRL]02|AT02|KICK27|FUTO27)\.nmt", x)]
+    return [x[:-4] for x in names if re.fullmatch(r"([A-Z_]+01|WALK_[FBRL]02|STOP02|JUMP_[FBRL]02|AT02|KICK27|FUTO27|STOP_A06|TWO06|STOP_B06|ONE06|BACK06|IKOU_B06|SHEATH06|HANG_[RL]06|CLIMB06|STOP_ABU05|IKOU_B05|SHEATH_BU05)\.nmt", x)]
 
 
 def windows(events, open_t, close_t, key):

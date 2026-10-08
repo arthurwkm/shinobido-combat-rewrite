@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_117_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 117);
+fn all_130_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 130);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -417,5 +417,22 @@ fn remaining_attacks_play_once_then_idle() {
         }
         p.step(false, false);
         assert_eq!(p.state, State::Idle, "{name}");
+    }
+}
+
+#[test]
+fn ledge_wall_and_corner_play_once_then_idle() {
+    use super::player::{Player, State};
+    // ESTIMATE: triggers are caller-chosen one-shots with no cancels; wall/ledge-driven selection comes with the world coupling.
+    for name in ["KABE_E01", "KABE_U01", "STOP_A06", "TWO06", "STOP_B06", "ONE06", "BACK06", "IKOU_B06", "SHEATH06", "HANG_R06", "HANG_L06", "CLIMB06", "STOP_ABU05", "IKOU_B05", "SHEATH_BU05"] {
+        let mut p = Player::new();
+        p.special(name);
+        for _ in 0..action(name).frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        // a climb ends above flat ground, so it may fall afterwards
+        assert!(matches!(p.state, State::Idle | State::Fall), "{name}");
     }
 }

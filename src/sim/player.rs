@@ -100,7 +100,9 @@ impl Player {
             self.pos[0] += self.air_vel[0];
             self.pos[2] += self.air_vel[1];
         }
-        if !jumping && !grounded {
+        // Special clips (climbs) own the height through root motion.
+        let rooted = self.state == State::Special;
+        if !jumping && !grounded && !rooted {
             self.vy += gravity(self.vy) * super::DT;
             self.pos[1] += self.vy * super::DT * UNIT_M;
         }
@@ -108,7 +110,7 @@ impl Player {
         self.pos = pos;
         self.wall_normal = wall;
         if ceiling { self.vy = 0.0; }
-        if self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
+        if !rooted && self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
             self.vy = 0.0;
             if jumping || !grounded {
                 let drop = if self.state == State::Fall { self.fall_from - pos[1] } else { 0.0 };
