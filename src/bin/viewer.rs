@@ -7,12 +7,24 @@ use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
 use shinobido_combat_rewrite::sim::input::Input;
+use shinobido_combat_rewrite::sim::combat::Fight;
+use shinobido_combat_rewrite::sim::enemy::Enemy;
+use shinobido_combat_rewrite::sim::execution;
 use shinobido_combat_rewrite::sim::player::Player;
 use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
 
-#[derive(Resource, Default)]
-struct Sim(Player);
+#[derive(Resource)]
+struct Sim(Fight);
+
+impl Default for Sim {
+    fn default() -> Self {
+        // Soldier 6 m ahead, facing the player (position ESTIMATE).
+        let mut enemy = Enemy::new([0.0, 0.0, 6.0]);
+        enemy.heading = std::f32::consts::PI;
+        Sim(Fight::new(Player::default(), enemy))
+    }
+}
 
 #[derive(Resource)]
 struct World(Terrain);
@@ -26,9 +38,13 @@ struct Cam(Orbit);
 #[derive(Component)]
 struct Rig;
 
-/// One cuboid per skeleton node, stretched from its parent joint to its own (the game skeleton drawn as primitives).
+/// One cuboid per skeleton node, stretched from its parent joint to its own (the game skeleton drawn as primitives); `true` = the soldier's.
 #[derive(Component)]
-struct Bone(usize);
+struct Bone(usize, bool);
+
+/// Floating diamond over the soldier while an execution is available.
+#[derive(Component)]
+struct Cue;
 
 /// Game skeleton and sampled clips from `extracted/anim` (tools/pose.py); `None` leaves the capsule.
 #[derive(Resource)]
@@ -70,7 +86,7 @@ fn main() {
         let _ = std::fs::remove_file(&shot.path);
         let mut sim = Sim::default();
         for _ in 0..shot.steps {
-            sim.0.step(true, false);
+            sim.0.player.step(true, false);
         }
         app.insert_resource(sim).insert_resource(Cam(Orbit { yaw: shot.yaw.to_radians(), ..default() })).insert_resource(shot).add_systems(Update, shoot);
     } else {
@@ -89,7 +105,7 @@ fn main() {
         .insert_resource(load_anim())
         .add_systems(Startup, setup)
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (read_pad, orbit, draw, pose_bones, draw_grid).chain())
+        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid).chain())
         .run();
 }
 
@@ -101,12 +117,16 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
     let body = mats.add(Color::srgb(0.2, 0.2, 0.35));
     if let Some((skel, _)) = &anim.0 {
         let unit = meshes.add(Cuboid::new(0.08, 0.08, 1.0));
+        let foe = mats.add(Color::srgb(0.6, 0.15, 0.12)); // A_BUSHI1 is the red soldier
         for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23)) {
-            commands.spawn((Bone(n), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default()));
+            commands.spawn((Bone(n, false), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default()));
+            commands.spawn((Bone(n, true), Mesh3d(unit.clone()), MeshMaterial3d(foe.clone()), Transform::default()));
         }
     } else {
         commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(body), Transform::default()));
     }
+    let cue = mats.add(StandardMaterial { base_color: Color::srgb(1.0, 0.85, 0.1), emissive: LinearRgba::rgb(4.0, 3.0, 0.2), ..default() });
+    commands.spawn((Cue, Mesh3d(meshes.add(Cuboid::new(0.25, 0.25, 0.25))), MeshMaterial3d(cue), Transform::default(), Visibility::Hidden));
 }
 
 /// Plain grey blocks; ramps are slabs, or steps (top at each step's low edge) when steeper than `STAIRS_SLOPE`.
@@ -180,7 +200,8 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
 }
 
 fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>) {
-    pad.0.apply(&mut sim.0, &world.0, cam.0.yaw);
+    pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
+    sim.0.step_enemy();
 }
 
 /// Mouse motion and right stick orbit the camera around the player.
@@ -199,30 +220,39 @@ fn orbit(
             * time.delta_secs();
     }
     cam.0.orbit([-d.x, d.y]); // looking down +z, screen-right is -x
-    let (e, f) = cam.0.eye(sim.0.pos);
+    let (e, f) = cam.0.eye(sim.0.player.pos);
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }
 
 fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
-    let p = &sim.0;
+    let p = &sim.0.player;
     if let Some(rig) = rig.as_mut() {
         rig.translation = Vec3::new(p.pos[0], p.pos[1] + 0.85, p.pos[2]);
         rig.rotation = Quat::from_rotation_y(p.heading);
     }
 }
 
-/// Poses the bone cuboids with the sim's current clip and frame (clips that were not exported keep the last pose).
+/// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
 fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, mut bones: Query<(&Bone, &mut Transform)>) {
     let Some((skel, clips)) = &anim.0 else { return };
-    let p = &sim.0;
-    let Some(row) = clips.row(p.world_action(), p.world_frame()) else { return };
-    let (at, yaw) = (Vec3::from(p.pos), Quat::from_rotation_y(p.heading));
-    let joints = skel.joints(row).map(|j| at + yaw * Vec3::from(j));
-    for (Bone(n), mut t) in &mut bones {
+    let (p, e) = (&sim.0.player, &sim.0.enemy);
+    let rows = [clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)), clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))];
+    let joints = rows.map(|r| r.map(|(row, pos, heading)| skel.joints(row).map(|j| Vec3::from(pos) + Quat::from_rotation_y(heading) * Vec3::from(j))));
+    for (Bone(n, foe), mut t) in &mut bones {
+        let Some(joints) = &joints[*foe as usize] else { continue };
         let (a, b) = (joints[skel.parent[*n].unwrap_or(*n)], joints[*n]);
         let len = a.distance(b).max(1e-3);
         *t = Transform::from_translation((a + b) / 2.0).looking_to(if len > 1e-3 { b - a } else { Vec3::Z }, Vec3::Y).with_scale(Vec3::new(1.0, 1.0, len));
     }
+}
+
+/// The execution cue: a spinning diamond above the soldier's head while `execution::available` offers a kill.
+fn cue(sim: Res<Sim>, time: Res<Time>, mut c: Single<(&mut Transform, &mut Visibility), With<Cue>>) {
+    let e = &sim.0.enemy;
+    let on = execution::available(&sim.0.player, e).is_some();
+    *c.1 = if on { Visibility::Visible } else { Visibility::Hidden };
+    c.0.translation = Vec3::new(e.pos[0], e.pos[1] + 2.1, e.pos[2]);
+    c.0.rotation = Quat::from_rotation_y(time.elapsed_secs() * 3.0) * Quat::from_rotation_x(0.6);
 }
 
 /// With no textures, a grid is what makes speed and distance readable (as in the reference).

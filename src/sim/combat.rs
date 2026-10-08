@@ -27,6 +27,11 @@ impl Fight {
     /// Advance both one frame, then resolve hits.
     pub fn step(&mut self, forward: bool, attack: bool) {
         self.player.step(forward, attack);
+        self.step_enemy();
+    }
+
+    /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
+    pub fn step_enemy(&mut self) {
         self.enemy.step(self.player.pos);
         self.resolve();
     }
