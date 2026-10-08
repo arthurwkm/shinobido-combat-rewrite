@@ -118,8 +118,10 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
 - [x] (evidence: `target/debug/viewer --record target/rec/atk --script tools/scripts/attack.txt --every 5 --ticks 40`, `--record target/rec/run ...`, `--shot target/shots/a.png`; `tools/tile.py` vs combat.mov 12-13 s and movement.mov; FK convention confirmed numerically in formats.md (rest-matrix transpose == STOP01 frame-0 quats); seen: STOP01 crouched ready stance, RUN01 forward lean, AT_A01 low lunge all match the clip silhouettes; limbs are joined by construction; GU_B01/JUMP01 have no usable clip frame (tutorial overlay); still differs: camera sits further back/higher than the clips so the figure is small, bone cuboids thin: covered by the next item) Pose correctness: put RUN01, STOP01, AT_A01, JUMP01 and GU_B01 next to the same actions in the clips
   (docs/video_notes.md timestamps). Fix bone axes, quaternion order and bind/rest composition until the
   silhouettes match and limbs stay joined. Check the enemy's set-07 poses the same way.
-- [ ] Visual audit of every M11 item with shots and records, fixing what differs from the clips and the
+- [x] (evidence: `target/debug/viewer --shot target/shots/a.png`, `--record target/rec/hit --script tools/scripts/hit.txt --every 30 --ticks 240` -> `Screenshot saved to target/rec/hit/00240.png`; `tools/tile.py target/cmp/hit.png "videos/shinobido combat.mov" 11,12,13,14 target/rec/hit 60,90,120,180`; fixed: debug bar/log moved below the game bar (no overlap, hit log shows `154 enemy BLADE07 hits you -20`), camera 4->3 m and pitch 0.45->0.3 ESTIMATE to match the clip's closer framing; still differs: clip is dark and textured, figures are cuboids (M13), player and soldier overlap (new item below), game HUD is plain rects vs the clip's framed icons) Visual audit of every M11 item with shots and records, fixing what differs from the clips and the
   reference: framing, ground and grid, light, blocks, both HUDs without overlaps, hit log visible.
+
+- [ ] Character separation: player and soldier must not overlap (push apart in `Fight`, test), seen overlapping in `target/rec/hit/00180.png`.
 
 ## Milestone 13 — The game's own characters
 - [ ] Kagetora's skinned mesh in the viewer: load the glTF from `tools/model.py` (body, head, textures),

@@ -57,8 +57,8 @@ pub const EXEC_DIST: f32 = 0.8;
 // ESTIMATE: follow camera from the clips (docs/video_notes.md: ~3 m back, pitched down 25-30 deg); the camera
 // class in the executable was not read. Distance (m), default pitch (rad), pitch limits, focus height (m),
 // orbit speed for mouse (rad per pixel) and right stick (rad/s), lock-on yaw follow rate (1/s).
-pub const CAM_DIST: f32 = 4.0;
-pub const CAM_PITCH: f32 = 0.45;
+pub const CAM_DIST: f32 = 3.0; // ESTIMATE: closer and lower to match combat.mov framing (audit 2026-10-08)
+pub const CAM_PITCH: f32 = 0.3;
 pub const CAM_PITCH_MIN: f32 = -0.2;
 pub const CAM_PITCH_MAX: f32 = 1.2;
 pub const CAM_FOCUS_HEIGHT: f32 = 1.3;
