@@ -8,8 +8,8 @@ Rules (thresholds below):
   - a worker whose weekly usage reaches WEEK is never used again this run; both gone -> exit
   - both 5h windows near full -> sleep until the earlier reset
   - a worker run that makes no commit is "idle"; all usable workers idle -> done or blocked, exit
-  - unanswered Blockers in PROGRESS.md (at start, and when all workers go idle): beep and ask each one
-    at the console, one at a time, until the end time. Answers are written under their blockers as
+  - unanswered Blockers in PROGRESS.md (at start for ASK_START seconds, and when all workers go idle
+    until the end time): beep and ask each one at the console, one at a time. Answers are written under their blockers as
     `  - Owner: ...` in one commit, then the workers start. Enter skips one; no terminal skips all.
     Waiting uses no tokens.
 Usage comes from the CLIs themselves: Claude's `rate_limit_event` (stream-json) and Codex's
@@ -21,6 +21,7 @@ from pathlib import Path
 
 NEAR, WEEK = 90, 80  # percent 5h cutoff, percent weekly cutoff
 POLL_MIN, POLL_MAX = 30, 300  # watchdog seconds: 300 at 40+ points of headroom, 150 at 10, 30 at 0
+ASK_START = 600  # seconds to wait for blocker answers at start before the night goes on without them
 END = float("inf")  # set in main(): a running worker is killed at this time
 CLAUDE = "/Users/arthursantos/.claude/local/claude"
 ROOT = Path(__file__).resolve().parent.parent
@@ -160,29 +161,37 @@ def blockers():
             and not (i + 1 < len(lines) and lines[i + 1].startswith("  - Owner:"))]
 
 
-def read_answer():
-    """One line from the console, beeping every 10 min; "" at the end time."""
+def read_answer(until):
+    """One line from the console, beeping every 10 min; "" at `until`."""
     termios.tcflush(sys.stdin, termios.TCIFLUSH)  # drop keys typed while the workers ran
-    while time.time() < END:
+    while time.time() < until:
         subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])
-        if select.select([sys.stdin], [], [], 600)[0]:
+        if select.select([sys.stdin], [], [], min(600, max(until - time.time(), 0)))[0]:
             return os.read(sys.stdin.fileno(), 65536).decode(errors="replace").strip()  # unbuffered, so select stays true
     return ""
 
 
-def ask_owner():
-    """Ask about each unanswered Blocker in turn, then write all answers in one commit.
+def foreground():
+    """stdin is a terminal and we are its foreground job (a background job touching it gets stopped)."""
+    try:
+        return sys.stdin.isatty() and os.tcgetpgrp(sys.stdin.fileno()) == os.getpgrp()
+    except OSError:  # a terminal that is not ours
+        return False
+
+
+def ask_owner(until):
+    """Ask about each unanswered Blocker in turn until `until`, then write all answers in one commit.
     True if any answer was written, so the workers start once with every answer in place."""
     todo = blockers()
-    if not todo or not sys.stdin.isatty():
+    if not todo or not foreground():
         return False
     log(f"{len(todo)} blockers need the owner, waiting at the console")
     answers = {}
     for i, q in enumerate(todo):
         print(f"\nBlockers remaining: {len(todo) - i}\n{q}\nAnswer in one line (Enter to skip):", flush=True)
-        if a := read_answer():
+        if a := read_answer(until):
             answers[q] = a
-        if time.time() >= END:
+        if time.time() >= until:
             break
     if not answers:
         log("no answers to the blockers")
@@ -212,7 +221,7 @@ def main():
     base = (ROOT / "NIGHT_PROMPT.md").read_text()
     dead, idle, errs, seen = set(), set(), {"claude": 0, "codex": 0}, {}
     log(f"start, until {hhmm}; near-full {NEAR}%, weekly stop {WEEK}%")
-    ask_owner()
+    ask_owner(min(time.time() + ASK_START, end))
     while time.time() < end:
         u = {w: USAGE[w]() for w in USAGE if w not in dead}
         for w, x in u.items():
@@ -225,7 +234,7 @@ def main():
             log("both weekly limits reached: end")
             return
         live = [w for w in u if w not in idle]  # idle = last run made no commit
-        if not live and ask_owner():
+        if not live and ask_owner(end):
             idle.clear()
             continue
         if not live:
