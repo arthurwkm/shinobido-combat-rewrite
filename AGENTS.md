@@ -57,7 +57,7 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Rust crates only from crates.io, declared in `Cargo.toml`. No Bevy until the viewer milestone.
 - Never install, upgrade or configure system software: no `brew`, `sudo`, `rustup`, global npm/pip,
   Python or Rust version changes, emulators, or edits to shell profiles or OS settings.
-- Never edit agent configuration: `.claude/`, `.codex/`, `night-settings.json`, `night.sh`,
+- Never edit agent configuration: `.claude/`, `.codex/`, `night-settings.json`, `night.sh` unless when explicitly prompted to,
   `NIGHT_PROMPT.md`, `CLAUDE.md`, `AGENTS.md`, or anything in the home folder.
 - Network: crates.io and PyPI for this project's dependencies; web search and docs only to research
   PS2, RenderWare or Acquire file formats. No accounts, payments, sign-ups, uploads or unrelated sites.
@@ -74,10 +74,10 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Smallest change that passes the test. No speculative abstractions or features outside `PROGRESS.md`.
 - Status notes: one line per step. The detailed record goes in `PROGRESS.md`.
 
-## Hand-offs between Claude and Codex
-- Claude orchestrates and commits. Codex works through the `codex:codex-rescue` subagent and does not commit.
-- Always ask for a foreground run (`--wait`): a background job outlives an unattended session and its result is lost.
-- Give Codex one bounded step with its own check ("make `tools/nmt.py --check` pass on all files"), not an open-ended goal.
-- Codex runs on a separate quota: give it the long, token-heavy work (format surveys across many files,
-  disassembly reading), then review its diff and run the tests yourself.
-- When usage is near the limit, delegate the remaining step to Codex, or update `PROGRESS.md` and exit.
+## Claude and Codex
+- `tools/night.py` alternates the two workers by usage: Claude until its 5-hour window is near full, then Codex,
+  then it waits for a reset. You are one of them; do not hand work to the other yourself.
+- Codex does not run git: the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
+- Both workers keep `PROGRESS.md` current: the next worker starts from it with no other memory.
+- Either worker may do the long, token-heavy work (format surveys, executable lookups); one bounded step at a time.
+  Codex being out of quota is never a Blocker: do the lookup yourself.
