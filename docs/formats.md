@@ -280,3 +280,9 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
 
 - **Confirmed (disassembly):** `0x10c900(actor, state, start)` is the state requester: maps `state` through the `actor+0x2f0` halfword table to a motion id, asks the controller (`0x1c0d90`), and on success stores `state` in actor `+0x2ec` (pending). `0x110f90` moves `+0x2ec` into `+0x2e4` (current) and loads `+0x2e8` flags from table `[[gp-0x6d38]+0x830]`. `0x10c9c0` is the variant taking an explicit motion id; constructor `0x10b500` starts in state 1.
 - **Tried (no hit):** (1) the ~200 callers of `0x10c900`: the cluster at `0x15cc50–0x15dc00` is a per-state request switch with no direct callers or data references (probably reached through an untraced table); (2) `0x15caf0` callers are a sort, not player code; (3) functions that read `+0x450`, call a state setter and compare floats: none.
+
+### Walk/run analog threshold — third attempt (2026-10-08, no result)
+
+- **Confirmed:** vtable-style refs to the `0x15cc50` cluster exist only as 4-word tables at `0x617734` and `0x61ea14` (`0x15cc50, 0x15d180, 0x15d9c0, 0x15da40`); `0x15d180` is a generic actor update with stick-like compares at +-0.8 (`0xbf4ccccd`/`0x3f4ccccd`, `0x15d31c`) calling `0x1893c0`/`0x1bf880` with +-1/-2: looks like menu/camera selection, not the player's walk/run.
+- **Observed:** registration code at `0x2a6330–0x2a63e0` binds motion ids 0xB2, 0xA8, 0xAB, 0xAE, 0x15A, 0xB0 to object slots `+0x88..0x9c` and stores float pairs 0.8/1.35 (`0x3f4ccccd`/`0x3faccccd`) at `+0x30/+0x34` of two of them (**hypothesis**: speed-scale or blend range of a locomotion blender, consumer not found).
+- Next idea if retried: find readers of `[obj+0x30]`/`[obj+0x34]` for the slots at `s3+0x8c/0x98`.

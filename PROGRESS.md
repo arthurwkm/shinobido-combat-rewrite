@@ -50,7 +50,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
 - [x] (SKIPPED per owner: enemy attacks are out of scope; `Player::hit(name)` stays caller-chosen) What triggers each HI_* reaction.
 - [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
-- [ ] Walk/run analog threshold. (BLOCKED again, see Blockers)
+- [ ] Walk/run analog threshold. (BLOCKED, third attempt failed, see Blockers)
 - [x] (formats.md "Transition-category bits"; `python tools/categories.py` → `ok`; names are hypotheses, masks 0x4/0x8 match no header so go via controller +0x180; not wired into sim) Mask category names (event types 5/6).
 - [x] (SKIPPED per owner: controller has no buffer, not needed for the goal) Input buffering rules.
 
@@ -58,8 +58,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [x] (`src/bin/viewer.rs`: capsule at `Player.pos`/`heading`, 60 Hz fixed step, W run, Shift walk, A/D turn, Space attack, G guard; `cargo clippy -q --all-targets` clean, `cargo test -q` → 16 passed; window not run headless, the Bevy build takes ~27 min cold) Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- Walk/run threshold: 3 more angles failed (formats.md "Walk/run analog threshold", 2nd attempt); the walk/run choice is in untraced code. Keep the `walk` flag ESTIMATE and skip, or give a hint? Owner: reply `skip` or `continue`.
-  - Owner: continue
+- Walk/run threshold: a third owner-approved attempt also failed (formats.md "third attempt"); the `walk` flag stays ESTIMATE. Reply `skip` to close the item, or `hint: <address/function>`.
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
@@ -89,3 +88,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: input buffering lookup blocked; controller has no buffer, player input struct untraced.
 - 2026-10-08 Claude: M7 viewer binary (capsule rig) builds; sim untouched.
 - 2026-10-08 Claude: owner skipped HI_* and input buffering (items closed); walk/run lookup failed again, blocked.
+- 2026-10-08 Claude: walk/run lookup 3rd attempt (vtable refs, 0x2a6330 registration) failed; re-blocked, flag stays ESTIMATE.
