@@ -160,6 +160,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("stick"), [x, y]) => i.stick = [*x, *y],
             (Some("lock"), [b]) => i.lock = *b != 0.0,
             (Some("crouch"), [b]) => i.crouch = *b != 0.0,
+            (Some("dash"), [b]) => i.dash = *b != 0.0,
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,
             (Some("jump"), _) => i.jump = true,
@@ -323,6 +324,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.item |= keys.just_pressed(KeyCode::KeyQ);
     i.lock = mouse.pressed(MouseButton::Right);
     i.crouch = keys.pressed(KeyCode::ControlLeft);
+    i.dash = keys.pressed(KeyCode::ShiftLeft);
     exec.0 |= keys.just_pressed(KeyCode::KeyE);
     for g in &pads {
         let s = Vec2::new(g.get(GamepadAxis::LeftStickX).unwrap_or(0.0), g.get(GamepadAxis::LeftStickY).unwrap_or(0.0));
@@ -334,6 +336,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
         i.crouch |= g.pressed(GamepadButton::LeftTrigger);
+        i.dash |= g.pressed(GamepadButton::East);
         exec.0 |= g.just_pressed(GamepadButton::North);
     }
     i.stick = [stick.x, stick.y];

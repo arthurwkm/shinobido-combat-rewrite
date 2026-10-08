@@ -8,7 +8,7 @@ pub const SUPPORT_EPS: f32 = 0.0001;
 
 // ESTIMATE: caller selects the run/idle family, as with walk_clip; no decoded wall or fatigue trigger.
 // ponytail: RE/LE and STOP_K use one-shot Special; replace caller selection when wall states exist.
-pub const RUN_CLIPS: &[&str] = &["RUN01", "RUN_R01", "RUN_L01"];
+pub const RUN_CLIPS: &[&str] = &["RUN01", "RUN_R01", "RUN_L01", "RUN_D05"];
 pub const IDLE_CLIPS: &[&str] = &["STOP01", "STOP02", "TIRED01"];
 
 // ESTIMATE: fall drop (m) from which the landing clip is LAND_B01 / LAND_A01 instead of LAND01; no decoded rule.

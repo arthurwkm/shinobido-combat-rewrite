@@ -1,0 +1,5 @@
+# run, then dash, then release
+0 stick 0 1
+90 dash 1
+180 dash 0
+240 stick 0 0

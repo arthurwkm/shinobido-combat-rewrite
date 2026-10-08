@@ -747,6 +747,21 @@ fn request_gate_refuses_outside_free_state_and_cancel_window() {
 }
 
 #[test]
+fn dash_runs_faster_than_run() {
+    use super::{input::Input, player::Player, terrain::Terrain};
+    let dist = |dash: bool| {
+        let (mut p, t, mut i) = (Player::new(), Terrain::default(), Input::default());
+        i.stick = [0.0, 1.0];
+        i.dash = dash;
+        for _ in 0..120 { i.apply(&mut p, &t, 0.0); }
+        (p.world_action(), p.pos[2])
+    };
+    let (d, run) = (dist(true), dist(false));
+    assert_eq!(d.0, "RUN_D05");
+    assert!(d.1 > run.1 * 1.3, "{d:?} vs {run:?}");
+}
+
+#[test]
 fn crouch_holds_walks_and_is_quieter() {
     use super::{enemy::Enemy, player::{Player, State}, stealth::Stealth};
     let mut p = Player::new();

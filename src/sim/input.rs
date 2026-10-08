@@ -16,6 +16,8 @@ pub struct Input {
     /// Held: lock-on (R1) guards when idle; crouch (L1) with `jump` dodges (ESTIMATE combinations, docs/controls.md).
     pub lock: bool,
     pub crouch: bool,
+    /// Held: dash (Circle); runs with RUN_D05 (set 05 `_D`, ~5.5 m/s against RUN01 3.4).
+    pub dash: bool,
 }
 
 impl Input {
@@ -32,6 +34,7 @@ impl Input {
         p.walk = mag < STICK_WALK;
         p.guard_held = self.lock;
         p.crouch_held = self.crouch;
+        p.run_clip = if self.dash { "RUN_D05" } else { "RUN01" };
         if self.jump && self.crouch {
             let dir = if !moving || y >= x.abs() { "FRONT01" } else if y <= -x.abs() { "BACK01" } else if x > 0.0 { "RIGHT01" } else { "LEFT01" };
             p.dodge(dir);
