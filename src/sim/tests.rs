@@ -151,3 +151,20 @@ fn jump_leaves_the_ground_at_frame_5_and_lands_about_51_frames_later() {
     assert!(peak > 0.5 && peak < 1.5, "{peak}");
     assert_eq!(p.state, State::Idle);
 }
+
+#[test]
+fn turning_around_takes_pi_over_turn_rate_then_run_goes_backwards() {
+    let mut p = super::player::Player::new();
+    p.target_heading = std::f32::consts::PI;
+    let mut n = 0;
+    while p.heading.cos() > -0.99999 {
+        p.step(false, false);
+        n += 1;
+        assert!(n < 100);
+    }
+    assert_eq!(n, 24); // pi / (7.854 / 60)
+    for _ in 0..30 {
+        p.step(true, false);
+    }
+    assert!(p.pos[2] < -1.6 && p.pos[0].abs() < 0.01, "{:?}", p.pos);
+}

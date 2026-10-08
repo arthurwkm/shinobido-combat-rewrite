@@ -33,7 +33,7 @@ Each item is one feature with a test against extracted data.
 - [x] (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE) Run, halt, idle.
 - [x] (WALK_F02 loop, 1.65 m / 80 f, `walk` flag stands in for the analog threshold: ESTIMATE; `cargo test -q` → 10 passed, compare.py 109/109) Forward walk.
 - [x] (JUMP01 then LAND01, gravity from the executable, launch velocity 155 u/s and 9.8/450 m per unit are ESTIMATE, tuned so airborne time ≈ JUMP01 take-off/landing events at frames 5/56; `cargo test -q` → 11 passed) Jump and land.
-- [ ] Turning.
+- [x] (no TURN motion exists in the player set; heading turns toward a target at 2.5 pi rad/s, default branch of executable turn function 0x10bf80 (formats.md); which branch applies per action is ESTIMATE; `cargo test -q` → 12 passed, compare.py 109/109) Turning.
 - [ ] Backward and sideways walk (WALK_B/R/L02 are extracted, not wired).
 
 ## Milestone 6 — Combat
@@ -53,6 +53,7 @@ Each item is one feature, as found in the game's action data, with a test.
 - (event meanings:) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log
+- 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
 - (newest first, one line per session)
 - 2026-10-08 night (12): Claude added jump/land to Player with ESTIMATE launch velocity/unit scale; 11 tests pass. Left: turning, hit reactions, viewer (Bevy go-ahead).
 - 2026-10-08 night (11): Claude found the gravity update at 0x1102b0 (a=-450 if |vy|>15 else -100-0.4|vy|, vy+=a*dt), in formats.md "Vertical velocity update"; jump launch velocity and unit scale still unknown, no sim change.

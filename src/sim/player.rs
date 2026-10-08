@@ -33,6 +33,10 @@ const UNIT_M: f32 = 9.8 / 450.0;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
 
+/// Ground turn rate, rad/s (2.5 pi). From the executable's turn function 0x10bf80, default-state branch (0x10c1f4);
+/// other states use other rates (formats.md). Which branch applies to which action is not decoded: locomotion only.
+const TURN_RATE: f32 = 7.853_981_6;
+
 /// Idle / run / halt on top of `World`. ESTIMATE: the transitions (release while running plays HALT01 once, then
 /// idle; pressing forward during HALT01 interrupts it) are guessed; the motions and root motion are from the files.
 pub struct Player {
@@ -44,6 +48,10 @@ pub struct Player {
     pub walk: bool,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
+    /// Yaw in radians; forward is (sin h, cos h) in x/z. `pos` is in the world frame.
+    pub heading: f32,
+    /// Direction the stick asks for (radians); the heading turns toward it at `TURN_RATE`.
+    pub target_heading: f32,
     vy: f32,
 }
 
@@ -55,13 +63,19 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3], vy: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, vy: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
     pub fn step(&mut self, forward: bool, attack: bool) {
         if attack {
             self.press_attack();
+        }
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+            let d = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
+                - std::f32::consts::PI;
+            let max = TURN_RATE * super::DT;
+            self.heading += d.clamp(-max, max);
         }
         match (self.state, self.guard_held) {
             (State::Idle | State::Run | State::Walk | State::Halt, true) => self.start(State::Guard, "GU_A01"),
@@ -160,9 +174,11 @@ impl Player {
     fn advance(&mut self) {
         let before = self.world.pos;
         self.world.step();
-        for (p, (now, was)) in self.pos.iter_mut().zip(self.world.pos.iter().zip(before)) {
-            *p += now - was;
-        }
+        let d: [f32; 3] = std::array::from_fn(|i| self.world.pos[i] - before[i]);
+        let (s, c) = self.heading.sin_cos();
+        self.pos[0] += d[0] * c + d[2] * s;
+        self.pos[1] += d[1];
+        self.pos[2] += d[2] * c - d[0] * s;
     }
 
     /// ESTIMATE: the first attack is AT_A01; while an attack's cancel window is open, a press goes to the first

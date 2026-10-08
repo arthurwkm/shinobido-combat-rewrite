@@ -223,3 +223,10 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   (`0x110330–0x110350`, bound register not traced).
 - **Hypothesis:** units are game units (not metres; run is 3.4 m/s in root motion), so the metre value of gravity is unknown.
   Initial jump velocity (set at jump start) not found; no sim use yet.
+
+### Turn function 0x10bf80 (found 2026-10-08)
+
+- **Confirmed (disassembly):** `0x10bf80(actor, angle)` rotates the actor by `angle` (sign picks direction) with the step
+  clamped to pi, scaled by actor `+0x420`; the step is `rate * dt` (`dt` = float at `[gp-0x6cec]+8`). `rate` is chosen by
+  state flags (actor `+0x280/+0x284/+0x2e8`): 20.944 (flag 0x40 at +0x284), 10.472, 7.854 (2.5 pi, the fall-through
+  default at `0x10c1f4`), 1.963, 5.24 etc. **Hypothesis:** 7.854 rad/s is the ordinary ground rate; flag-to-action mapping not decoded.
