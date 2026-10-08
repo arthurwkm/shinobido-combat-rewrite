@@ -59,6 +59,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 
 ## Blockers
 - Walk/run threshold: a third owner-approved attempt also failed (formats.md "third attempt"); the `walk` flag stays ESTIMATE. Reply `skip` to close the item, or `hint: <address/function>`.
+  - Owner: continue and dont ask for decisions anymore, always go with with your recommendations. just dont download big files or make changes to other projects
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
