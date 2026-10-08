@@ -5,6 +5,7 @@ pub mod extracted;
 pub mod combat;
 pub mod enemy;
 pub mod lockon;
+pub mod stealth;
 pub mod player;
 pub mod terrain;
 pub mod data;

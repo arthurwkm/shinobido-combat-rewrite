@@ -590,3 +590,25 @@ fn lock_on_selects_switches_releases_and_strafes() {
     assert!(!l.drive(&mut p, &[], [1.0, 0.0]));
     assert_eq!(l.target, None);
 }
+
+#[test]
+fn stealth_fills_from_sight_and_noise_and_alerts() {
+    use super::{enemy::{Enemy, State}, stealth::{Alert, Stealth}};
+    let run = |e: &mut Enemy, s: &mut Stealth, p: [f32; 3], act: &str, n: u32| (0..n).for_each(|_| s.step(e, p, act));
+    // in front (heading 0 faces +z), standing: seen, alerts within a few seconds
+    let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
+    run(&mut e, &mut s, [0.0, 0.0, 5.0], "STOP01", 30);
+    assert!(s.seen && s.meter > 0.0 && s.level() != Alert::Alerted);
+    run(&mut e, &mut s, [0.0, 0.0, 5.0], "STOP01", 300);
+    assert_eq!(s.level(), Alert::Alerted);
+    assert_eq!(e.state, State::Alert);
+    // behind, standing: unseen, silent -> stays at zero
+    let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
+    run(&mut e, &mut s, [0.0, 0.0, -2.0], "STOP01", 600);
+    assert!(!s.seen && s.meter == 0.0);
+    // behind, running close: heard, meter rises; walking close is quiet enough only inside 3 m, beyond it decays
+    run(&mut e, &mut s, [0.0, 0.0, -2.0], "RUN01", 60);
+    assert!(s.meter > 0.3, "{}", s.meter);
+    run(&mut e, &mut s, [0.0, 0.0, -6.0], "WALK_F02", 600);
+    assert_eq!(s.meter, 0.0);
+}

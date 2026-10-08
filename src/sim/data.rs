@@ -31,3 +31,15 @@ pub const FRONT_CONE: f32 = std::f32::consts::FRAC_PI_2;
 // ESTIMATE: lock-on pick range (m) and half-angle (rad) around the facing; the camera/target-select code was not read.
 pub const LOCK_RANGE: f32 = 12.0;
 pub const LOCK_CONE: f32 = std::f32::consts::FRAC_PI_2;
+// ESTIMATE: stealth numbers; sight/hearing ranges are not in the AI files (formats.md "Enemy AI"), none read from the executable.
+// Sight range (m) and half-angle (rad); meter fill per second when seen at point-blank (scaled down with distance);
+// hearing radius (m) while running / walking; meter fill per second when heard; meter decay per second unperceived;
+// meter thresholds for Suspicious and Alerted.
+pub const SIGHT_RANGE: f32 = 12.0;
+pub const SIGHT_CONE: f32 = std::f32::consts::FRAC_PI_3;
+pub const SIGHT_FILL: f32 = 1.5;
+pub const HEAR_RUN: f32 = 8.0;
+pub const HEAR_WALK: f32 = 3.0;
+pub const HEAR_FILL: f32 = 0.5;
+pub const STEALTH_DECAY: f32 = 0.2;
+pub const SUSPICIOUS_AT: f32 = 0.4;
