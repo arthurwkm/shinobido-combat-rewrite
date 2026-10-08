@@ -9,4 +9,6 @@ with `PROGRESS.md` updated in the same commit, and keep going without stopping t
 When the item is checked off, or you record a Blocker for it, add one Log line, commit and exit:
 the runner starts the next feature in a fresh session. Never exit with uncommitted work (Codex: the runner commits for you).
 An item that needs an executable lookup is not blocked: do the lookup.
+A decision is not a Blocker: take your own recommendation, note it in the Log line, and keep going. Only stop for one
+that needs a big download, activity unrelated to this project, or changes to settings of other projects.
 If no unchecked item is unblocked when you start, exit at once without a commit.
