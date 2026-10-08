@@ -249,3 +249,13 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
 ### Walk/run analog threshold — lookup failed (2026-10-08, no result)
 
 - Tried: (1) strings in the executable (no walk/run/stick names; only libpad); (2) immediate loads of mtnfile IDs 168–174 (RUN_R/L, WALK_F/B/R/L02): hits at `0x2a6344–0x2a6374` and `0x11523c` are a motion-registration table and a switch on actor `+0x2e4` state values, not stick logic (state values 0xA7/0xA8 coincide with RUN_RE/LE IDs: **hypothesis** state id ≈ motion id); (3) direct `sw …, 0x2e4(actor)` after an immediate: only `0x10b55c`, so states are set through a helper call. Next idea: find that helper (callers of state setter) and trace the caller using state 3/171.
+
+### Transition-category bits (types 5/6) — empirical, `python tools/categories.py` (2026-10-08)
+
+The category word tested by the checker at `0x1c1268` is the motion header word at `+0x14` (= `flags[0]` in
+`tools/nmt.py`, **confirmed** by layout: 5 × f32 precede it). Across the player's motions (**confirmed** by the script's asserts):
+- `0x20000` is on every attack (AT_A01/C01/D01/E01, SOCCER01, KICK_J01); `0x80` on every HI_* hit reaction (except HI_F01 `0xa0`), with `0x40000`/`0x80000` stacking on heavier reactions;
+  `0x4000` on JUMP01/FLIP_B01/HALT01/RUN01 family; `0x8000` and `0x40000000` on locomotion (STOP01, RUN01, WALK_*); `0x200` on KABE_E01 and RUN_RE/LE; `0x100` UP_BA01; `0x400` BURA_HI01.
+- Mask args used by type 5: `0x4000` (after AT_A01 at f40, AT_E01, SOCCER01, LAND01…: allows jump-like motions), `0x200`/`0x400` (JUMP01, FALL01, KABE/TRI_J01), `0x20` (CLIMB_B01, MAKURI_H01), `0x100`, `0x40000000` (SHEATH01).
+- Mask `0x8` (all attack chains) and `0x4` (DRINK01) match **no** player header word, so they must hit the controller word `+0x180` instead (**hypothesis**: attack-chain/“combo” permission, set elsewhere).
+- Names stay **hypothesis**: `0x20000` attack, `0x80` hit reaction, `0x4000` air/jump, `0x8000`/`0x40000000` ground locomotion.

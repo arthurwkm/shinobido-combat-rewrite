@@ -51,7 +51,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [ ] What triggers each HI_* reaction. (BLOCKED, see Blockers)
 - [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
 - [ ] Walk/run analog threshold. (BLOCKED, see Blockers)
-- [ ] Mask category names (event types 5/6).
+- [x] (formats.md "Transition-category bits"; `python tools/categories.py` → `ok`; names are hypotheses, masks 0x4/0x8 match no header so go via controller +0x180; not wired into sim) Mask category names (event types 5/6).
 - [ ] Input buffering rules.
 
 ## Milestone 7 — Viewer
@@ -85,3 +85,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: HI_* trigger lookup blocked after 3 failed approaches; partial findings in formats.md.
 - 2026-10-08 Claude: event type 35 damage formula documented and wired (hit_damage); 6b damage item done.
 - 2026-10-08: walk/run analog threshold lookup failed 3 ways; blocked.
+- 2026-10-08 Claude: mask category bits tabulated empirically (tools/categories.py); 6b mask item done.
