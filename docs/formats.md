@@ -396,3 +396,35 @@ Survey by `tools/camera.py` (`ok: 110 .cmt parsed ...`).
 - **Confirmed:** `cmtnfile.bin` = `u32 n` (97), `n` `u32` offsets into a string block that follows, holding NUL-separated upper-case file names; all exist as `.cmt` (case-insensitive). The names are action cameras (CLIMB, BURA, NORIR/NORIL, SUI, SHOJI, ITEM, KUGURI, HEBI, KABUTO, KENOBI, MOSU, KUMA, DEKA, MAE, MAKURI, NUKERARE/SEIKO/TEIKO/STR variants, CRI*/KUBIKIRI for the critical/stealth kill) plus `CAME_*` scene shots. Hypothesis: the game plays one of these when the player starts the matching action (e.g. `climb.cmt` 164 frames for CLIMB), relative to the player.
 - **Hypothesis:** `cmractdb.bin` = header `u32 103, 0, 0, 0` then 103 records of 816 bytes starting with an id (38..58, 82..125, 256..1191, ascending; looks like a scene/event id), then floats `pos(3), 40.0, 1.392 1.09 0.737, ...` (a fixed camera with FOV 40 and per-record action sub-blocks of `[x y z 1.0]` points). Not needed for the sandbox.
 - **Not in the files:** the third-person follow camera (distance, height, FOV, lag) and the lock-on camera. The executable has camera code (strings `Camera`, `DontLock CharacterCamera` at VA `0x611db0`, referenced from `0x3fb194`; `cmtnfile.bin` loaded near `0x31bf68`..; `cmractdb.bin` near `0x3a8ea8`, `Special stealth kill camera fault!!` near `0x3a4228`) but it is a large vector-math camera class; per AGENTS.md rule 7 follow/lock-on values are `ESTIMATE` in `src/sim/data.rs` / the viewer, tuned against the Shinobido clips (video catalogue item).
+
+## Control guide — disc help texture (2026-10-08)
+
+- **Confirmed (VOLUME directory and visual read):** `US\UI\txd\help\N_CtrlGuide.rws`
+  is a 263568-byte RenderWare texture dictionary with the English Basic Controls
+  diagram; no script VM decoding is needed. Square Attack, Triangle Grab, Circle
+  Dash, Cross Jump, left stick Move, right stick Camera, Select Equipment Screen,
+  Start Pause Menu. Cross Jump also appears in the movement clip's 00:00 tutorial.
+- **Confirmed (image leaders):** lower drawing image-left button 1 is Lock-on;
+  image-right 1 is Hide/Crouch; image-right 2 is Use Item. **Hypothesis:** this is
+  a rear/underside view (grips upward, sticks underneath), so these mean R1, L1,
+  L2 respectively; the drawing's numerals have no legible L/R letters. The other
+  button 2 is unlabelled. `docs/controls.md` records these qualifications and
+  explicitly estimated context combinations; the image does not prove timing,
+  hold/toggle semantics, guard or execution inputs.
+- **Confirmed for this image:** native header at file offset `0x7c` is 512×512,
+  8-bit; pixel packet at `0xc8` reports a 256×256 PSMCT32 upload. Existing model
+  decoder `tools/texture.py` assumes one horizontal GS page and repeats columns
+  on this wider image. A temporary decoder reusing its block/column and CLUT
+  tables produces a coherent full diagram. No change to model decoding here.
+  Reproduction: read only this entry with `volume.read_entry`; read `<16I` at
+  `0x7c`; pass packet sizes header[12]/[13] to `texture.packet` starting at `0xc8`.
+  For upload words, page index is `(y // 32) * (upload_width // 64) + x // 64`,
+  times 2048 words, plus the existing within-page BLOCK32/COL32 offset. For PSMT8
+  sampling, page index is `(y // 64) * (width // 128) + x // 128`, times 8192
+  bytes, plus the existing BLOCK32/COL8 offset. Use the existing 256-entry CLUT
+  permutation and alpha conversion. Both address sets cover the 262144-byte
+  raster; unlike the narrow decoder, horizontal pages are distinct.
+- Evidence: `.venv/bin/python target/decode_control_guide.py` →
+  `target/controls-guide-wide.png: 512x512; upload 256x256 PSMCT32, 4 pages across`;
+  PNG visually inspected. Temporary decoder and image stay in ignored `target/`.
+  This is a targeted image decode, not a generalized wide-texture parser.

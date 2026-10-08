@@ -91,7 +91,7 @@ def decode(d, pos):
     words = struct.unpack(f"<{len(tex) // 4}I", tex)
     need = {addr(x, y) // (4 if depth == 8 else 8) for y in range(h) for x in range(pw_)}
     # the file is the raster of a PSMCT32 rect; its width is the one whose GS words are exactly the texture's words
-    for rw in (8, 16, 32, 64, 128):
+    for rw in (8, 16, 32, 64, 256, 128):
         mem = ct32_memory(words, rw)
         if set(mem) == need:
             break

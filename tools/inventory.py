@@ -19,7 +19,7 @@ GROUPS = [
     ("rolls and evasion", r"FRONT|BACK01|RIGHT|LEFT|UKEMI"),
     ("attacks", r"AT\d|AT_|SOCCER|BLADE|KICK27|FUTO|CLAW"),
     ("guard", r"GU_"),
-    ("hit reactions", r"HI_|DEKA_|NORI_|BURA_|SUI_|SHOJI_|ITEM_HI|NAGERARE|CLAW_Y|CLAW_T"),
+    ("hit reactions", r"HI_|DEKA_|NORI_|BURA_|SUI_|SHOJI_|ITEM_HI|NAGERARE"),
     ("wall, ledge and corner", r"KABE|STOP_[KABLR]\d|BACK06|ONE06|TWO06|IKOU|SHEATH_BU|STOP_ABU|HANG|CLIMB06|SHEATH06"),
     ("items and carrying", r"SHEATH01|PICK|THROW|DRINK|PUT|MAKI|NINJYUTU|OPEN|CLOSE|MAKURI"),
     ("talk and other", r"TOJO|TALK|KIME|FURI|WAIT"),

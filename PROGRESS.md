@@ -68,7 +68,7 @@ Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-o
 - [x] (`.venv/bin/python tools/ai.py` → `ok: 10 Busi battle files, 1120 rows, every file filled exactly`; battle tables confirmed, .ass/.asc record layout hypothesis, sight/hearing ranges not in the files → ESTIMATE in M10; formats.md "Enemy AI") Enemy AI data: survey `AI\ActionSet` and `AI\battle` for the chosen enemy (sight/hearing ranges, alert states, attack choice); document in formats.md.
 - [x] (`.venv/bin/python tools/camera.py` → `ok: 110 .cmt parsed, track layout fills every file; fov 0.28..1.31 rad; cmtnfile lists 97 names, all present`; .cmt are scripted action cameras; follow/lock-on camera values are not in the files → ESTIMATE from the clips, formats.md "Camera data") Camera: survey `camera\` for the player follow and lock-on camera parameters (distance, height, FOV, lag); document in formats.md.
 - [x] (`docs/video_notes.md`, coarse 2 s contact sheets of all 3 clips: HUD, camera, per-action tables; frame-exact reads and HUD colours left open in the file, no emulator capture) Video catalogue: `docs/video_notes.md`, one line per action seen in `videos/shinobido *.mov` (timestamp, action, matching motion name, camera and HUD state); fill gaps with short emulator captures (AGENTS.md method 3). Feeds the Milestone 9 items, the camera and the HUD.
-- [ ] Controls: the PS2 button→action mapping (executable pad handling, tutorial/help text in `VOLUME.DAT`, or ESTIMATE); write `docs/controls.md` with gamepad and keyboard/mouse bindings.
+- [x] (`docs/controls.md`; disc `US\UI\txd\help\N_CtrlGuide.rws` visually read from `target/controls-guide-wide.png`; `.venv/bin/python target/decode_control_guide.py` → `512x512; upload 256x256 PSMCT32, 4 pages across`; face/stick labels confirmed, shoulder sides hypothesis, context combinations ESTIMATE) Controls: PS2 layout plus planned gamepad and keyboard/mouse bindings. M8 review: all seven extraction tools reviewed; removed shadowed inventory alternatives without changing its 134-motion output. Final `cargo test -q` → 16 passed; `cargo clippy -q --all-targets` → exit 0, no output; `.venv/bin/python tools/compare.py` → 109/109 actions within tolerance. Next: M9 static world.
 
 ## Milestone 9 — Full player moveset in the sim
 - [ ] Static world in the sim (engine-free): boxes and ramps as colliders, ground height, wall contact, ledge detection, falling off edges. Shared with the viewer terrain.
@@ -107,6 +107,8 @@ Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compar
 Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
 - Lock-on in use (target switch, strafing) and guard against an attack: not in the current clips.
 - A stealth kill from behind and one from above, showing the cue before the input.
+
+- Original shoulder controls, guard and evasion inputs: a control tutorial showing button names would confirm the rear-view guide interpretation and estimated combinations.
 
 ## Blockers
 (none)
@@ -153,3 +155,5 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: M8 enemy AI survey done: AIattle tables parsed (tools/ai.py), .ass/.asc layout left as hypothesis (3 blind attempts at record bounds), sight/hearing not in files → ESTIMATE in M10 stealth.
 - 2026-10-08 Claude: M8 camera survey done: camera\*.cmt are scripted action cameras (pos/quat/fov keys, tools/camera.py); follow/lock-on camera not in files and exe camera class too big → ESTIMATE, to be tuned from the clips.
 - 2026-10-08 Claude: M8 video catalogue done (docs/video_notes.md) from 2 s contact sheets; timings are coarse, motion names are candidates, HUD colours unsampled.
+
+- 2026-10-08 Codex: M8 controls done from disc help texture; chose R1 lock/L1 crouch/L2 item from rear-view geometry (hypothesis), keyboard bindings and context combinations explicitly ESTIMATE; decoded only the guide into target, documented wide-page recipe, skipped executable lookup because help supplied basic controls. M8 review found only dead inventory regex alternatives (removed, output unchanged); rws/model/texture/harakiri/ai/camera self-checks all passed, plus 16 Rust tests, clean clippy, compare 109/109. Existing tools/texture.py width-candidate change preserved; no staging/commit (runner handles it). Next: M9 static world.
