@@ -213,3 +213,13 @@ Type 3 arg0 is the **0-based** index into `mtnfile.bin` (the numbering in `docs/
 `AT_A01` → AT_C01, AT_CA01, SOCCER01; `AT_C01` → AT_CA01, AT_D01, AT_DA01, SOCCER01; `GU_A01` → GU_B01;
 `RUN01` → STOP02 and WALK_F02/B02/R02/L02. The 1-based reading gives self-cancels and unrelated targets.
 So walking lives in the suffix-`02` set (hypothesis: same character, another stance/weapon state), not in the suffix-`01` set.
+
+### Vertical velocity update (gravity) — executable lookup, `0x1102b0–0x110350`
+
+Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical velocity.
+- **Confirmed (disassembly):** `dt` = float at `[[gp-0x6cec]+8]`. `f0 = func_2E81B8(vy)` (**hypothesis:** fabsf/magnitude).
+  If `f0 > 15.0` (`0x41700000`): `a = -450.0` (`0xC3E10000`). Else: `a = -100.0 (0xC2C80000) + (-0.4 (0xBECCCCCD)) * f0`.
+  Then `vy += a * dt` (`0x110318–0x11032c`). If actor `+0x280` bit0 is set, `vy` is clamped to a lower bound
+  (`0x110330–0x110350`, bound register not traced).
+- **Hypothesis:** units are game units (not metres; run is 3.4 m/s in root motion), so the metre value of gravity is unknown.
+  Initial jump velocity (set at jump start) not found; no sim use yet.
