@@ -6,3 +6,4 @@ your item needs. Work on the first unblocked unchecked item: it is one feature. 
 with `PROGRESS.md` updated in the same commit, and keep going without stopping to report progress.
 When the item is checked off, or you record a Blocker for it, add one Log line, commit and exit:
 the runner starts the next feature in a fresh session. Never exit with uncommitted work.
+If no unchecked item is unblocked when you start, exit at once without a commit.

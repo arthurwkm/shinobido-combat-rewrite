@@ -49,10 +49,11 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
    feature starts in a fresh session. Otherwise continue with the next step; never stop just to report.
    Before checking off a milestone's last item, do one cleanup pass over that milestone's code
    (dead code, duplication), tests green.
-5. If the same approach fails 3 times, record it under Blockers in `PROGRESS.md` and move to the next
-   unblocked item. Anything that needs the owner (installing software, a decision, missing data) is a
+5. If the same approach fails 3 times, record it under Blockers in `PROGRESS.md`; that blocks the item
+   (step 4: commit and stop). Anything that needs the owner (installing software, a decision, missing data) is a
    Blocker, not a workaround.
-6. If every remaining item is blocked, or the milestone list is done, update `PROGRESS.md`, commit and exit.
+6. If at session start every remaining item is blocked, or the milestone list is done, exit without a
+   commit: the runner reads a session with no commit as "done or blocked" and ends the night.
    Do not keep trying: unused usage is worth more than a stuck session.
 
 ## Scope (hard limits)
