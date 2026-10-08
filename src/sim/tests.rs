@@ -107,3 +107,17 @@ fn guard_goes_a_then_b_while_held_and_ends_with_y() {
     }
     assert_eq!(p.state, State::Idle);
 }
+
+#[test]
+fn dodges_move_by_their_root_motion_then_return_to_idle() {
+    use super::player::{Player, State};
+    for (dir, axis, want) in [("FRONT01", 2, 1.5), ("BACK01", 2, -1.6), ("RIGHT01", 0, -1.6), ("LEFT01", 0, 1.6)] {
+        let mut p = Player::new();
+        p.dodge(dir);
+        for _ in 0..31 {
+            p.step(false, false);
+        }
+        assert_eq!(p.state, State::Idle, "{dir}");
+        assert!((p.pos[axis] - want).abs() < 0.05, "{dir} {:?}", p.pos);
+    }
+}

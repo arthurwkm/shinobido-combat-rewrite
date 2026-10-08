@@ -10,6 +10,8 @@ pub enum State {
     Guard,
     /// GU_Y01 (hypothesis: guard release).
     GuardEnd,
+    /// FRONT01 / BACK01 / RIGHT01 / LEFT01 (hypothesis: evasive steps; 30 frames, 1.5-1.6 m of root motion each).
+    Dodge,
 }
 
 /// Idle / run / halt on top of `World`. ESTIMATE: the transitions (release while running plays HALT01 once, then
@@ -50,7 +52,10 @@ impl Player {
             (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, "STOP01"),
             _ => {}
         }
-        if matches!(self.state, State::Guard | State::GuardEnd) {
+        if self.state == State::Dodge && self.world.done() {
+            self.start(State::Idle, "STOP01");
+        }
+        if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge) {
             return self.advance();
         }
         if self.state == State::Attack {
@@ -71,7 +76,7 @@ impl Player {
                 State::Idle => "STOP01",
                 State::Run => "RUN01",
                 State::Halt => "HALT01",
-                State::Attack | State::Guard | State::GuardEnd => unreachable!(),
+                State::Attack | State::Guard | State::GuardEnd | State::Dodge => unreachable!(),
             });
         } else if self.world.done() && self.state != State::Halt {
             self.world = World::new(if self.state == State::Run { "RUN01" } else { "STOP01" });
@@ -81,6 +86,13 @@ impl Player {
 
     pub fn world_action(&self) -> &'static str {
         self.world.action.name
+    }
+
+    /// Start an evasive step from idle/run/halt. `dir`: "FRONT01", "BACK01", "RIGHT01" or "LEFT01".
+    pub fn dodge(&mut self, dir: &str) {
+        if matches!(self.state, State::Idle | State::Run | State::Halt) {
+            self.start(State::Dodge, dir);
+        }
     }
 
     fn start(&mut self, state: State, name: &str) {
