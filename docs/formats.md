@@ -43,3 +43,16 @@ Relevant folders and types:
 `0.8333` (50 f), `-0.01667`, `0.0833` (5 f), `0.2667` (16 f), `0.3` (18 f), and the integer `50` (`0x32`).
 Likely an action length plus timing windows (hit, cancel), like Elden Ring's TAE.
 Confirm by checking that the length matches the keyframe data's own duration across many files.
+
+## motion\mtnfile.bin and the player's motions — confirmed (index table), hypothesis (suffix)
+
+- **confirmed**: little-endian `u32 count=1221`, then `count` u32 offsets (first = 4888 = 4+4*1221, last
+  string ends at file size 20500); strings are NUL-terminated `NAME.nmt`, all 1221 unique. So motion ID =
+  index into this table, value = file in `motion\`. Parsed with a short Python snippet; a `tools/` parser comes with `nmt.py`.
+- **hypothesis**: the numeric suffix of a motion name selects the character/skeleton set (01..28). Suffix `01`
+  (108 entries; `RUN01`, `JUMP01`, `AT_A01`, `GU_A01`, `HI_*01` hit reactions, `NINJYUTU01`, `SHEATH01`) is
+  the player: it is first in the table (IDs 1..) and `viewer\motion.txt` lists `at01/jump01/land01/...` first.
+  Not yet tied to the skeleton in `model\KAGETORA_BODY.rws`; check when `rws.py` exists.
+- Player model files are `model\KAGETORA_*.rws` (also `GOH_*.rws`: another playable, Goh, to check). Names in `AGENTS.md`
+  are right.
+- Unsuffixed `AT01/AT02/AT03.nmt` exist in `motion\` but have no suffix-form entry; role unknown.

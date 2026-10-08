@@ -12,7 +12,7 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] `docs/formats.md` seeded: disc layout, VOLUME.DAT, folders, `.nmt` timing hypothesis.
 
 ## Milestone 2 — Understand the player's data
-- [ ] Find which motions belong to Kagetora (the player): `viewer\njmotion.txt`, `viewer\motion.txt`, the motion name prefixes. Write the list (names only) to `docs/player_motions.md`.
+- [x] Find which motions belong to Kagetora (the player): `viewer\njmotion.txt`, `viewer\motion.txt`, the motion name prefixes. Write the list (names only) to `docs/player_motions.md`.
 - [ ] `motion\mtnfile.bin`: confirm or reject "motion ID → name table". Note how IDs map to `.nmt` files.
 - [ ] `.nmt` header: decode the fields (length, timing windows in 1/60 s?). Confirm across many files (see AGENTS.md, Method). `tools/nmt.py` with a self-check.
 - [ ] `.nmt` keyframes: bone tracks, frame rate, compression; which bone carries root motion.
