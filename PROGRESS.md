@@ -85,7 +85,7 @@ Items per uncovered group (motions in docs/player_motions.md; sim has run/halt/i
 ## Milestone 10 — Enemy and combat interactions
 - [x] (`src/sim/enemy.rs`; 53 set-07 motions added to extract.py, 7 have no mtnfile ID; BLADE07 has no hit events so window/range/hp are ESTIMATE in data.rs; `cargo test -q` → 32 passed; clippy clean; compare.py 186/186) Enemy in the sim: state machine (idle, patrol, alert, attack, guard, hit, death) on its own motions.
 - [x] (`src/sim/combat.rs` `Fight`: player hit window x type-35 damage -> `Enemy::hit`, enemy BLADE07 window -> `Player::hit(HI_BS01)` unless guarding in front; one hit per swing; reach/cone/damage/hp ESTIMATE in data.rs; test `hits_land_both_ways_and_guard_blocks`; `cargo test -q` → 33 passed; clippy clean; compare.py 186/186) Hits both ways: player hit windows damage the enemy, enemy attacks trigger player HI_* reactions and guard.
-- [ ] Lock-on: target select/switch/release, strafe locomotion while locked, facing.
+- [x] (`src/sim/lockon.rs` `LockOn::select/switch/release/drive`: nearest-to-facing pick in range/cone, clockwise/ccw switch, faces target and picks WALK_F/B/R/L02 from input; range 12 m and cone 90° ESTIMATE in data.rs; test `lock_on_selects_switches_releases_and_strafes`; `cargo test -q` → 34 passed; clippy clean; compare.py 186/186) Lock-on: target select/switch/release, strafe locomotion while locked, facing.
 - [ ] Stealth: enemy awareness from sight/sound and alert state, exposed as a stealth meter value.
 - [ ] Execution availability: conditions per execution and the "can execute" cue state.
 - [ ] Executions: every execution from M8 plays paired (alignment, both motions, enemy dies), with a test each.
@@ -170,3 +170,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: talk/idle extras done (7 clips already extracted, only a test was missing); Milestone 9 closed after clippy/dead-code review.
 - 2026-10-08 Claude: Enemy state machine on set-07 motions done; transitions and attack window ESTIMATE.
 - 2026-10-08 Claude: Hits both ways done (combat::Fight); damage uses type-35 arg with ESTIMATE power, enemy always plays HI_BS01 on the player, guard blocks only inside the frontal cone.
+- 2026-10-08 Lock-on done in sim (lockon.rs); strafe uses walk clips with the player facing the target; viewer wiring stays in M11. Range/cone ESTIMATE.

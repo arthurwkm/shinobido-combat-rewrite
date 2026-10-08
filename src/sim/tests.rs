@@ -557,3 +557,36 @@ fn hits_land_both_ways_and_guard_blocks() {
     for _ in 0..300 { f.step(false, false); }
     assert_eq!((f.player_hp, f.player.state == PS::Guard), (data::PLAYER_HP, true));
 }
+
+#[test]
+fn lock_on_selects_switches_releases_and_strafes() {
+    use super::{lockon::LockOn, player::Player};
+    let ts = [[0.0, 0.0, 5.0], [4.0, 0.0, 4.0], [-4.0, 0.0, 4.0], [0.0, 0.0, -5.0]];
+    let mut l = LockOn::default();
+    l.select([0.0; 3], 0.0, &ts);
+    assert_eq!(l.target, Some(0)); // nearest the facing; the one behind is outside the cone
+    l.switch([0.0; 3], &ts, true);
+    assert_eq!(l.target, Some(1)); // clockwise (+x) neighbour
+    l.switch([0.0; 3], &ts, false);
+    l.switch([0.0; 3], &ts, false);
+    assert_eq!(l.target, Some(2));
+    l.release();
+    assert_eq!(l.target, None);
+    l.select([0.0; 3], 0.0, &[[0.0, 0.0, 50.0]]);
+    assert_eq!(l.target, None); // out of range
+
+    // strafe right around a target ahead: faces it, plays WALK_R02, moves +x
+    let mut p = Player::new();
+    l.select(p.pos, p.heading, &ts[..1]);
+    for _ in 0..60 {
+        let fwd = l.drive(&mut p, &ts[..1], [1.0, 0.0]);
+        p.step(fwd, false);
+    }
+    assert_eq!(p.world_action(), "WALK_R02");
+    assert!(p.pos[0] < -0.5, "x {}", p.pos[0]); // WALK_R02 root is -x at heading 0 (formats.md)
+    let want = (0.0 - p.pos[0]).atan2(5.0 - p.pos[2]);
+    assert!((p.heading - want).abs() < 0.3, "heading {} want {}", p.heading, want);
+    // target vanishes: lock drops
+    assert!(!l.drive(&mut p, &[], [1.0, 0.0]));
+    assert_eq!(l.target, None);
+}

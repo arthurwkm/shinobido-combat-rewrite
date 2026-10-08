@@ -28,3 +28,6 @@ pub const PLAYER_POWER: f32 = 1.0;
 pub const ENEMY_DAMAGE: i32 = 20;
 pub const MELEE_REACH: f32 = 2.0;
 pub const FRONT_CONE: f32 = std::f32::consts::FRAC_PI_2;
+// ESTIMATE: lock-on pick range (m) and half-angle (rad) around the facing; the camera/target-select code was not read.
+pub const LOCK_RANGE: f32 = 12.0;
+pub const LOCK_CONE: f32 = std::f32::consts::FRAC_PI_2;
