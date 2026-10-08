@@ -41,10 +41,12 @@ Update this file before stopping every session. Check an item only with evidence
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- (none hard.) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
+- Remaining items all wait on executable lookups (do via Codex after its quota resets 2026-10-08 02:53, one bounded step each): (1) gravity/jump arc/land and turn-rate constants for M5; (2) what triggers each HI_* reaction and the damage use of event type 35 for M6; (3) the walk/run analog threshold. M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download). Nothing else is unblocked.
+- (event meanings:) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (9): all remaining items blocked on lookups; exited.
 - 2026-10-07 night (8): forward walk from the suffix-02 set. Left: jump/land/turn (need lookups), hit reactions, viewer.
 - 2026-10-07 night (7): evasive steps in Player. Remaining M6: hit reactions (trigger/damage rules unknown). M5: jump/land/turn/walk need lookups.
 - 2026-10-07 night (6): guard states in Player. Next: hit reactions (HI_*), evasion, suffix-02 walk.
