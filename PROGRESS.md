@@ -30,6 +30,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Milestone 5 — Movement
 - [ ] Walk, run, stop; jumps and landings; turning — each with a test against extracted data.
+  - done: run/halt/idle (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE). Not done: walk (no walk motion in the suffix-01 set), jump/land (JUMP01 root is 0 m, gravity unknown), turning.
 
 ## Milestone 6 — Combat
 - [ ] Attack chains, guard, evasion, hit reactions — as found in the game's action data, each with a test.
@@ -45,6 +46,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (3): run/halt/idle state machine in player.rs. Jump/turn need gravity and turn data (lookups); stopping.
 - 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.

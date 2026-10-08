@@ -36,3 +36,22 @@ fn stepping_run_for_its_length_covers_its_root_motion() {
     assert_eq!(n, 30);
     assert!((w.pos[2] - 1.69).abs() < 0.01, "{:?}", w.pos);
 }
+
+#[test]
+fn holding_forward_runs_at_the_run_cycle_speed_then_halts_in_place() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    for _ in 0..120 {
+        p.step(true);
+    }
+    assert_eq!(p.state, State::Run);
+    assert!((p.pos[2] - 4.0 * 1.69).abs() < 0.05, "{:?}", p.pos); // 4 cycles of 30 frames
+    let z = p.pos[2];
+    p.step(false);
+    assert_eq!(p.state, State::Halt);
+    for _ in 0..60 {
+        p.step(false);
+    }
+    assert_eq!(p.state, State::Idle);
+    assert!((p.pos[2] - z).abs() < 0.2, "halt moved {}", p.pos[2] - z);
+}
