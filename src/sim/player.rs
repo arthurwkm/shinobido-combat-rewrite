@@ -9,6 +9,8 @@ pub enum State {
     Halt,
     /// L1 held: STOP_S05 idle, WALK_F05 moving (set 05 `_S` variants).
     Crouch,
+    /// Back to a tall wall: IKOU_B06 in, STOP_A06 idle, ONE06 side-step, STOP_B06 peek at a wall end, BACK06 out.
+    Hug,
     Attack,
     /// GU_A01 then GU_B01 while held.
     Guard,
@@ -69,6 +71,11 @@ pub struct Player {
     /// Direction the stick asks for (radians); the heading turns toward it at `TURN_RATE`.
     pub target_heading: f32,
     pub wall_normal: Option<[f32; 3]>,
+    /// The wall in contact (or behind, while hugging) is at least `HUG_WALL_MIN` tall.
+    wall_tall: bool,
+    /// Sign of the side-step that reached a wall end (0 when none): peeking blocks further movement that way.
+    hug_edge: f32,
+    hug_dir: f32,
     vy: f32,
     fall_from: f32,
     air_vel: [f32; 2],
@@ -82,7 +89,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -93,6 +100,11 @@ impl Player {
     /// Advance on shared terrain. Leaving the ground without a jump plays FALL01, then a landing clip by drop height.
     pub fn step_on(&mut self, terrain: &super::terrain::Terrain, forward: bool, attack: bool) {
         let before = self.pos;
+        let (sh, ch) = self.heading.sin_cos();
+        self.wall_tall = match if self.state == State::Hug { Some([sh, 0.0, ch]) } else { self.wall_normal } {
+            Some(n) => terrain.wall_behind(before, n, super::data::HUG_WALL_MIN),
+            None => false,
+        };
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
         self.step_action(forward, attack);
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
@@ -184,11 +196,23 @@ impl Player {
         if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit | State::Special) {
             return self.advance();
         }
+        if self.state == State::Hug {
+            return self.step_hug(forward);
+        }
         if self.state == State::Attack {
             if self.world.done() {
                 self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
+        }
+        if let (true, true, true, Some(n)) = (self.crouch_held, forward, self.wall_tall, self.wall_normal) {
+            let (s, c) = self.target_heading.sin_cos();
+            if -(s * n[0] + c * n[2]) > 0.7 {
+                self.heading = n[0].atan2(n[2]);
+                self.hug_edge = 0.0;
+                self.start(State::Hug, "IKOU_B06");
+                return self.advance();
+            }
         }
         if self.crouch_held && !self.guard_held {
             let clip = if forward { "WALK_F05" } else { "STOP_S05" };
@@ -226,6 +250,44 @@ impl Player {
             self.start(s, clip(s));
         } else if self.world.done() && self.state != State::Halt {
             self.world = World::new(clip(self.state));
+        }
+        self.advance();
+    }
+
+    /// Hug: the wall is behind the player (heading faces away from it). Stick sideways along the wall side-steps at
+    /// `HUG_SPEED`, a wall end stops it and peeks, stick away or releasing crouch plays BACK06.
+    fn step_hug(&mut self, forward: bool) {
+        let name = self.world.action.name;
+        let d = self.target_heading - self.heading;
+        let (side, away) = if forward { (d.sin(), d.cos() > 0.7) } else { (0.0, false) };
+        let side = if side.abs() > 0.5 { side.signum() } else { 0.0 };
+        if name == "BACK06" {
+            if self.world.done() { self.start(State::Idle, self.idle_clip); }
+            return self.advance();
+        }
+        if !self.crouch_held || away {
+            self.start(State::Hug, "BACK06");
+            return self.advance();
+        }
+        if name == "IKOU_B06" && !self.world.done() {
+            return self.advance();
+        }
+        if !self.wall_tall && self.hug_edge == 0.0 {
+            self.hug_edge = self.hug_dir;
+        }
+        if self.wall_tall { self.hug_edge = 0.0; }
+        let moving = side != 0.0 && side != self.hug_edge;
+        if moving { self.hug_dir = side; }
+        let clip = if moving { "ONE06" } else if self.hug_edge != 0.0 { "STOP_B06" } else { "STOP_A06" };
+        if name != clip {
+            self.start(State::Hug, clip);
+        } else if self.world.done() {
+            self.world = World::new(clip);
+        }
+        if moving {
+            let n = self.heading;
+            self.pos[0] += n.cos() * side * super::data::HUG_SPEED * super::DT;
+            self.pos[2] -= n.sin() * side * super::data::HUG_SPEED * super::DT;
         }
         self.advance();
     }

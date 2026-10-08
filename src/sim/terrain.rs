@@ -68,6 +68,12 @@ impl Terrain {
         best
     }
 
+    /// A solid box at least `min_h` tall stands right behind a body at `p` whose wall normal is `n`.
+    pub fn wall_behind(&self, p: [f32; 3], n: [f32; 3], min_h: f32) -> bool {
+        let probe = [p[0] - n[0] * (BODY_RADIUS + 0.05), p[1], p[2] - n[2] * (BODY_RADIUS + 0.05)];
+        self.colliders.iter().any(|b| !b.ramp && b.contains(probe, 0.0) && b.min[1] <= p[1] + SUPPORT_EPS && b.max[1] >= p[1] + min_h)
+    }
+
     /// Resolve a feet-centred upright body; small swept steps prevent tunnelling and allow wall sliding.
     // ponytail: square horizontal bounds approximate the capsule; refine when corner motion is calibrated.
     pub fn move_body(&self, from: [f32; 3], to: [f32; 3], grounded: bool) -> ([f32; 3], Option<[f32; 3]>, bool) {

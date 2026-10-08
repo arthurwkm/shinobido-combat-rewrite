@@ -72,3 +72,6 @@ pub const CAM_LOCK_RATE: f32 = 6.0;
 // (the game's analog threshold is not decoded, PROGRESS M6b).
 pub const STICK_DEAD: f32 = 0.2;
 pub const STICK_WALK: f32 = 0.55;
+// ESTIMATE: wall hug side-step speed (m/s; the 06 clips have no root motion) and the least wall height (m) that allows a hug.
+pub const HUG_SPEED: f32 = 1.0;
+pub const HUG_WALL_MIN: f32 = 2.0;

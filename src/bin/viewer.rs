@@ -116,7 +116,7 @@ fn parse_shot() -> Option<Shot> {
 }
 
 /// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
-/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | yaw <deg>`, `#` comments),
+/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | at <x> <z> | yaw <deg>`, `#` comments),
 /// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
 #[derive(Resource)]
 struct Record {
@@ -150,7 +150,7 @@ fn parse_record() -> Option<Record> {
     })
 }
 
-fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut cam: ResMut<Cam>, mut commands: Commands, mut exit: MessageWriter<AppExit>) {
+fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut cam: ResMut<Cam>, mut sim: ResMut<Sim>, mut commands: Commands, mut exit: MessageWriter<AppExit>) {
     let t = rec.tick;
     for (_, cmd) in rec.script.iter().filter(|s| s.0 == t) {
         let mut w = cmd.split_whitespace();
@@ -161,6 +161,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("lock"), [b]) => i.lock = *b != 0.0,
             (Some("crouch"), [b]) => i.crouch = *b != 0.0,
             (Some("dash"), [b]) => i.dash = *b != 0.0,
+            (Some("at"), [x, z]) => { sim.0.player.pos[0] = *x; sim.0.player.pos[2] = *z; }
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,
             (Some("jump"), _) => i.jump = true,

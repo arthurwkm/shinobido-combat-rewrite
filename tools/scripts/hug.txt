@@ -1,0 +1,8 @@
+# crouch toward the tall wall (z=8), hug, side-step to the wall end (x=-4), peek, leave
+0 at -8 6
+0 crouch 1
+1 stick 0 1
+100 stick 0 0
+160 stick -1 0
+420 stick 0 0
+460 stick 0 -1

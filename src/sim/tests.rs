@@ -782,3 +782,44 @@ fn crouch_holds_walks_and_is_quieter() {
     };
     assert!(heard("WALK_F05") == 0.0 && heard("WALK_F02") > 0.0);
 }
+
+#[test]
+fn wall_hug_enters_slides_peeks_and_leaves() {
+    use super::player::{Player, State};
+    use super::terrain::Terrain;
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [-8.0, 0.0, 6.0];
+    p.crouch_held = true;
+    // walk crouched +z into the tall wall (z 8..8.5)
+    for _ in 0..200 { p.target_heading = 0.0; p.step_on(&t, true, false); }
+    assert_eq!(p.state, State::Hug);
+    assert!((p.heading - (-std::f32::consts::PI)).abs() < 1e-3 || (p.heading - std::f32::consts::PI).abs() < 1e-3, "back to wall, faces -z");
+    for _ in 0..70 { p.step_on(&t, false, false); }
+    assert_eq!(p.world_action(), "STOP_A06");
+    // facing -z, screen-left of the player is +x: stick toward +x
+    let x0 = p.pos[0];
+    for _ in 0..60 { p.target_heading = std::f32::consts::FRAC_PI_2; p.step_on(&t, true, false); }
+    assert!(p.pos[0] > x0 + 0.5, "side-steps along the wall: {}", p.pos[0]);
+    assert_eq!(p.world_action(), "ONE06");
+    for _ in 0..400 { p.step_on(&t, true, false); }
+    assert!(p.pos[0] < -3.5, "stops at the wall end (x=-4): {}", p.pos[0]);
+    assert_eq!(p.world_action(), "STOP_B06");
+    p.target_heading = p.heading; // stick away from the wall
+    p.step_on(&t, true, false);
+    assert_eq!(p.world_action(), "BACK06");
+    for _ in 0..90 { p.step_on(&t, false, false); }
+    assert_eq!(p.state, State::Crouch, "crouch is still held after leaving");
+}
+
+#[test]
+fn low_blocks_do_not_allow_a_hug() {
+    use super::player::{Player, State};
+    use super::terrain::Terrain;
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [2.5, 0.0, 1.0];
+    p.crouch_held = true;
+    for _ in 0..120 { p.target_heading = 0.0; p.step_on(&t, true, false); }
+    assert_ne!(p.state, State::Hug, "crate is 1 m tall");
+}
