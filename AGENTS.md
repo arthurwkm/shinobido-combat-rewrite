@@ -76,6 +76,8 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 
 ## Hand-offs between Claude and Codex
 - Claude orchestrates and commits. Codex works through the `codex:codex-rescue` subagent and does not commit.
+- Always ask for a foreground run (`--wait`): a background job outlives an unattended session and its result is lost.
+- Give Codex one bounded step with its own check ("make `tools/nmt.py --check` pass on all files"), not an open-ended goal.
 - Codex runs on a separate quota: give it the long, token-heavy work (format surveys across many files,
   disassembly reading), then review its diff and run the tests yourself.
 - When usage is near the limit, delegate the remaining step to Codex, or update `PROGRESS.md` and exit.

@@ -4,7 +4,7 @@
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "excludedCommands": [
-      "node *codex-companion.mjs *"
+      "node *codex-companion.mjs* task *"
     ],
     "network": {
       "strictAllowlist": true,
