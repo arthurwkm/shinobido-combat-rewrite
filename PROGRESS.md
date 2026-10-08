@@ -48,7 +48,8 @@ Each item is one feature, as found in the game's action data, with a test.
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- Remaining items all wait on executable lookups (either worker): (1) turn-rate constants for M5 (gravity found, see Log); (2) what triggers each HI_* reaction and the damage use of event type 35 for M6; (3) the walk/run analog threshold. M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download). Nothing else is unblocked.
+- M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download).
+- Not blockers, work for either worker (executable lookups, AGENTS.md method step 2): (1) turn-rate constants for Turning (gravity found, see Log); (2) what triggers each HI_* reaction and the damage use of event type 35; (3) the walk/run analog threshold.
 - (event meanings:) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log
