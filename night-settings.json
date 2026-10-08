@@ -4,7 +4,9 @@
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "excludedCommands": [
-      "node *codex-companion.mjs* task *"
+      "node *codex-companion.mjs* task *",
+      "target/debug/viewer",
+      "target/debug/viewer *"
     ],
     "network": {
       "strictAllowlist": true,

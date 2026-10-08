@@ -83,6 +83,7 @@ Next: one `- [ ]` item per uncovered group, added here by the M8 inventory item 
 
 ## Milestone 11 — Reference-style viewer
 Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compare against `videos/`.
+- [ ] `--shot <path>` flag (AGENTS.md Done means): render a fixed scene for a few frames, save the PNG, exit; options to pick the clip/frame and camera angle. Check: the PNG exists and is not blank.
 - [ ] Sandbox look of `videos/eldenring viewer.mp4`: flat grid ground, grey primitive blocks, lighting, window title; the reference's `src/view` copied and adapted.
 - [ ] Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item; default framing matches the Shinobido clips (behind and above).
 - [ ] Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
@@ -133,4 +134,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: walk/run lookup 3rd attempt (vtable refs, 0x2a6330 registration) failed; re-blocked, flag stays ESTIMATE.
 - 2026-10-08 Claude: owner said go with recommendations; walk/run threshold closed as ESTIMATE (walk flag caller-chosen), Blocker removed. All milestones done.
 - 2026-10-08 Claude: goal refined from the owner's clips: viewer look/HUD/terrain per `videos/eldenring viewer.mp4` and the Shinobido clips (eye awareness icon, ki compass), moveset adds wall run/hug, crouch, carry; player motions span sets 01/02/05/06/27; emulator for attended sessions only (night sandbox blocks screencapture/osascript, tested).
-- 2026-10-08 Claude: night config review: Codex download needs no longer become Blockers (they ended nights early), M9 placeholder is no longer a checkbox, .venv python path, build timeout/no-release rules, viewer cannot run in the night sandbox (no GPU, tested).
+- 2026-10-08 Claude: night config review: Codex download needs no longer become Blockers (they ended nights early), M9 placeholder is no longer a checkbox, .venv python path, build timeout/no-release rules, viewer runs outside the night sandbox via `--shot` (GPU tested), display kept awake.

@@ -75,9 +75,10 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 ## Done means
 - `cargo test -q` passes and `.venv/bin/python tools/compare.py` reports every extracted action within tolerance.
 - Viewer items: `cargo build -q --bin viewer` succeeds and `cargo clippy -q --all-targets` is clean.
-- The night sandbox has no GPU: the viewer cannot run unattended ("Unable to find a GPU"). Keep viewer
-  logic testable in `src/sim/` or plain functions, and end each viewer item's Log line with what the owner
-  should look at when running it.
+- Viewer look: run `target/debug/viewer --shot target/shots/<name>.png` as a plain command (no pipes,
+  `&&` or redirects: only that exact form runs outside the night sandbox, which has no GPU). It must exit
+  by itself after saving. Compare the PNG with frames of `videos/eldenring viewer.mp4` and the Shinobido
+  clips, and name the shot in the item's evidence. Never run the viewer without `--shot`: it never exits.
 - Show evidence: the command you ran and the last lines of its output. Never claim success without it.
 
 ## Loop
