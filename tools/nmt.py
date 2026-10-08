@@ -21,11 +21,10 @@ FPS = 60
 def parse(d):
     h = struct.unpack_from("<5f5I", d)
     m = {"t": h[:5], "flags": h[5:7], "ev_off": h[7], "len_s": h[1], "frames_hdr": round(h[1] * FPS)}
-    p, events = h[7] or 0x28, []
-    if h[7]:
-        while struct.unpack_from("<I", d, p + 4)[0]:
-            events.append(struct.unpack_from("<fIII", d, p))
-            p += 16
+    # Header u16 at +0x1a is the event count (from the executable, docs/formats.md); a type-0 record does not end the list.
+    p = h[7] or 0x28
+    events = [struct.unpack_from("<fIII", d, p + 16 * i) for i in range(struct.unpack_from("<H", d, 0x1A)[0])]
+    p += 16 * len(events)
     m["events"] = events
     m["frames"], m["bones"] = struct.unpack_from("<HH", d, p + 12)
     q, ents = p + 24, []

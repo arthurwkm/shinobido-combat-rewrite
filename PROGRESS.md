@@ -40,12 +40,11 @@ Update this file before stopping every session. Check an item only with evidence
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- Hit / cancel / input windows: `.nmt` event types are unnamed (3/4 and 5/6 look like start/end pairs by arg). Naming them needs
-  the event dispatch in `SCES_539.31` (targeted disassembly, allowed by AGENTS.md method step 2) — not started; do this next.
-  Until then M3's windows, M4 `compare.py` and M5/M6 tests have nothing to compare against.
+- (none hard.) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (4): Codex disassembled the event dispatcher (0x113220); nmt.py now reads the event count from header +0x1a (1356 files tile to EOF, was 1350). Next: extract hit/cancel windows from events into extracted.rs (M3), then M6.
 - 2026-10-07 night (3): run/halt/idle state machine in player.rs. Jump/turn need gravity and turn data (lookups); stopping.
 - 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).

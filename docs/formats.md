@@ -108,3 +108,101 @@ a few Acquire-specific chunks (`0x1b`, `0x1000060`, unread).
   position, 1 root rotation, 2 hips position, 3..23 the 21 `bones` rotations in hierarchy order; counts match, the
   per-bone order is not verified yet).
 - Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale unknown.
+
+## .nmt event consumer — targeted SCES_539.31 lookup (2026-10-07)
+
+Addresses below are **virtual addresses** in the disc's PAL executable. **Confirmed** means
+an instruction/data relationship was checked, not measured in a running game. Gameplay names
+inferred from those relationships are explicitly **hypothesis**. This section supersedes the
+zero-terminated-event and two-u32-flags descriptions above; the existing parser was not changed.
+
+### Loader, count and per-frame dispatch
+
+- **Confirmed:** ELF PT_LOAD maps file offset `0x80` to VA `0x100000` (VA = file offset +
+  `0xfff80`). `motion/` at `0x605ad0` is referenced by the motion-manager constructor
+  `0x176050`; initialization at `0x3255bc` uses `motion/mtnfile.bin` at `0x60d9f0` through
+  `0x12d280`. `0x1762f0` assembles the prefix and indexed filename; `0x176230` calls the
+  NMT initializer `0x175e80`.
+- **Confirmed:** `0x175e98–0x175ea8` relocates nonzero header `+0x1c` by adding the file
+  base. `0x175eac–0x175eb4` adds header `+0x24` to the base to obtain the animation data.
+  Header `+0x1a` is the event count (loaded with signed `lh`), **not flag bits**.
+  The low halfword at `+0x18` remains unnamed. `+0x24` is an animation offset, not merely
+  the second member of a size sum.
+- **Confirmed across all 1441 top-level files:** counted events end at
+  `(events_off or 0x28) + 16 * count`; the animation offset is 8 bytes later in 1429 files,
+  and immediately there in 12. There are no invalid bounds. A type-zero record does **not**
+  terminate runtime traversal: e.g. `SPIN_H25` has later events after type zero. The old
+  parser disagrees with the count on 10 files; `THROW01` has 2 counted events but it reads 9.
+  The apparent sentinel/common-block zeroes are therefore not a reliable event boundary.
+- **Confirmed:** animation object `+0x310` points to the loaded motion wrapper, `+0x318`
+  is the event cursor. Getter `0x177300` returns the next event when
+  `event.time * object[+0x320] <= object[+0x88]`; `0x177370` uses strict `<` instead.
+  Each advances the cursor by 16 and bounds it against `events + count*16`
+  (`0x177330–0x177354`, `0x1773a0–0x1773c4`). These getters do not test event type zero.
+  `0x1773e0` resets/seeks the cursor; `0x1775d0` stores a time multiplier and its reciprocal
+  at `+0x320/+0x324`.
+- **Confirmed:** per-frame loop `0x111c34–0x111c60` repeatedly calls `0x177300` and
+  dispatcher `0x113220`. The latter reads event `+4` at `0x11326c`, checks type `<69`,
+  then jumps through `0x604b50 + 4*type`. After most handlers, `0x114144–0x11414c` forwards
+  the record to motion controller handler `0x1c1110`. Seek/replay path `0x1130c0` uses the
+  strict getter and skips selected one-shot types before forwarding controller events.
+
+### Event meanings
+
+`actor` is the dispatcher's first argument; `controller = actor[+0x448]`. Argument names
+refer to the two raw u32 fields; some handlers reinterpret them as floats or packed halves.
+The table covers every type in `AT_A01` plus the other specifically requested types.
+
+| Type | Handler VA | Meaning and evidence / confidence |
+|---|---|---|
+| 1 | `0x113298` | **Confirmed:** sets actor `+0x280` bit `0x80` and activates selected weapon/body objects. For arg0 `<9`, combines `arg0<<16` with actor `+0x2e4`; arg1 selects a part. Calls `0x1c74e0 → 0x184a20 → 0x158500`, which registers/resets objects through `0x130d40`; arg0 `<8` can also create/register a bone-attached object through `0x1c4510`. **Hypothesis (strong): attack/hit-window open**, with attack mode in arg0 and shape/part selector in arg1. Other arg0 modes take different branches; not a universal boolean. |
+| 2 | `0x11333c` | **Confirmed:** queues the record through `0x118920` (capacity four). Flush `0x118980` calls `0x1c7550 → 0x184b20 → 0x1588b0`, disables the objects through `0x130db0`, removes the temporary object through `0x1c4700`, and clears bit `0x80`. **Hypothesis (strong): attack/hit-window close**, deferred until queue processing rather than immediate at dispatch. |
+| 3 | `0x11395c` / `0x1c1154` | **Confirmed: enable transition to motion ID arg0.** `0x1c12f0` adds an entry to a 16-entry permission list. Arg1 low/high signed 16-bit halves become floats scaled by animation `+0x324`, with a third float zero. Checker `0x1c11e0` / lookup `0x1c13f0` tests the requested target ID; the values feed transition parameters at controller `+0x68/+0x6c` (`0x1c0e24–0x1c0e50`). **Hypothesis:** the exact blend/start-time interpretation of those parameters. |
+| 4 | `0x113984` / `0x1c11a0` | **Confirmed: remove transition permission for motion ID arg0**, through `0x1c1360`. This pairs with type 3, not the hit-shape activation above. |
+| 5 | `0x1139ac` / `0x1c11b0` | **Confirmed: enable transition-category mask arg0**, OR into controller `+0x74`. Checker `0x1c1268–0x1c1288` intersects this with target motion header `+0x14` OR controller `+0x180`, allowing the transition when nonzero. Individual category names remain **hypothesis/unresolved**. |
+| 6 | `0x1139d4` / `0x1c11c0` | **Confirmed: disable transition-category bits arg0**, AND with complement at controller `+0x74`. |
+| 7 | `0x113480` | **Confirmed: effect sub-dispatch**, `0x114430 → 0x1c5340`, indexed by arg0 (16 cases, table `0x606fe0`). **Hypothesis (strong): subtype arg0=1 is footstep/contact feedback**: calls `0x1c5610`, branches on contact state, chooses bone 3/6 using arg1 bit `0x10`, selects an effect/cue using arg1 low nibble and a surface-like byte, and calls `0x119030`. RUN01 uses this subtype at frames 8/23 with arg1 20/4. Type 7 as a whole is **not** synonymous with footstep: subtype 7 calls `0x1c78c0` with arg1 low/high halves. |
+| 13 | `0x113dd4` | **Confirmed:** shared handler with 53; nonnegative arg0 goes to `0x119030`, subject to actor state and arg1 flags. Arg1 bit0 controls retained handle behavior, bit1 can suppress dispatch for actor kind 1. **Hypothesis: character-relative sound/cue playback**, via `0x23f2f0 → 0x2408a0`; exact cue identity unverified, no sound assets decoded. |
+| 18 | `0x113618` | **Confirmed:** calls `0x116fc0`, which changes actor `+0x288` bit8 and calls `0x1c7400(actor[+0x44c],1,-1)` plus `0x1deac0`; counterpart type19 reverses the bit through `0x117040`. **Hypothesis: weapon draw/equip state**; gameplay name unresolved. It is not the type1/2 activation pair. |
+| 22 | `0x11370c` | **Confirmed:** routes arg0/arg1 through actor `+0x458` helpers `0x1e2b90` / `0x1e23f0` (arg1 sign changes branch), optionally notifies actor callback with message `0x1c`. **Hypothesis: equipment/attachment action**; exact meaning unresolved. |
+| 23 | `0x113764` | **Confirmed:** conditionally calls `0x1150b0(actor,0)` when actor `+0x4c0` and `+0x460` bit `0x01000000` are present; fallback calls `0x1e2f10`. **Hypothesis: release/end an attachment or paired interaction**; exact meaning unresolved. |
+| 29 / 30 | `0x113890` / `0x1138a0` | **Confirmed:** set/clear actor `+0x280` bit1. Consumer `0x110330–0x110350` clamps negative actor `+0x314` to zero. **Hypothesis: suspend/resume falling**, not a demonstrated input window. |
+| 31 / 32 | `0x1138b4` / `0x1138cc` | **Confirmed:** set/clear bit `0x4000`; 31 writes constant `1.5` to actor `+0x428` (ignores arg0). Consumers `0x1101c8–0x11022c` and `0x110848–0x11089c` choose movement scale 1.5 or zero from target distance. **Hypothesis: approach-target movement/stop control**, not hit activation. |
+| 33 / 34 | `0x1138e0` / `0x113908` | **Confirmed: facing/turn override enable/disable.** Set/clear bit `0x2000`; 33 stores `float(arg0 bits)*2.0944` at actor `+0x42c`. Target-direction consumers `0x112f54–0x112fa4`, `0x113044–0x113094` pass this to angular turning function `0x10bf80`. Exact gameplay units remain **hypothesis**. |
+| 35 | `0x11391c` | **Confirmed:** stores truncated `u16(arg0)*actor[+0x45c][+0x34]` at `+0x580`, signed upper half of arg0 at `+0x584`, and arg1 at `+0x588`. Values are consumed at `0x10e5d4–0x10e608` and `0x11404c–0x114088`. **Hypothesis: attack strength/damage parameters**, not a window toggle. |
+| 49 / 50 | `0x113c74` / `0x113c84` | **Confirmed:** set/clear bit `0x400`. `0x114f70` uses it to permit assigning actor `+0x468` partner pointer (a force argument can bypass); reciprocal links use `+0x464/+0x468`. **Hypothesis: paired-character/grab receiver permission**, not established as general cancel permission. |
+| 53 | `0x113dd4` | **Confirmed:** identical dispatch target and argument handling to type13. **Hypothesis: sound/cue variant distinguished elsewhere or retained authoring distinction**; dispatcher itself does not distinguish them. |
+
+### AT_A01 interpretation, limitations and checks
+
+- **Confirmed data / hypothesis hit interpretation:** type1 at frame14 and type2 at frame21
+  bracket the attack-object active phase; nominal interval `[14,21)`. Actual end is the deferred
+  queue flush, and collision sampling order was not traced. Do not claim measured hit timing.
+- **Confirmed transition permissions:** types3/4 enable IDs30/31 at frame20 and remove them
+  at frame24; ID34 is enabled at20 and removed at26. In `mtnfile.bin` these are `AT_C01`,
+  `AT_CA01`, `SOCCER01`. Type5 enables mask8 at20, type6 clears it at25; type5 re-enables
+  it at38 and enables mask`0x4000` at40. These are permission windows, **not proof that a
+  raw button press is buffered for the same interval**. Other controller gates still apply.
+- **Confirmed:** type50 is authored at frame64 despite the header length being55. Traversal
+  checks current time, so its presence does not prove it executes during normal playback.
+- **Unresolved / next:** identify mask category names, raw-input buffering, exact collision
+  update order, and the remaining gameplay names above. The bounded lookup found the consumer
+  and transition machinery; it did **not** fully name every event. Correct the count-based parser
+  in a separately authorized step before using events from the ten affected files. No parser,
+  simulation, generated tables, or `PROGRESS.md` edits were made in this docs-only step.
+- **Evidence:** `.venv/bin/python extracted/check_nmt_events.py` checks exact dispatcher words,
+  21 requested jump targets, all 1441 counted bounds, and all 17 distinct `AT_A01` types:
+
+  ```text
+  AT_A01: 24 counted events; 17 types covered; attack markers 14/21 frames
+  OK: 21 dispatch targets match ELF; 1441 counted event bounds valid
+  Animation gaps: {8: 1429, 0: 12}; old sentinel parser disagrees on 10 files
+  ```
+
+Scratch extraction/checks/listings are under ignored `extracted/`; only targeted functions were
+read with rabbitizer's R5900 decoder. No whole-program decompilation or prohibited asset decoding.
+
+Baseline checks (unchanged simulation; these do not validate the new event hypotheses):
+`cargo test -q` → `test result: ok. 5 passed; 0 failed`;
+`.venv/bin/python tools/compare.py` → `105/105 actions within tolerance`.
+`git diff --check` passed; tracked changes are limited to this file. No commit was made.
