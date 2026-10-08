@@ -8,8 +8,7 @@ fn main() {
     println!("cargo:rerun-if-changed={GENERATED}");
     if !Path::new(GENERATED).exists() {
         eprintln!("\n{GENERATED} is missing. It is generated from the game disc; run:\n");
-        eprintln!("    .venv/bin/python tools/volume.py extract 'motion\\'");
-        eprintln!("    .venv/bin/python tools/extract.py\n");
+        eprintln!("    .venv/bin/python tools/setup.py\n");
         std::process::exit(1);
     }
 }

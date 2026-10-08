@@ -22,7 +22,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Milestone 3 — Extraction pipeline
 - [x] (partial: name, frames, raw root keys, raw events; no hit/cancel windows yet, event types unnamed; `cargo test -q` → 3 passed) `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
-- [ ] `tools/setup.py` runs every generator; `build.rs` explains clearly when generated files are missing (as in the reference).
+- [x] (evidence: removed extracted.rs, `cargo build` prints the setup.py hint, `python tools/setup.py` + `cargo test -q` → 3 passed) `tools/setup.py` runs every generator; `build.rs` explains clearly when generated files are missing (as in the reference).
 
 ## Milestone 4 — Simulation skeleton
 - [ ] (Cargo project, build.rs and 3 data tests exist; `World::step` not written) Cargo project without Bevy: `src/sim/` engine-free 60 Hz `World::step`, `cargo test -q` green.
@@ -45,5 +45,5 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
-- 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). Next: event-type dispatch in the executable, then tools/setup.py.
+- 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.
