@@ -126,7 +126,7 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
 ## Milestone 13 — Mannequin characters
 Owner decision 2026-10-08: no textured or skinned game meshes. Characters are reference-style mannequins on
 the game skeleton; the glTF/texture/skin-weight work stays as it is and is not wired into the viewer.
-- [ ] Kagetora mannequin like the reference's: capsule limbs, sphere joints and head, box torso on the game
+- [x] (evidence: `target/debug/viewer --record target/rec/hit --script tools/scripts/hit.txt --every 30 --ticks 240`, `tools/tile.py target/cmp/hit.png "videos/shinobido combat.mov" 11,12,13,14 target/rec/hit 60,90,120,180` -> `target/cmp/hit.png`: capsule limbs, box waist/chest, sphere head, joined at joints, same build in red for the soldier; still differs: clip is dark/textured with a sword, no katana yet (next item); B toggles the bone cuboids) Kagetora mannequin like the reference's: capsule limbs, sphere joints and head, box torso on the game
   bones, limbs joined, proportions roughly as in the clips; the bone cuboids stay behind a debug key.
 - [ ] Katana and scabbard props: find the attach bone; sheathed out of combat and drawn in combat as in the
   clips (no sword in the movement clip, sword low in the right hand in combat); SHEATH01 switches them.
@@ -280,3 +280,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 M12 record: `--record/--script/--every/--ticks` runs one sim tick per rendered frame with scripted pad (format in viewer.rs doc), `tools/tile.py` stacks clip frames over recorded frames.
 - 2026-10-08 M12 pose: FK convention confirmed against rest matrices (no code change needed); poses match clip silhouettes, camera framing/limb thickness left to the visual-audit item.
 - 2026-10-08 Claude: character separation (Fight::separate, half push each, skipped during executions); seen in target/rec/hit/00180.png.
+- 2026-10-08 M13: reverted the uncommitted skinned-mesh viewer experiment (owner decision); mannequin parts (capsule/box/sphere) on both skeletons, B shows cuboids; radii ESTIMATE.

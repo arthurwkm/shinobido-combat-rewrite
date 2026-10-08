@@ -73,6 +73,10 @@ struct Rig;
 #[derive(Component)]
 struct Bone(usize, bool);
 
+/// A mannequin piece (capsule, sphere or box) on the same bone as `Bone(n, foe)`; the cuboids show with B.
+#[derive(Component)]
+struct Part(usize, bool);
+
 /// Floating diamond over the soldier while an execution is available.
 #[derive(Component)]
 struct Cue;
@@ -222,10 +226,30 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
     let body = mats.add(Color::srgb(0.2, 0.2, 0.35));
     if let Some((skel, _)) = &anim.0 {
         let unit = meshes.add(Cuboid::new(0.08, 0.08, 1.0));
-        let foe = mats.add(Color::srgb(0.6, 0.15, 0.12)); // A_BUSHI1 is the red soldier
+        let foe_mat = mats.add(Color::srgb(0.6, 0.15, 0.12)); // A_BUSHI1 is the red soldier
+        let foe = foe_mat.clone();
         for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23)) {
-            commands.spawn((Bone(n, false), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default()));
-            commands.spawn((Bone(n, true), Mesh3d(unit.clone()), MeshMaterial3d(foe.clone()), Transform::default()));
+            commands.spawn((Bone(n, false), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default(), Visibility::Hidden));
+            commands.spawn((Bone(n, true), Mesh3d(unit.clone()), MeshMaterial3d(foe.clone()), Transform::default(), Visibility::Hidden));
+            // Mannequin part: bone length is fixed by the rest offset, so the mesh is built at that length.
+            let o = skel.offset[n];
+            let len = (o[0] * o[0] + o[1] * o[1] + o[2] * o[2]).sqrt().max(0.01);
+            let (mesh, off) = match n {
+                10 => (Sphere::new(0.105).mesh().build(), 0.02), // head, centred a little above the head joint
+                7 | 8 => (Cuboid::new(if n == 7 { 0.26 } else { 0.32 }, 0.2, len).into(), 0.0), // waist and chest
+                _ => {
+                    let r = match n { 1 | 4 => 0.06, 2 | 5 => 0.07, 3 | 6 => 0.055, 9 => 0.04, 11 | 16 => 0.05, 12 | 17 => 0.05, 13 | 18 => 0.045, 14 | 19 => 0.04, _ => 0.035 };
+                    (Capsule3d::new(r, (len - 2.0 * r).max(0.0)).into(), 0.0)
+                }
+            };
+            let mesh = meshes.add(mesh);
+            for (foe, mat) in [(false, &body), (true, &foe_mat)] {
+                // Capsules stand along Y: the child turns them onto the part's Z axis.
+                let turn = if matches!(n, 7 | 8 | 10) { Quat::IDENTITY } else { Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) };
+                commands.spawn((Part(n, foe), Transform::default(), Visibility::Inherited)).with_children(|c| {
+                    c.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(mat.clone()), Transform::from_translation(Vec3::Z * off).with_rotation(turn)));
+                });
+            }
         }
     } else {
         commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(body), Transform::default()));
@@ -425,16 +449,29 @@ fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
 }
 
 /// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
-fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, mut bones: Query<(&Bone, &mut Transform)>) {
+fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), Without<Part>>, mut parts: Query<(&Part, &mut Transform), Without<Bone>>) {
+    if keys.just_pressed(KeyCode::KeyB) {
+        *debug = !*debug;
+    }
     let Some((skel, clips)) = &anim.0 else { return };
     let (p, e) = (&sim.0.player, &sim.0.enemy);
     let rows = [clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)), clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))];
     let joints = rows.map(|r| r.map(|(row, pos, heading)| skel.joints(row).map(|j| Vec3::from(pos) + Quat::from_rotation_y(heading) * Vec3::from(j))));
-    for (Bone(n, foe), mut t) in &mut bones {
-        let Some(joints) = &joints[*foe as usize] else { continue };
-        let (a, b) = (joints[skel.parent[*n].unwrap_or(*n)], joints[*n]);
+    let seg = |joints: &[Vec3; NODES], n: usize| {
+        let (a, b) = (joints[skel.parent[n].unwrap_or(n)], joints[n]);
         let len = a.distance(b).max(1e-3);
-        *t = Transform::from_translation((a + b) / 2.0).looking_to(if len > 1e-3 { b - a } else { Vec3::Z }, Vec3::Y).with_scale(Vec3::new(1.0, 1.0, len));
+        (Transform::from_translation((a + b) / 2.0).looking_to(if len > 1e-3 { b - a } else { Vec3::Z }, Vec3::Y), len)
+    };
+    for (Bone(n, foe), mut t, mut v) in &mut bones {
+        *v = if *debug { Visibility::Inherited } else { Visibility::Hidden };
+        let Some(joints) = &joints[*foe as usize] else { continue };
+        let (tr, len) = seg(joints, *n);
+        *t = tr.with_scale(Vec3::new(1.0, 1.0, len));
+    }
+    for (Part(n, foe), mut t) in &mut parts {
+        if let Some(joints) = &joints[*foe as usize] {
+            *t = seg(joints, *n).0;
+        }
     }
 }
 
