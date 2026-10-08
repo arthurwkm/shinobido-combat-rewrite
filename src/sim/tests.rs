@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_110_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 110);
+fn all_114_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 114);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -366,4 +366,24 @@ fn locomotion_selection_switches_mid_cycle_and_rejects_other_clips() {
     p.idle_clip = "missing";
     for _ in 0..action("HALT01").frames + 1 { p.step(false, false); }
     assert_eq!((p.state, p.world_action()), (State::Idle, "STOP01"));
+}
+
+#[test]
+fn walking_off_a_ledge_plays_fall_then_landing_by_drop_and_ground_jumps_are_actions() {
+    use super::{terrain::{Collider, Terrain}, player::{Player, State}};
+    let terrain = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 5.0, 2.0], false)] };
+    let mut p = Player::new();
+    p.pos = [0.0, 5.0, 1.5];
+    let (mut fell, mut land) = (false, "");
+    for _ in 0..200 {
+        p.step_on(&terrain, true, false);
+        fell |= p.state == State::Fall && p.world_action() == "FALL01";
+        if p.state == State::Land && land.is_empty() { land = p.world_action(); }
+    }
+    assert!(fell);
+    assert_eq!(land, "LAND_A01");
+    let mut p = Player::new();
+    p.special("JUMP_F02");
+    for _ in 0..40 { p.step(false, false); }
+    assert!(p.pos[2] > 3.0 && p.state == State::Idle, "{:?}", p.pos);
 }

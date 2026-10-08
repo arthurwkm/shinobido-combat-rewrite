@@ -16,7 +16,9 @@ pub enum State {
     Dodge,
     /// JUMP01 animation; height from the game's gravity update (jump launch velocity and unit scale are ESTIMATE).
     Jump,
-    /// LAND01 after touching down.
+    /// FALL01 loop while off the ground without a jump (horizontal speed carried from the last grounded frame: ESTIMATE).
+    Fall,
+    /// LAND01 (LAND_B01 / LAND_A01 after longer falls) after touching down.
     Land,
     /// A HI_*01 hit reaction (hypothesis: B/U/C letters are the hit side or height; which one the game picks is ESTIMATE).
     Hit,
@@ -64,6 +66,8 @@ pub struct Player {
     pub target_heading: f32,
     pub wall_normal: Option<[f32; 3]>,
     vy: f32,
+    fall_from: f32,
+    air_vel: [f32; 2],
 }
 
 impl Default for Player {
@@ -74,7 +78,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -82,12 +86,20 @@ impl Player {
         self.step_on(&super::terrain::Terrain::default(), forward, attack);
     }
 
-    /// Advance on shared terrain. Falling keeps the current clip until the falling-motion item.
+    /// Advance on shared terrain. Leaving the ground without a jump plays FALL01, then a landing clip by drop height.
     pub fn step_on(&mut self, terrain: &super::terrain::Terrain, forward: bool, attack: bool) {
         let before = self.pos;
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
         self.step_action(forward, attack);
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
+        if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+            self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
+            self.fall_from = before[1];
+            self.start(State::Fall, "FALL01");
+        } else if self.state == State::Fall {
+            self.pos[0] += self.air_vel[0];
+            self.pos[2] += self.air_vel[1];
+        }
         if !jumping && !grounded {
             self.vy += gravity(self.vy) * super::DT;
             self.pos[1] += self.vy * super::DT * UNIT_M;
@@ -98,7 +110,11 @@ impl Player {
         if ceiling { self.vy = 0.0; }
         if self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
             self.vy = 0.0;
-            if jumping || !grounded { self.start(State::Land, "LAND01"); }
+            if jumping || !grounded {
+                let drop = if self.state == State::Fall { self.fall_from - pos[1] } else { 0.0 };
+                let clip = if drop >= super::data::LAND_A_DROP { "LAND_A01" } else if drop >= super::data::LAND_B_DROP { "LAND_B01" } else { "LAND01" };
+                self.start(State::Land, clip);
+            }
         }
     }
 
@@ -142,6 +158,10 @@ impl Player {
                 self.pos[1] += self.vy * super::DT * UNIT_M;
             }
             return;
+        }
+        if self.state == State::Fall {
+            if self.world.done() { self.start(State::Fall, "FALL01"); }
+            return self.advance();
         }
         if self.state == State::Land {
             if self.world.done() {
