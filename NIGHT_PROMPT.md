@@ -1,7 +1,7 @@
 You are running unattended overnight; the owner is asleep and will read `PROGRESS.md` and `git log`
 in the morning. Follow `AGENTS.md` exactly.
 
-Start by checking health: `cargo test -q`, `cargo clippy -q --all-targets`, `python tools/compare.py`.
+Start by checking health: `cargo test -q`, `cargo clippy -q --all-targets`, `.venv/bin/python tools/compare.py`.
 Anything red is fixed and committed first. Then read `PROGRESS.md` (skip its Log) and only the
 `docs/formats.md` sections your item needs. Work on the first unchecked item: it is one feature.
 Before every commit, review your own `git diff` for bugs and fix them; fix bugs you find in older code

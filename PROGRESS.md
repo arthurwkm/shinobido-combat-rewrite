@@ -71,7 +71,7 @@ Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-o
 
 ## Milestone 9 — Full player moveset in the sim
 - [ ] Static world in the sim (engine-free): boxes and ramps as colliders, ground height, wall contact, ledge detection, falling off edges. Shared with the viewer terrain.
-- [ ] (one item per uncovered group from the M8 inventory, added by that item; e.g. run stop, flips, rolls, jump variants and falling, ledge grab/hang/shimmy/climb, wall actions, stealth movement, jump attacks, remaining attacks, items)
+Next: one `- [ ]` item per uncovered group, added here by the M8 inventory item (e.g. run stop, flips, rolls, jump variants and falling, ledge grab/hang/shimmy/climb, wall actions, stealth movement, jump attacks, remaining attacks, items).
 
 ## Milestone 10 — Enemy and combat interactions
 - [ ] Enemy in the sim: state machine (idle, patrol, alert, attack, guard, hit, death) on its own motions.
@@ -133,3 +133,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: walk/run lookup 3rd attempt (vtable refs, 0x2a6330 registration) failed; re-blocked, flag stays ESTIMATE.
 - 2026-10-08 Claude: owner said go with recommendations; walk/run threshold closed as ESTIMATE (walk flag caller-chosen), Blocker removed. All milestones done.
 - 2026-10-08 Claude: goal refined from the owner's clips: viewer look/HUD/terrain per `videos/eldenring viewer.mp4` and the Shinobido clips (eye awareness icon, ki compass), moveset adds wall run/hug, crouch, carry; player motions span sets 01/02/05/06/27; emulator for attended sessions only (night sandbox blocks screencapture/osascript, tested).
+- 2026-10-08 Claude: night config review: Codex download needs no longer become Blockers (they ended nights early), M9 placeholder is no longer a checkbox, .venv python path, build timeout/no-release rules, viewer cannot run in the night sandbox (no GPU, tested).

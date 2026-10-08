@@ -73,12 +73,15 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Check `df -h .` before large extractions or builds; stop with a Blocker below 5 GB free.
 
 ## Done means
-- `cargo test -q` passes and `python tools/compare.py` reports every extracted action within tolerance.
+- `cargo test -q` passes and `.venv/bin/python tools/compare.py` reports every extracted action within tolerance.
 - Viewer items: `cargo build -q --bin viewer` succeeds and `cargo clippy -q --all-targets` is clean.
+- The night sandbox has no GPU: the viewer cannot run unattended ("Unable to find a GPU"). Keep viewer
+  logic testable in `src/sim/` or plain functions, and end each viewer item's Log line with what the owner
+  should look at when running it.
 - Show evidence: the command you ran and the last lines of its output. Never claim success without it.
 
 ## Loop
-1. Session start: run `cargo test -q`, `cargo clippy -q --all-targets` and `python tools/compare.py`.
+1. Session start: run `cargo test -q`, `cargo clippy -q --all-targets` and `.venv/bin/python tools/compare.py`.
    If anything fails, fixing it is the first job (commit the fix), before any new item.
 2. Read `PROGRESS.md` (skip its Log). Work on the first unchecked item of the current milestone.
    Each checklist item is one feature.
@@ -118,6 +121,8 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
   are committed; documentation describes layouts and may quote a few bytes or values, never whole tables.
 
 ## Token discipline
+- Builds: dev profile only (never `--release`: disk is tight, deps are already optimized). A Bevy rebuild
+  can pass 2 minutes: give such commands a 10-minute timeout instead of retrying them.
 - Quiet commands: `cargo build -q`, `cargo test -q`. Send long output to `target/logs/<name>.log`
   and read only the errors or the tail.
 - Never print whole binary, generated or extracted files. Use `rg`, `head -c`, hex dumps of small
