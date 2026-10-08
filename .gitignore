@@ -7,3 +7,4 @@ __pycache__/
 /extracted/
 /src/sim/extracted.rs
 /assets/*.bin
+/videos/

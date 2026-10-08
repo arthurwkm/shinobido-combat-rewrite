@@ -57,12 +57,50 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 ## Milestone 7 — Viewer
 - [x] (`src/bin/viewer.rs`: capsule at `Player.pos`/`heading`, 60 Hz fixed step, W run, Shift walk, A/D turn, Space attack, G guard; `cargo clippy -q --all-targets` clean, `cargo test -q` → 16 passed; window not run headless, the Bevy build takes ~27 min cold) Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
+## Milestone 8 — Data for the full scope
+Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-on, stealth, reference-style viewer.
+- [ ] Moveset inventory: group every player motion in `docs/player_motions.md` by action (locomotion, run stop, jumps, flips, rolls, attacks, guard, ledge, wall, stealth, items, executions, other) with its sim status; each group not yet in the sim becomes an item in Milestone 9. Check: a tool asserts every player motion is listed exactly once.
+- [ ] Skeleton order: confirm the RWS HAnim bone order against the `.nmt` tracks (currently unverified), e.g. by posing the rest skeleton with IDLE frame 0 and checking bone lengths stay constant across all player clips.
+- [ ] Kagetora model: parse geometry, skin weights and textures of `model\KAGETORA_BODY/HEAD_H/WEAPON.rws` (+ TXD); `tools/model.py` writes a viewer-loadable file (e.g. glTF) to `extracted/`. Check: weights sum to 1, bone indices in range, vertex counts match the RW headers.
+- [ ] Executions: decode `motion\harakiri\*.nmp` (paired player/enemy motions?) and list each execution with its trigger condition (from files, executable or ESTIMATE) in formats.md.
+- [ ] Enemy pick: choose the most common foot soldier; find its model, skeleton and motion set (idle, patrol, alert, attack, guard, hit, death, execution victim). Write the list to `docs/enemy.md`.
+- [ ] Enemy AI data: survey `AI\ActionSet` and `AI\battle` for the chosen enemy (sight/hearing ranges, alert states, attack choice); document in formats.md.
+- [ ] Camera: survey `camera\` for the player follow and lock-on camera parameters (distance, height, FOV, lag); document in formats.md.
+- [ ] Controls: the PS2 button→action mapping (executable pad handling, tutorial/help text in `VOLUME.DAT`, or ESTIMATE); write `docs/controls.md` with gamepad and keyboard/mouse bindings.
+
+## Milestone 9 — Full player moveset in the sim
+- [ ] Static world in the sim (engine-free): boxes and ramps as colliders, ground height, wall contact, ledge detection, falling off edges. Shared with the viewer terrain.
+- [ ] (one item per uncovered group from the M8 inventory, added by that item; e.g. run stop, flips, rolls, jump variants and falling, ledge grab/hang/shimmy/climb, wall actions, stealth movement, jump attacks, remaining attacks, items)
+
+## Milestone 10 — Enemy and combat interactions
+- [ ] Enemy in the sim: state machine (idle, patrol, alert, attack, guard, hit, death) on its own motions.
+- [ ] Hits both ways: player hit windows damage the enemy, enemy attacks trigger player HI_* reactions and guard.
+- [ ] Lock-on: target select/switch/release, strafe locomotion while locked, facing.
+- [ ] Stealth: enemy awareness from sight/sound and alert state, exposed as a stealth meter value.
+- [ ] Execution availability: conditions per execution and the "can execute" cue state.
+- [ ] Executions: every execution from M8 plays paired (alignment, both motions, enemy dies), with a test each.
+
+## Milestone 11 — Reference-style viewer
+Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compare against `videos/`.
+- [ ] Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item.
+- [ ] Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
+- [ ] Terrain: ground, walls, rooftops with ledges, slopes, stairs, cover, built from the sim's static world.
+- [ ] Kagetora's skinned model playing the sim's current clip and frame (fallback: primitive shapes on the game skeleton).
+- [ ] Enemy model and animations; execution cue effect.
+- [ ] HUD: action + frame, speed, health of both, lock-on, stealth meter.
+- [ ] Review pass over the whole viewer and sim: bugs, dead code, duplication; tests green.
+
+## Requests
+Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
+(none)
+
 ## Blockers
 (none)
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
 - (newest first, one line per session)
+- 2026-10-08 owner: goal widened (full moveset, 1 enemy, executions, lock-on, stealth, reference-style viewer with game model); milestones 8-11 added; workers decide instead of asking.
 - 2026-10-08 night (12): Claude added jump/land to Player with ESTIMATE launch velocity/unit scale; 11 tests pass. Left: turning, hit reactions, viewer (Bevy go-ahead).
 - 2026-10-08 night (11): Claude found the gravity update at 0x1102b0 (a=-450 if |vy|>15 else -100-0.4|vy|, vy+=a*dt), in formats.md "Vertical velocity update"; jump launch velocity and unit scale still unknown, no sim change.
 - 2026-10-08 night (10): Claude tried a float-constant scan for gravity (0.98/9.8/0.163 etc.): only hit is a 0.95-1.08 scale table at 0x609fe0, not gravity; blind scan is not viable, need a code-path lookup from the JUMP01 motion id. No code changes; exited.
