@@ -114,9 +114,15 @@ a few Acquire-specific chunks (`0x1b`, `0x1000060`, unread).
 - Frame list: 29 frames (56 B each: 3×3 matrix, position, parent s32, flags); frame 0 is the scene root.
   Each frame's extension holds an HAnim chunk `0x11e`; frame 1 carries the hierarchy: 28 nodes
   `(node id, node index, flags)`, ids 0..27 once each, ids 24..27 are tips (flag 1: both feet and both hands).
-- 28 nodes − 4 tips = 24 animated nodes = the 24 tracks of a `.nmt` (**hypothesis** for the mapping: track 0 root
-  position, 1 root rotation, 2 hips position, 3..23 the 21 `bones` rotations in hierarchy order; counts match, the
-  per-bone order is not verified yet).
+- Each frame's own `0x11e` extension holds its node id (frame→id: 1→23 root, 2→0 hips, 3→7, 4→4, 5→21, 6→1, ...;
+  the hierarchy in frame 1 lists ids in DFS order, so use `rws.frame_ids` + frame parents, not node order).
+  Tree by id: 23 root; 0 hips; legs 1→2→3 (+ tip 24) and 4→5→6 (+ tip 25); spine 7→8; head 9→10; arms 11→12→13→14→15
+  (+ tip 26) and 16→17→18→19→20 (+ tip 27); ids 21→22 hang off the hips (z 2.4 each, tail/scabbard-like, no tracks).
+- `.nmt` track order (**confirmed** by `python tools/rws.py`): track 0 root position, 1 root rotation, 2 hips position,
+  3..23 = rotations of node ids 0..20 in id order (track = id + 3). Evidence: 21 rotation tracks = ids 0..20 (21, 22
+  have none); tracks 18 and 23 (ids 15, 20 = the hands, last of each arm chain) are static (≤2 keys) in ~115 of 128
+  `*01` clips while every other rotation track is static in <10; the id tree's limb chains match the anatomy.
+  Quaternion component order inside a key is still unverified.
 - Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale unknown.
 
 ## .nmt event consumer — targeted SCES_539.31 lookup (2026-10-07)
