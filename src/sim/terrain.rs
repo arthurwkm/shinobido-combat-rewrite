@@ -120,3 +120,27 @@ impl Terrain {
         (p, wall, ceiling)
     }
 }
+
+/// Ramps steeper than this (rise over run) are drawn as stairs by the viewer; the sim still sees a ramp.
+pub const STAIRS_SLOPE: f32 = 0.3;
+
+impl Terrain {
+    /// The viewer sandbox: tall walls with a corner, a tiled-roof building, a slope, stairs,
+    /// a narrow corridor and crates. Sizes are ESTIMATE (from the clips, not the game files).
+    pub fn sandbox() -> Self {
+        let b = |min, max| Collider::new(min, max, false);
+        let colliders = vec![
+            b([-10.0, 0.0, 8.0], [-4.0, 6.0, 8.5]),      // tall wall
+            b([-4.5, 0.0, 8.0], [-4.0, 6.0, 14.0]),      // returns at a corner to peek around
+            b([6.0, 0.0, 6.0], [14.0, 3.5, 14.0]),       // rooftop, high-jump ledge
+            Collider::new([-3.0, 0.0, -10.0], [3.0, 1.0, -4.0], true), // slope
+            Collider::new([8.0, 0.0, -12.0], [10.0, 2.4, -4.0], true), // stairs
+            b([-21.0, 0.0, -20.0], [-20.5, 4.0, -4.0]),  // corridor, 3 m wide
+            b([-17.5, 0.0, -20.0], [-17.0, 4.0, -4.0]),
+            b([2.0, 0.0, 3.0], [3.0, 1.0, 4.0]),         // crates
+            b([3.2, 0.0, 3.0], [4.2, 1.0, 4.0]),
+            b([2.6, 1.0, 3.0], [3.6, 2.0, 4.0]),
+        ];
+        Self { colliders }
+    }
+}

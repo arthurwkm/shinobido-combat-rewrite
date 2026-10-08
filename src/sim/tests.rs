@@ -666,3 +666,15 @@ fn every_execution_plays_paired_and_kills() {
     let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 9.0]));
     assert!(!f.execute());
 }
+
+#[test]
+fn sandbox_terrain_has_roof_slope_stairs_corridor_and_crates() {
+    use super::terrain::Terrain;
+    let t = Terrain::sandbox();
+    assert_eq!(t.ground_height([10.0, 3.5, 10.0]), 3.5);
+    assert!((t.ground_height([0.0, 1.0, -7.0]) - 0.5).abs() < 1e-5);
+    assert!(t.ground_height([9.0, 3.0, -4.1]) > 2.3);
+    assert_eq!(t.ground_height([-19.0, 0.0, -10.0]), 0.0); // corridor floor
+    assert_eq!(t.ground_height([3.1, 2.0, 3.5]), 2.0); // stacked crates
+    assert!(t.ledge([10.0, 0.0, 4.0], [0.0, 1.0], 4.0).is_some()); // roof edge in reach of a high jump
+}

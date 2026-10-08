@@ -8,10 +8,13 @@ use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::player::Player;
-use shinobido_combat_rewrite::sim::terrain::Terrain;
+use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
 
 #[derive(Resource, Default)]
 struct Sim(Player);
+
+#[derive(Resource)]
+struct World(Terrain);
 
 #[derive(Resource, Default)]
 struct Pad(Input);
@@ -67,6 +70,7 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_hz(60.0))
         .insert_resource(ClearColor(Color::srgb(0.07, 0.08, 0.1)))
         .insert_resource(GlobalAmbientLight { brightness: 350.0, ..default() })
+        .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
         .add_systems(Startup, setup)
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
@@ -74,11 +78,44 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>, world: Res<World>) {
     commands.spawn((Camera3d::default(), Transform::default()));
     commands.spawn((DirectionalLight { illuminance: 9000.0, shadow_maps_enabled: true, ..default() }, Transform::default().looking_to(Vec3::new(-0.5, -1.0, 0.35), Vec3::Y)));
     commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(400.0, 400.0))), MeshMaterial3d(mats.add(StandardMaterial { base_color: Color::srgb(0.2, 0.23, 0.2), perceptual_roughness: 0.95, ..default() }))));
+    spawn_terrain(&mut commands, &mut meshes, &mut mats, &world.0);
     commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(mats.add(Color::srgb(0.2, 0.2, 0.35))), Transform::default()));
+}
+
+/// Plain grey blocks; ramps are slabs, or steps (top at each step's low edge) when steeper than `STAIRS_SLOPE`.
+fn spawn_terrain(commands: &mut Commands, meshes: &mut Assets<Mesh>, mats: &mut Assets<StandardMaterial>, terrain: &Terrain) {
+    let grey = mats.add(StandardMaterial { base_color: Color::srgb(0.45, 0.45, 0.47), perceptual_roughness: 0.9, ..default() });
+    let mut block = |commands: &mut Commands, min: Vec3, max: Vec3, rot: Quat| {
+        let size = max - min;
+        commands.spawn((Mesh3d(meshes.add(Cuboid::new(size.x, size.y, size.z))), MeshMaterial3d(grey.clone()), Transform::from_translation((min + max) / 2.0).with_rotation(rot)));
+    };
+    for c in &terrain.colliders {
+        let (min, max) = (Vec3::from(c.min), Vec3::from(c.max));
+        if !c.ramp {
+            block(commands, min, max, Quat::IDENTITY);
+            continue;
+        }
+        let (rise, run) = (max.y - min.y, max.z - min.z);
+        if rise / run > STAIRS_SLOPE {
+            let n = (rise / 0.25).round().max(1.0) as u32;
+            for i in 0..n {
+                let z0 = min.z + run * i as f32 / n as f32;
+                let top = min.y + rise * i as f32 / n as f32;
+                if top > 0.0 {
+                    block(commands, Vec3::new(min.x, 0.0, z0), Vec3::new(max.x, top, z0 + run / n as f32), Quat::IDENTITY);
+                }
+            }
+        } else {
+            let (len, tilt) = (rise.hypot(run), (rise / run).atan());
+            let centre = Vec3::new((min.x + max.x) / 2.0, min.y + rise / 2.0 - 0.05, (min.z + max.z) / 2.0);
+            let half = Vec3::new((max.x - min.x) / 2.0, 0.05, len / 2.0);
+            block(commands, centre - half, centre + half, Quat::from_rotation_x(-tilt));
+        }
+    }
 }
 
 fn shoot(mut commands: Commands, mut shot: ResMut<Shot>, mut exit: MessageWriter<AppExit>) {
@@ -119,8 +156,8 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>) {
-    pad.0.apply(&mut sim.0, &Terrain::default(), cam.0.yaw);
+fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>) {
+    pad.0.apply(&mut sim.0, &world.0, cam.0.yaw);
 }
 
 /// Mouse motion and right stick orbit the camera around the player.
