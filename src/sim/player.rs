@@ -228,6 +228,11 @@ impl Player {
         self.world.action.name
     }
 
+    /// Length in frames of the current clip.
+    pub fn world_len(&self) -> u32 {
+        self.world.action.frames
+    }
+
     /// Frame of the current clip (for posing the rig).
     pub fn world_frame(&self) -> u32 {
         self.world.frame

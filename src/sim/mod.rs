@@ -5,6 +5,7 @@ pub mod extracted;
 pub mod combat;
 pub mod enemy;
 pub mod execution;
+pub mod hud;
 pub mod input;
 pub mod lockon;
 pub mod camera;

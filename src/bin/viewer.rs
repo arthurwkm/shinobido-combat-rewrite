@@ -6,6 +6,7 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
+use shinobido_combat_rewrite::sim::hud::{self, Debug};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
 use shinobido_combat_rewrite::sim::enemy::Enemy;
@@ -31,6 +32,19 @@ struct World(Terrain);
 
 #[derive(Resource, Default)]
 struct Pad(Input);
+
+#[derive(Resource, Default)]
+struct Dbg(Debug);
+
+/// Debug HUD pieces (reference hud.rs layout): bars and log top-left, readout top-right, target bar bottom.
+#[derive(Component)]
+enum Hud {
+    PlayerBar,
+    EnemyBar,
+    Log,
+    Readout,
+}
+
 
 #[derive(Resource, Default)]
 struct Cam(Orbit);
@@ -102,10 +116,11 @@ fn main() {
         .insert_resource(GlobalAmbientLight { brightness: 350.0, ..default() })
         .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
+        .init_resource::<Dbg>()
         .insert_resource(load_anim())
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, setup_hud))
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid).chain())
+        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid, update_hud).chain())
         .run();
 }
 
@@ -199,9 +214,42 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>) {
+fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>) {
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
+    dbg.0.observe(&sim.0);
+}
+
+fn setup_hud(mut commands: Commands) {
+    let font = |size: f32| TextFont { font_size: FontSize::Px(size), ..default() };
+    let back = Color::srgba(0.0, 0.0, 0.0, 0.6);
+    let bar = |commands: &mut Commands, node: Node, kind: Hud, colour: Color| {
+        let outer = commands.spawn((node, BackgroundColor(back))).id();
+        commands.spawn((Node { width: percent(100), height: percent(100), ..default() }, BackgroundColor(colour), kind, ChildOf(outer)));
+    };
+    let abs = |left: Option<Val>, right: Option<Val>, top: Option<Val>, bottom: Option<Val>| Node {
+        position_type: PositionType::Absolute,
+        left: left.unwrap_or(Val::Auto), right: right.unwrap_or(Val::Auto), top: top.unwrap_or(Val::Auto), bottom: bottom.unwrap_or(Val::Auto),
+        ..default()
+    };
+    let red = Color::srgb(0.62, 0.12, 0.1);
+    bar(&mut commands, Node { width: px(240), height: px(11), ..abs(Some(px(28)), None, Some(px(24)), None) }, Hud::PlayerBar, red);
+    commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(44)), None)));
+    commands.spawn((Text::new(""), font(15.0), Hud::Readout, abs(None, Some(px(20)), Some(px(20)), None)));
+    commands.spawn((Text::new("Soldier"), font(18.0), abs(Some(percent(25)), None, None, Some(px(66)))));
+    bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
+}
+
+fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, Option<&mut Text>, Option<&mut Node>)>) {
+    for (kind, text, node) in &mut q {
+        match (kind, text, node) {
+            (Hud::PlayerBar, _, Some(mut n)) => n.width = percent(100.0 * hud::player_bar(&sim.0)),
+            (Hud::EnemyBar, _, Some(mut n)) => n.width = percent(100.0 * hud::enemy_bar(&sim.0)),
+            (Hud::Log, Some(mut t), _) => t.0 = dbg.0.log.join("\n"),
+            (Hud::Readout, Some(mut t), _) => t.0 = dbg.0.readout(&sim.0, &pad.0),
+            _ => {}
+        }
+    }
 }
 
 /// Mouse motion and right stick orbit the camera around the player.
