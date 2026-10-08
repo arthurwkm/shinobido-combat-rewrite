@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 NEAR, WEEK = 90, 80  # percent 5h cutoff, percent weekly cutoff
-POLL_MIN, POLL_MAX = 30, 600  # watchdog seconds: 30 s per percent of headroom left, clamped to this range
+POLL_MIN, POLL_MAX = 30, 300  # watchdog seconds: 300 at 40+ points of headroom, 150 at 10, 30 at 0
 END = float("inf")  # set in main(): a running worker is killed at this time
 CLAUDE = "/Users/arthursantos/.claude/local/claude"
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,6 +41,10 @@ def git(*a):
     return subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True).stdout.strip()
 
 
+def poll_delay(headroom):
+    return min(POLL_MAX, 100 + 5 * headroom) if headroom >= 10 else max(POLL_MIN, 30 + 12 * headroom)
+
+
 def commits():
     return int(git("rev-list", "--count", "HEAD") or 0)
 
@@ -58,7 +62,7 @@ def claude_usage():
     for l in r.stdout.splitlines():
         if '"rate_limit_event"' in l:
             return parse_claude(json.loads(l))
-    return dict(five=100, week=0, reset=time.time() + 1800)  # unknown: assume full, retry in 30 min
+    return dict(five=100, week=0, reset=time.time() + 1800, unknown=True)  # assume full, retry in 30 min
 
 
 def codex_usage():
@@ -79,7 +83,7 @@ def codex_usage():
         log(f"codex usage read failed: {e}")
     finally:
         p.kill()
-    return dict(five=100, week=0, reset=time.time() + 1800)
+    return dict(five=100, week=0, reset=time.time() + 1800, unknown=True)
 
 
 USAGE = {"claude": claude_usage, "codex": codex_usage}
@@ -100,8 +104,10 @@ def run(worker, prompt, seen):
         delay = 60
         while not done.wait(delay):
             u = seen.get("claude") if worker == "claude" else codex_usage()
+            if u and u.get("unknown"):  # a failed read is not evidence of a full window
+                u = None
             if u:
-                delay = min(max(30 * min(NEAR - u["five"], WEEK - u["week"]), POLL_MIN), POLL_MAX)
+                delay = poll_delay(min(NEAR - u["five"], WEEK - u["week"]))
             if time.time() >= END or (u and (u["five"] >= NEAR or u["week"] >= WEEK)):
                 log(f"{worker} stopped: end time or usage limit ({u and (u['five'], u['week'])})")
                 killed.append(1)
