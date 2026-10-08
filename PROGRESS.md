@@ -46,6 +46,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-08 night (10): Claude tried a float-constant scan for gravity (0.98/9.8/0.163 etc.): only hit is a 0.95-1.08 scale table at 0x609fe0, not gravity; blind scan is not viable, need a code-path lookup from the JUMP01 motion id. No code changes; exited.
 - 2026-10-07 night (9): all remaining items blocked on lookups; exited.
 - 2026-10-07 night (8): forward walk from the suffix-02 set. Left: jump/land/turn (need lookups), hit reactions, viewer.
 - 2026-10-07 night (7): evasive steps in Player. Remaining M6: hit reactions (trigger/damage rules unknown). M5: jump/land/turn/walk need lookups.
