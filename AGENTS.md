@@ -6,20 +6,32 @@ tuned by eye, and a playable viewer like the reference project's. **This is not 
 
 In scope:
 - **Kagetora's whole moveset**, each action with the game's own animation: walk, run, run stop,
-  jumps, flips, rolls/evasion, attacks and chains, guard, hit reactions, ledge grab/hang/climb,
-  wall actions, stealth movement, items, and every other player action found in the motion data.
+  jumps (including the high jump onto rooftops), flips, rolls/evasion, attacks and chains, guard,
+  hit reactions, ledge grab/hang/climb, wall run up, wall hug and corner peek, crouch movement,
+  picking up, carrying and throwing crates and bodies, items, and every other player action found
+  in the motion data. The player's motions span several suffix sets (`01`, `02`, `05`, `06`, `27`,
+  reached through the cancel graph), not only `01`.
 - **One enemy** (the most common foot soldier): its own model and motions, a simple AI driven by
   the game's AI files (`AI\`) where readable, attacks that hit the player, hit reactions, death.
 - **Combat interactions**: lock-on (target select, strafing, lock-on camera), hits both ways, guard.
 - **Executions**: every player execution (`motion\harakiri\`, paired player/enemy motions), the
   conditions that allow each, and the visual cue the game shows when an enemy can be executed.
 - **Stealth**: enemy awareness (sight, sound, alert states) and the on-screen stealth meter it drives.
-- **Viewer** (Bevy), like `src/` of the reference: third-person orbit camera with lock-on, controls
-  mapped to the game's PS2 pad layout (gamepad plus keyboard/mouse), a sandbox terrain with what the
-  moveset needs (walls, rooftops with ledges, slopes, stairs, cover), Kagetora's own skinned model
-  from `model\KAGETORA_*.rws` playing the extracted animations (fallback: primitive shapes on the
-  game skeleton, as the reference does), the enemy, and a HUD (action + frame, health, lock-on,
-  stealth meter, execution cue).
+- **Viewer** (Bevy), like `src/` of the reference and its clip `videos/eldenring viewer.mp4`:
+  - Third-person camera behind and above the player, as in the Shinobido clips; orbit with mouse/right
+    stick, lock-on camera. Controls mapped to the game's PS2 pad layout (gamepad plus keyboard/mouse).
+  - Sandbox look of the reference: flat grid ground, plain grey primitive blocks, simple lighting.
+    Terrain holds what the moveset needs: tall walls (wall run, wall hug, corners to peek around),
+    tiled rooftops with ledges reachable by the high jump, stairs, slopes, a narrow walled corridor
+    (the combat clip's arena), and crates to climb, carry and throw.
+  - Kagetora's own skinned model from `model\KAGETORA_*.rws` playing the extracted animations
+    (fallback: primitive shapes on the game skeleton, as the reference's mannequin does), and the
+    enemy's own model.
+  - HUD in two parts. Debug readout like the reference: player bars and a hit log top-left; action,
+    frame/length, speed, height, lock-on and queued input top-right; target name and health bar at the
+    bottom. Game HUD like the Shinobido clips: health bar top-left, the eye awareness icon top-centre
+    (its colour shows the alert state, the bar under it is the stealth meter), the ki compass top-right
+    pointing at enemies, and the execution cue.
 
 Out of scope: other enemy types, bosses, missions, story, cutscenes, full game stages, sound, menus.
 
@@ -40,10 +52,14 @@ What is known about it is in `docs/formats.md`; read it before any format work a
    (e.g. run speed, gravity, cancel rules, sight range). Find it by searching for the float constant, or for code
    that references a known string/file name, with `rabbitizer`/`spimdisasm` (installed in `.venv`).
    Disassemble only the functions you need; write findings to `docs/formats.md` with addresses.
-3. **Gameplay videos in `videos/`** (owner-supplied), for what only shows on screen: which animation
-   plays for an input, camera behaviour, effects, HUD. Read frames with `ffmpeg` into `target/` and look
-   at small tiles; never commit videos or frames. Do not run the emulator. If a clip would settle
-   something, add it under Requests in `PROGRESS.md` and continue with an `ESTIMATE` meanwhile.
+3. **Gameplay videos in `videos/`** (owner-supplied: `shinobido movement/combat/stealth.mov`, 60 fps), for
+   what only shows on screen: which animation plays for an input, camera behaviour, effects, HUD. Read
+   frames with `ffmpeg` into `target/` and look at small tiles; never commit videos or frames.
+   The emulator (owner's PCSX2 at `~/Downloads/PCSX2-v2.6.3.app`, booted with this folder's ISO) may be
+   run to look at the game: focus it and send pad keys with `osascript` (System Events), capture with
+   `screencapture -x` into `target/` (or `-v` for a short clip). Never change its settings, BIOS or
+   memory cards; it renders with Metal, which has crashed once on window teardown, so relaunch if it dies. If a capture fails or the game needs input you cannot send, do not retry
+   blindly: add a Request in `PROGRESS.md` and continue with an `ESTIMATE` meanwhile.
 4. **`ESTIMATE`** in `src/sim/data.rs`, with a one-line reason.
 
 Not allowed: whole-program decompilation, splat/matching-decomp projects, m2c, decoding `ACQ.BIN`,

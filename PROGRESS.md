@@ -59,13 +59,14 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 
 ## Milestone 8 — Data for the full scope
 Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-on, stealth, reference-style viewer.
-- [ ] Moveset inventory: group every player motion in `docs/player_motions.md` by action (locomotion, run stop, jumps, flips, rolls, attacks, guard, ledge, wall, stealth, items, executions, other) with its sim status; each group not yet in the sim becomes an item in Milestone 9. Check: a tool asserts every player motion is listed exactly once.
+- [ ] Moveset inventory: group every player motion in `docs/player_motions.md` by action (locomotion, run stop, jumps, flips, rolls, attacks, guard, ledge, wall, stealth, items, executions, other) with its sim status; each group not yet in the sim becomes an item in Milestone 9. The player set is wider than suffix `01`: following type-3 cancel targets from the `01` motions reaches sets `02` (walk, jumps), `06` (wall hug, hang, climb), `05` (STOP_ABU/IKOU_B/SHEATH_BU, and the set holds crouch `_S`, dash `_D`, carry `_K`, hug `_H` variants) and `27` (KICK/FUTO); decide per set whether it is the player's and record why in formats.md. Check: a tool asserts every player motion is listed exactly once.
 - [ ] Skeleton order: confirm the RWS HAnim bone order against the `.nmt` tracks (currently unverified), e.g. by posing the rest skeleton with IDLE frame 0 and checking bone lengths stay constant across all player clips.
 - [ ] Kagetora model: parse geometry, skin weights and textures of `model\KAGETORA_BODY/HEAD_H/WEAPON.rws` (+ TXD); `tools/model.py` writes a viewer-loadable file (e.g. glTF) to `extracted/`. Check: weights sum to 1, bone indices in range, vertex counts match the RW headers.
 - [ ] Executions: decode `motion\harakiri\*.nmp` (paired player/enemy motions?) and list each execution with its trigger condition (from files, executable or ESTIMATE) in formats.md.
 - [ ] Enemy pick: choose the most common foot soldier; find its model, skeleton and motion set (idle, patrol, alert, attack, guard, hit, death, execution victim). Write the list to `docs/enemy.md`.
 - [ ] Enemy AI data: survey `AI\ActionSet` and `AI\battle` for the chosen enemy (sight/hearing ranges, alert states, attack choice); document in formats.md.
 - [ ] Camera: survey `camera\` for the player follow and lock-on camera parameters (distance, height, FOV, lag); document in formats.md.
+- [ ] Video catalogue: `docs/video_notes.md`, one line per action seen in `videos/shinobido *.mov` (timestamp, action, matching motion name, camera and HUD state); fill gaps with short emulator captures (AGENTS.md method 3). Feeds the Milestone 9 items, the camera and the HUD.
 - [ ] Controls: the PS2 button→action mapping (executable pad handling, tutorial/help text in `VOLUME.DAT`, or ESTIMATE); write `docs/controls.md` with gamepad and keyboard/mouse bindings.
 
 ## Milestone 9 — Full player moveset in the sim
@@ -82,17 +83,20 @@ Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-o
 
 ## Milestone 11 — Reference-style viewer
 Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compare against `videos/`.
-- [ ] Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item.
+- [ ] Sandbox look of `videos/eldenring viewer.mp4`: flat grid ground, grey primitive blocks, lighting, window title; the reference's `src/view` copied and adapted.
+- [ ] Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item; default framing matches the Shinobido clips (behind and above).
 - [ ] Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
-- [ ] Terrain: ground, walls, rooftops with ledges, slopes, stairs, cover, built from the sim's static world.
+- [ ] Terrain: tall walls, rooftops with ledges, stairs, slopes, a narrow walled corridor, crates, built from the sim's static world.
 - [ ] Kagetora's skinned model playing the sim's current clip and frame (fallback: primitive shapes on the game skeleton).
 - [ ] Enemy model and animations; execution cue effect.
-- [ ] HUD: action + frame, speed, health of both, lock-on, stealth meter.
+- [ ] Debug HUD like the reference: player bars and hit log top-left; action, frame/length, speed, height, lock-on, queued input top-right; target name and health bar at the bottom.
+- [ ] Game HUD like the Shinobido clips: health bar top-left, eye awareness icon (alert colour + stealth meter bar) top-centre, ki compass top-right pointing at enemies, execution cue.
 - [ ] Review pass over the whole viewer and sim: bugs, dead code, duplication; tests green.
 
 ## Requests
 Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
-(none)
+- Lock-on in use (target switch, strafing) and guard against an attack: not in the current clips.
+- A stealth kill from behind and one from above, showing the cue before the input.
 
 ## Blockers
 (none)
@@ -128,3 +132,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: owner skipped HI_* and input buffering (items closed); walk/run lookup failed again, blocked.
 - 2026-10-08 Claude: walk/run lookup 3rd attempt (vtable refs, 0x2a6330 registration) failed; re-blocked, flag stays ESTIMATE.
 - 2026-10-08 Claude: owner said go with recommendations; walk/run threshold closed as ESTIMATE (walk flag caller-chosen), Blocker removed. All milestones done.
+- 2026-10-08 Claude: goal refined from the owner's clips: viewer look/HUD/terrain per `videos/eldenring viewer.mp4` and the Shinobido clips (eye awareness icon, ki compass), moveset adds wall run/hug, crouch, carry; player motions span sets 01/02/05/06/27; emulator allowed for observation (PCSX2, screencapture + osascript verified).
