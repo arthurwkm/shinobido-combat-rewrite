@@ -37,6 +37,26 @@ def geometries(d):
     return out
 
 
+def materials(d):
+    """Per geometry, the texture name of each material (None when untextured): material list 0x8 -> 0x7 -> texture 0x6 -> name 0x2."""
+    clump = next(p for t, _, _, p in chunks(d) if t == 0x10)
+    gl = next((s, p) for t, s, _, p in chunks(d, clump + 12) if t == 0x1A)
+    out = []
+    for t, s, _, p in chunks(d, gl[1] + 12, gl[1] + 12 + gl[0]):
+        if t != 0x0F:
+            continue
+        names = []
+        for t2, s2, _, p2 in chunks(d, p + 12, p + 12 + s):
+            if t2 == 0x08:
+                for t3, s3, _, p3 in chunks(d, p2 + 12, p2 + 12 + s2):
+                    if t3 == 0x07:
+                        tex = next((q for t4, _, _, q in chunks(d, p3 + 12, p3 + 12 + s3) if t4 == 0x06), None)
+                        name = next((q for t5, _, _, q in chunks(d, tex + 12, tex + 12 + struct.unpack_from("<I", d, tex + 4)[0]) if t5 == 0x02), None) if tex else None
+                        names.append(d[name + 12 : name + 28].split(b"\0")[0].decode() if name else None)
+        out.append(names)
+    return out
+
+
 def packets(b):
     """Vertex packets of one native block: each is (count, {pos, uv, v4b, v3b} lists of tuples)."""
     out, i = [], 0
@@ -86,7 +106,8 @@ def build(d):
     par, off, _ = skeleton(d)
     ids = frame_ids(d)
     prims = []
-    for g, meshes, native, skin in geometries(d):
+    mats = materials(d)
+    for gi, (g, meshes, native, skin) in enumerate(geometries(d)):
         nb, used, ibm, nid = skin_info(d, skin)
         pos = [bone_pos(m) for m in ibm]
         parent = {ids[f]: ids[par[f]] for f in range(1, len(ids)) if par[f] > 0}
@@ -110,13 +131,13 @@ def build(d):
                 if len({v[0] for v in t}) == 3:
                     tris.append(t if i % 2 == 0 else [t[1], t[0], t[2]])
             joints = [min(segs, key=lambda s: seg_dist(v[0], s[1], s[2]))[0] for v in vs]
-            prims.append({"material": mat, "verts": vs, "joints": joints, "tris": tris})
+            prims.append({"material": mat, "texture": mats[gi][mat], "verts": vs, "joints": joints, "tris": tris})
         assert k == len(pk)
     return prims
 
 
-def write_gltf(d, path):
-    """glTF 2.0 with the skin (every node of the HAnim list is a joint), one primitive per RW mesh (material index in `extras`), no textures yet."""
+def write_gltf(d, path, part):
+    """glTF 2.0 with the skin (every node of the HAnim list is a joint), one primitive per RW mesh (material index in `extras`), materials by texture name (PNGs from tools/texture.py)."""
     import json
 
     prims = build(d)
@@ -145,7 +166,7 @@ def write_gltf(d, path):
             jn[ids[par[f]]].setdefault("children", []).append(ids[f])
     root = ids[1]
     ibm_acc = add(b"".join(struct.pack("<16f", *[*by_id[i][:3], 0, *by_id[i][4:7], 0, *by_id[i][8:11], 0, *by_id[i][12:15], 1]) for i in range(nb)), 5126, nb, "MAT4")
-    meshes = []
+    meshes, tex_ids = [], {}
     for p in prims:
         vs = [v for t in p["tris"] for v in t]
         n = len(vs)
@@ -160,7 +181,9 @@ def write_gltf(d, path):
             "JOINTS_0": add(b"".join(struct.pack("<4B", jmap[v[0]], 0, 0, 0) for v in vs), 5121, n, "VEC4", 34962),
             "WEIGHTS_0": add(struct.pack("<4f", 1, 0, 0, 0) * n, 5126, n, "VEC4", 34962),
         }
-        meshes.append({"primitives": [{"attributes": attrs, "mode": 4, "extras": {"material": p["material"]}}]})
+        if p["texture"] not in tex_ids:
+            tex_ids[p["texture"]] = len(tex_ids)
+        meshes.append({"primitives": [{"attributes": attrs, "mode": 4, "material": tex_ids[p["texture"]], "extras": {"material": p["material"]}}]})
     nodes_out = jn + [{"mesh": i, "skin": 0} for i in range(len(meshes))]
     g = {
         "asset": {"version": "2.0", "generator": "tools/model.py"},
@@ -169,6 +192,9 @@ def write_gltf(d, path):
         "nodes": nodes_out,
         "skins": [{"joints": list(range(nb)), "inverseBindMatrices": ibm_acc, "skeleton": root}],
         "meshes": meshes,
+        "materials": [{"name": str(n), "pbrMetallicRoughness": {"baseColorTexture": {"index": i}, "metallicFactor": 0}, "alphaMode": "MASK"} for n, i in tex_ids.items()],
+        "textures": [{"source": i} for i in tex_ids.values()],
+        "images": [{"uri": f"../textures/{part}/{n}.png"} for n in tex_ids],
         "accessors": acc,
         "bufferViews": views,
         "buffers": [{"uri": path.name.replace(".gltf", ".bin"), "byteLength": len(blob)}],
@@ -206,5 +232,5 @@ if __name__ == "__main__":
     for part in ("BODY", "HEAD_H", "HEAD_L", "WEAPON"):
         d = (MODEL / f"KAGETORA_{part}.rws").read_bytes()
         check(d)
-        write_gltf(d, out / f"kagetora_{part.lower()}.gltf")
+        write_gltf(d, out / f"kagetora_{part.lower()}.gltf", part.lower())
     print("ok: geometry strips give the RW triangle counts, normals unit length, skin matrices match HAnim bone lengths (body, heads, weapon)")

@@ -152,7 +152,29 @@ the strip/triangle-count check passes on each. HEAD_H: 3 geometries (42, 42, 584
 HAnim skeleton (face/hair bones); HEAD_L: 3 geometries (42, 42, 568 tris), 3 nodes; WEAPON: 1 geometry (166 tris), 2 nodes.
 Each part has its own root frame; head files place frame 0 at y 15.3 / z 0.22 (model units, hypothesis: attach point on the
 body's head bone, bone 9 = head per id tree), the weapon at the origin (attach to a hand bone: unknown, hypothesis hand 15/20).
-Skin weights are missing here too (same rigid ESTIMATE). Texture dictionaries (`0x16`, native `0x15` textures) not yet decoded.
+Skin weights are missing here too (same rigid ESTIMATE). `tools/model.py` also resolves each material to its texture
+name (material list `0x08` → `0x07` → texture `0x06` → name `0x02`) and writes glTF materials pointing at the PNGs.
+
+### PS2 native textures (`0x16` dictionary, native `0x15`) — `python tools/texture.py` (2026-10-08)
+
+32 textures in BODY (16 + 1 duplicate), HEAD_H (7), HEAD_L (6), WEAPON (2; the second, `kagetpra_env`, is an environment map).
+- Chunk `0x15`: `0x01` (8 B: `'PS2\0'`, filter/addressing) · `0x02` name (16 B) · `0x02` mask name (4 B) · `0x01` data · `0x03` ext.
+  Data struct = chunk header + 64-byte raster header (u32 `width, height, depth (4|8), rasterFormat (0x2x504 = 8888 palette),
+  tex0 lo/hi, tex1 lo/hi, miptbp1 lo/hi, miptbp2 lo/hi, texelBytes, paletteBytes, gpuAligned, skyMip`) then a second chunk header
+  and the two GS upload packets back to back: texels (`texelBytes`) then palette (`paletteBytes`). Each packet = GIF tag
+  (NLOOP 3, A+D) · regs TRXPOS 0x51, TRXREG 0x52, TRXDIR 0x53 · IMAGE tag (NLOOP = data/16) · data; header 80 B.
+  **Confirmed**: `texelBytes` = w·h·depth/8 + 80 (4-bit rows padded to 32 px) and tex0 PSM = 0x13 (PSMT8) / 0x14 (PSMT4).
+  tex0 TBP/TBW and TRXREG sizes do not describe the data (TBW is 2 everywhere; TRXREG is w/2×h/2 even for 4-bit): ignored.
+- Texels are the raster of a PSMCT32 rect uploaded into GS memory and then read as PSMT8/PSMT4 (the usual swizzle trick).
+  Decoding replays GS addressing (block tables, 8x8-word / 16x16-byte / 32x16-nibble column tables, page = 64x32 / 128x64 / 128x128).
+  **Confirmed** for all 32 textures: the set of GS words written by a rect of some width (8..128) equals exactly the set of words
+  the texture reads. The 8-bit pictures (face, cloth, armour mesh, weapon) come out as coherent images, which confirms the
+  8-bit tables and block order. **4-bit hypothesis**: same structure, column table by analogy, coverage exact, but dithered
+  skin textures (`Goh_hand`) look noisy and the in-block order is not independently confirmed.
+- Palette: 8-bit = 256 words with entries 8..15 and 16..23 of every 32 swapped (CSM1; **confirmed**: face/cloth smoothness
+  8.5/4.3 vs 31/26 unswapped); 4-bit = first 16 words in file order (hypothesis). RGBA bytes, alpha 0..0x80 (×2 for PNG).
+- Output: `extracted/textures/<part>/<name>.png`; `kagetora_tazuna0` appears twice in BODY (same name, different image: the
+  second overwrites the first in the output dir; materials resolve by name so the viewer needs per-material order if it matters).
 
 ## .nmt event consumer — targeted SCES_539.31 lookup (2026-10-07)
 
