@@ -458,6 +458,7 @@ fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
 }
 
 /// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
+#[allow(clippy::too_many_arguments)]
 fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>, pad: Res<Pad>, aware: Res<Aware>, mut drawn: Local<bool>) {
     if keys.just_pressed(KeyCode::KeyB) {
         *debug = !*debug;
