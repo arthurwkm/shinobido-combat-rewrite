@@ -259,3 +259,19 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
 - Mask args used by type 5: `0x4000` (after AT_A01 at f40, AT_E01, SOCCER01, LAND01…: allows jump-like motions), `0x200`/`0x400` (JUMP01, FALL01, KABE/TRI_J01), `0x20` (CLIMB_B01, MAKURI_H01), `0x100`, `0x40000000` (SHEATH01).
 - Mask `0x8` (all attack chains) and `0x4` (DRINK01) match **no** player header word, so they must hit the controller word `+0x180` instead (**hypothesis**: attack-chain/“combo” permission, set elsewhere).
 - Names stay **hypothesis**: `0x20000` attack, `0x80` hit reaction, `0x4000` air/jump, `0x8000`/`0x40000000` ground locomotion.
+
+## Input buffering — partial executable lookup (2026-10-08)
+
+- **Confirmed (code read):** the motion controller keeps **no input buffer**. Request function
+  `0x1c0d90` (and `0x1c0e70`) calls the permission checker `0x1c11e0`; on success it stores the
+  target in controller `+0x64` with start/blend floats at `+0x68/+0x6c`, clears flags `0x3000` at
+  `+0x70`. `0x1c0c70` applies it in the same update: starts the motion, `+0x60 = +0x64`,
+  `+0x64 = -1`, zeroes `+0x74` (category mask), `+0x180`, `+0x178` (permission count). A refused
+  request returns 0 and leaves nothing pending. Checker order (`0x1c1228–0x1c1288`): pending id
+  `+0x64` equal to target → -1; `+0x70` bit `0x2000` or `0x1000` → 1; else category test
+  (`+0x74 & (target header +0x14 | +0x180)`), else permission-list lookup `0x1c13f0`.
+- **Confirmed:** actor-level wrapper `0x10cb30(actor, slot)` maps an action slot through the
+  `actor+0x2f0` halfword table to a motion ID and calls `0x1c11e0` (a pure "may I" test); ~40
+  callers (`0x15cdc4`, `0x15e02c`, `0x29a2a8`, `0x381e20`, …). Generic start helper `0x10c900(actor, slot, start)`.
+- **Unresolved:** any press-hold/timer buffering lives in the player input struct (`actor+0x450`,
+  fields seen `+0x5e0`, `+0x614`, `+0x690`, `+0x734/+0x738`), not traced.

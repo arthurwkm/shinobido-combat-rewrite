@@ -52,12 +52,13 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
 - [ ] Walk/run analog threshold. (BLOCKED, see Blockers)
 - [x] (formats.md "Transition-category bits"; `python tools/categories.py` → `ok`; names are hypotheses, masks 0x4/0x8 match no header so go via controller +0x180; not wired into sim) Mask category names (event types 5/6).
-- [ ] Input buffering rules.
+- [ ] Input buffering rules. (BLOCKED, see Blockers)
 
 ## Milestone 7 — Viewer
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
+- Input buffering lookup: controller has none (formats.md, "Input buffering"); player input struct at actor +0x450 is untraced. Continue by tracing the writers of +0x5e0/+0x614 (pad edge/timer fields), or skip? Owner: reply `skip` or `continue`.
 - Walk/run analog threshold lookup failed 3 ways (formats.md, "Walk/run analog threshold"); continue by finding the actor state-setter helper and its run/walk callers, or skip? Owner: reply `skip` or `continue`.
 - HI_* trigger lookup failed 3 ways (formats.md, "HI_* reaction trigger"); continue by tracing writers of actor +0x2e4 states 0x23–0x2D from 0x1bfe40, or skip this item? Owner: reply `skip` or `continue`.
 
@@ -86,3 +87,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: event type 35 damage formula documented and wired (hit_damage); 6b damage item done.
 - 2026-10-08: walk/run analog threshold lookup failed 3 ways; blocked.
 - 2026-10-08 Claude: mask category bits tabulated empirically (tools/categories.py); 6b mask item done.
+- 2026-10-08 Claude: input buffering lookup blocked; controller has no buffer, player input struct untraced.
