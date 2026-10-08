@@ -278,3 +278,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 M11 enemy: soldier drawn as red bones (primitive fallback, own model deferred), viewer runs Fight; cue is a diamond; execute key left for the HUD/input pass (ESTIMATE: placement 6 m ahead); look unverified (no GPU).
 - 2026-10-08 M11 debug HUD: text/log/bars built engine-free in sim::hud (testable), viewer only draws; speed = per-tick horizontal delta, hit log from hp drops, lock-on line shows the guard/R1 hold until LockOn is wired.
 - 2026-10-08 M12 record: `--record/--script/--every/--ticks` runs one sim tick per rendered frame with scripted pad (format in viewer.rs doc), `tools/tile.py` stacks clip frames over recorded frames.
+- 2026-10-08 M12 pose: FK convention confirmed against rest matrices (no code change needed); poses match clip silhouettes, camera framing/limb thickness left to the visual-audit item.
