@@ -41,7 +41,7 @@ const TAKEOFF_FRAME: u32 = 5;
 
 /// Ground turn rate, rad/s (2.5 pi). From the executable's turn function 0x10bf80, default-state branch (0x10c1f4);
 /// other states use other rates (formats.md). Which branch applies to which action is not decoded: locomotion only.
-const TURN_RATE: f32 = 7.853_981_6;
+pub const TURN_RATE: f32 = 7.853_981_6;
 
 /// Idle / run / halt on top of `World`. ESTIMATE: the transitions (release while running plays HALT01 once, then
 /// idle; pressing forward during HALT01 interrupts it) are guessed; the motions and root motion are from the files.

@@ -14,3 +14,10 @@ pub const IDLE_CLIPS: &[&str] = &["STOP01", "STOP02", "TIRED01"];
 // ESTIMATE: fall drop (m) from which the landing clip is LAND_B01 / LAND_A01 instead of LAND01; no decoded rule.
 pub const LAND_B_DROP: f32 = 1.5;
 pub const LAND_A_DROP: f32 = 4.0;
+
+// ESTIMATE: BLADE07 carries no attack events (nor does any set-07 motion); swing active window in frames, mid-clip.
+pub const ENEMY_ATTACK_HIT: (u32, u32) = (40, 60);
+// ESTIMATE: distance (m) at which a chasing soldier starts BLADE07.
+pub const ENEMY_ATTACK_RANGE: f32 = 1.5;
+// ESTIMATE: soldier hit points; the executable's health values were not looked up.
+pub const ENEMY_HP: i32 = 100;

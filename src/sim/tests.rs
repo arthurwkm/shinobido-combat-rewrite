@@ -20,7 +20,7 @@ fn run_footsteps_are_frames_8_and_23() {
 
 #[test]
 fn all_133_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 133);
+    assert_eq!(ACTIONS.iter().filter(|a| !a.name.ends_with("07")).count(), 133);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -484,4 +484,49 @@ fn talk_and_idle_extras_play_once_then_idle() {
         p.step(false, false);
         assert_eq!(p.state, State::Idle, "{name}");
     }
+}
+
+#[test]
+fn enemy_notices_chases_attacks_and_dies() {
+    use super::enemy::{Enemy, State};
+    let mut e = Enemy::new([0.0, 0.0, 5.0]);
+    let player = [0.0; 3];
+    e.step(player);
+    assert_eq!((e.state, e.action()), (State::Idle, "STOP07"));
+    e.alert();
+    assert_eq!(e.action(), "SURP07");
+    for _ in 0..40 { e.step(player); }
+    assert_eq!(e.state, State::Chase);
+    // facing the player (-z), RUN07 closes the distance until the swing starts
+    let mut swung = false;
+    for _ in 0..600 {
+        e.step(player);
+        swung |= e.state == State::Attack;
+        if e.attack_active() { break; }
+    }
+    assert!(swung && e.attack_active());
+    assert!(e.pos[2] < 5.0 && e.pos[2] > 0.5, "{:?}", e.pos);
+    e.hit("HI_BS07", 30);
+    assert_eq!((e.state, e.hp, e.action()), (State::Hit, 70, "HI_BS07"));
+    e.hit("HI_BS07", 100);
+    assert_eq!((e.state, e.hp, e.action()), (State::Dead, 0, "DIE_A07"));
+    for _ in 0..400 { e.step(player); }
+    assert_eq!(e.state, State::Dead);
+}
+
+#[test]
+fn enemy_guard_blocks_damage_and_patrol_loops() {
+    use super::enemy::{Enemy, State};
+    let mut e = Enemy::new([0.0; 3]);
+    e.guard_held = true;
+    e.step([0.0, 0.0, 9.0]);
+    assert_eq!(e.state, State::Guard);
+    e.hit("HI_BS07", 50);
+    assert_eq!(e.hp, super::data::ENEMY_HP);
+    e.guard_held = false;
+    e.step([0.0, 0.0, 9.0]);
+    assert_eq!(e.state, State::Idle);
+    e.patrol();
+    for _ in 0..200 { e.step([0.0, 0.0, 9.0]); }
+    assert_eq!((e.state, e.action()), (State::Patrol, "WALK_A07"));
 }
