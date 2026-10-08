@@ -46,6 +46,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-08 night (11): Claude found the gravity update at 0x1102b0 (a=-450 if |vy|>15 else -100-0.4|vy|, vy+=a*dt), in formats.md "Vertical velocity update"; jump launch velocity and unit scale still unknown, no sim change.
 - 2026-10-08 night (10): Claude tried a float-constant scan for gravity (0.98/9.8/0.163 etc.): only hit is a 0.95-1.08 scale table at 0x609fe0, not gravity; blind scan is not viable, need a code-path lookup from the JUMP01 motion id. No code changes; exited.
 - 2026-10-07 night (9): all remaining items blocked on lookups; exited.
 - 2026-10-07 night (8): forward walk from the suffix-02 set. Left: jump/land/turn (need lookups), hit reactions, viewer.
