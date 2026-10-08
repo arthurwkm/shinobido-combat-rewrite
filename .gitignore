@@ -1,0 +1,9 @@
+/target
+/.venv/
+__pycache__/
+# The game disc and everything derived from it: regenerate locally, never commit.
+*.iso
+*.ISO
+/extracted/
+/src/sim/extracted.rs
+/assets/*.bin

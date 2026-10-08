@@ -1,0 +1,7 @@
+# Unattended runs: work inside this folder only, never stop to ask, no network.
+# The Claude plugin passes read-only or workspace-write per task; these are the defaults otherwise.
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false

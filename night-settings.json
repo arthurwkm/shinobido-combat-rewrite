@@ -1,0 +1,70 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [
+      "node *codex-companion.mjs *"
+    ],
+    "network": {
+      "strictAllowlist": true,
+      "allowedDomains": [
+        "crates.io",
+        "index.crates.io",
+        "static.crates.io",
+        "pypi.org",
+        "files.pythonhosted.org"
+      ]
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/.cargo/registry",
+        "~/.cargo/git",
+        "~/Library/Caches/pip"
+      ],
+      "denyWrite": [
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/.claude",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/.codex",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/night-settings.json",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/night.sh",
+        "//Users/arthursantos/arthurwkm_workspace/ELDEN-RING-Combat-Rewrite",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/AGENTS.md",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/NIGHT_PROMPT.md",
+        "//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/CLAUDE.md"
+      ],
+      "denyRead": [
+        "~/.ssh",
+        "~/.aws",
+        "~/.config/gh",
+        "~/.codex/auth.json",
+        "~/.gnupg"
+      ]
+    }
+  },
+  "permissions": {
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(brew *)",
+      "Bash(rustup *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(npm install -g *)",
+      "Bash(npm i -g *)",
+      "Bash(pip install --user *)",
+      "Bash(defaults write *)",
+      "Bash(launchctl *)",
+      "Bash(crontab *)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/.claude/**)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/.codex/**)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/night-settings.json)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/night.sh)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/CLAUDE.md)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/AGENTS.md)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/NIGHT_PROMPT.md)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/shinobido-combat-rewrite/*.iso)",
+      "Edit(//Users/arthursantos/arthurwkm_workspace/ELDEN-RING-Combat-Rewrite/**)",
+      "Edit(~/.claude/**)",
+      "Edit(~/.codex/**)"
+    ]
+  }
+}

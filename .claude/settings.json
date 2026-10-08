@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(brew *)",
+      "Bash(rustup *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(npm install -g *)",
+      "Bash(npm i -g *)",
+      "Bash(pip install --user *)",
+      "Bash(defaults write *)",
+      "Bash(launchctl *)",
+      "Bash(crontab *)",
+      "Edit(./.claude/**)",
+      "Edit(./.codex/**)",
+      "Edit(./night-settings.json)",
+      "Edit(./night.sh)",
+      "Edit(./CLAUDE.md)",
+      "Edit(./AGENTS.md)",
+      "Edit(./NIGHT_PROMPT.md)",
+      "Edit(./*.iso)",
+      "Edit(~/.claude/**)",
+      "Edit(~/.codex/**)"
+    ]
+  }
+}
