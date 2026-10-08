@@ -95,7 +95,7 @@ Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compar
 - [x] (CLOSED 2026-10-08 as code-complete: build and clippy clean, PNG still unverified because `Unable to find a GPU`; see Requests) `--shot <path>` flag (AGENTS.md Done means): render a fixed scene for a few frames, save the PNG, exit; options to pick the clip/frame and camera angle. Check: the PNG exists and is not blank. (Code written in `src/bin/viewer.rs`: `--shot <png> [--yaw deg] [--steps n]`; builds and clippy clean, but the night sandbox has no GPU (`Unable to find a GPU`), so the PNG is unverified: run `target/debug/viewer --shot target/shots/a.png` with the owner present, then check this off.)
 - [x] (ground 400 m, 100x100 gizmo grid, directional light 9000 + ambient 350, dark clear colour, title; values copied from the reference `view.rs`; `cargo build -q --bin viewer` and `cargo clippy -q --all-targets` clean; look unverified, no GPU) Sandbox look of `videos/eldenring viewer.mp4`: flat grid ground, grey primitive blocks, lighting, window title; the reference's `src/view` copied and adapted.
 - [x] (`src/sim/camera.rs` `Camera::orbit/follow_lock/eye`, params ESTIMATE in data.rs from video_notes (4 m back, 0.45 rad pitch); viewer `orbit` system: right-mouse drag + right stick; `follow_lock` tested but not wired until the viewer has an enemy; test `camera_sits_behind_orbits_and_locks_on`; `cargo test -q` → 38 passed; clippy clean; compare.py 186/186; `--shot` still `Unable to find a GPU`, look unverified) Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item; default framing matches the Shinobido clips (behind and above).
-- [ ] Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
+- [x] (`src/sim/input.rs` `Input::apply`: camera-relative stick, walk below 0.55 / dead zone 0.2 ESTIMATE, attack/jump/item edges consumed once per tick, lock=guard, crouch+jump=dodge; viewer `read_pad` samples WASD/mouse/gamepad per render frame; dash and grab have no sim hook yet; test `stick_is_camera_relative_and_edges_fire_once`; `cargo test -q` → 39 passed; clippy clean; compare.py 186/186; viewer builds) Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
 - [ ] Terrain: tall walls, rooftops with ledges, stairs, slopes, a narrow walled corridor, crates, built from the sim's static world.
 - [ ] Kagetora's skinned model playing the sim's current clip and frame (fallback: primitive shapes on the game skeleton).
 - [ ] Enemy model and animations; execution cue effect.
@@ -115,6 +115,7 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 (none)
 
 ## Log
+- 2026-10-08 Input: sim::input + viewer read_pad; mouse motion always orbits (per controls.md), RMB is lock/guard; Alt+WASD walks.
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
 - (newest first, one line per session)
 - 2026-10-08 owner: goal widened (full moveset, 1 enemy, executions, lock-on, stealth, reference-style viewer with game model); milestones 8-11 added; workers decide instead of asking.

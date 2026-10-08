@@ -65,3 +65,7 @@ pub const CAM_FOCUS_HEIGHT: f32 = 1.3;
 pub const CAM_MOUSE_SENS: f32 = 0.004;
 pub const CAM_STICK_SPEED: f32 = 2.5;
 pub const CAM_LOCK_RATE: f32 = 6.0;
+// ESTIMATE: stick deflection (0..1) below which input is ignored, and below which forward input walks instead of running
+// (the game's analog threshold is not decoded, PROGRESS M6b).
+pub const STICK_DEAD: f32 = 0.2;
+pub const STICK_WALK: f32 = 0.55;

@@ -1,4 +1,4 @@
-//! Capsule rig driven by the sim. W run (Shift walk), A/D turn, Space attack, G guard,.
+//! Capsule rig driven by the sim. WASD move (Alt walk), LMB attack, Space jump, Q item, RMB guard, Ctrl+Space dodge; pad per docs/controls.md.
 //! The sim stays engine-free: this only feeds `Player::step` at 60 Hz and draws `pos`/`heading`.
 
 use bevy::prelude::*;
@@ -6,10 +6,15 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
+use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::player::Player;
+use shinobido_combat_rewrite::sim::terrain::Terrain;
 
 #[derive(Resource, Default)]
 struct Sim(Player);
+
+#[derive(Resource, Default)]
+struct Pad(Input);
 
 #[derive(Resource, Default)]
 struct Cam(Orbit);
@@ -62,9 +67,10 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_hz(60.0))
         .insert_resource(ClearColor(Color::srgb(0.07, 0.08, 0.1)))
         .insert_resource(GlobalAmbientLight { brightness: 350.0, ..default() })
+        .init_resource::<Pad>()
         .add_systems(Startup, setup)
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (orbit, draw, draw_grid).chain())
+        .add_systems(Update, (read_pad, orbit, draw, draw_grid).chain())
         .run();
 }
 
@@ -86,30 +92,47 @@ fn shoot(mut commands: Commands, mut shot: ResMut<Shot>, mut exit: MessageWriter
     }
 }
 
-fn tick(keys: Res<ButtonInput<KeyCode>>, mut sim: ResMut<Sim>) {
-    let p = &mut sim.0;
-    let turn = keys.pressed(KeyCode::KeyA) as i32 - keys.pressed(KeyCode::KeyD) as i32;
-    p.target_heading = p.heading + turn as f32 * 0.5;
-    p.walk = keys.pressed(KeyCode::ShiftLeft);
-    p.guard_held = keys.pressed(KeyCode::KeyG);
-    // ponytail: just_pressed is per render frame, so a tap can be missed or doubled on a fixed tick; fine for a viewer.
-    p.step(keys.pressed(KeyCode::KeyW), keys.just_pressed(KeyCode::Space));
+/// Samples keyboard/mouse and gamepad every render frame: held state overwritten, edges OR-ed until a tick takes them.
+fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>) {
+    let k = |c| keys.pressed(c) as i32 as f32;
+    let mut stick = Vec2::new(k(KeyCode::KeyD) - k(KeyCode::KeyA), k(KeyCode::KeyW) - k(KeyCode::KeyS)).clamp_length_max(1.0);
+    if keys.pressed(KeyCode::AltLeft) {
+        stick *= 0.4; // keyboard walk (docs/controls.md); below STICK_WALK
+    }
+    let i = &mut pad.0;
+    i.attack |= mouse.just_pressed(MouseButton::Left);
+    i.jump |= keys.just_pressed(KeyCode::Space);
+    i.item |= keys.just_pressed(KeyCode::KeyQ);
+    i.lock = mouse.pressed(MouseButton::Right);
+    i.crouch = keys.pressed(KeyCode::ControlLeft);
+    for g in &pads {
+        let s = Vec2::new(g.get(GamepadAxis::LeftStickX).unwrap_or(0.0), g.get(GamepadAxis::LeftStickY).unwrap_or(0.0));
+        if s.length() > stick.length() {
+            stick = s.clamp_length_max(1.0);
+        }
+        i.attack |= g.just_pressed(GamepadButton::West);
+        i.jump |= g.just_pressed(GamepadButton::South);
+        i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
+        i.lock |= g.pressed(GamepadButton::RightTrigger);
+        i.crouch |= g.pressed(GamepadButton::LeftTrigger);
+    }
+    i.stick = [stick.x, stick.y];
 }
 
-/// Mouse (while right button held) and right stick orbit the camera around the player.
+fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>) {
+    pad.0.apply(&mut sim.0, &Terrain::default(), cam.0.yaw);
+}
+
+/// Mouse motion and right stick orbit the camera around the player.
 fn orbit(
     mut cam: ResMut<Cam>,
     sim: Res<Sim>,
-    mouse: Res<ButtonInput<MouseButton>>,
     motion: Res<AccumulatedMouseMotion>,
     pads: Query<&Gamepad>,
     time: Res<Time>,
     mut eye: Single<&mut Transform, With<Camera3d>>,
 ) {
-    let mut d = Vec2::ZERO;
-    if mouse.pressed(MouseButton::Right) {
-        d += motion.delta * CAM_MOUSE_SENS;
-    }
+    let mut d = motion.delta * CAM_MOUSE_SENS;
     for pad in &pads {
         d += Vec2::new(pad.get(GamepadAxis::RightStickX).unwrap_or(0.0), -pad.get(GamepadAxis::RightStickY).unwrap_or(0.0))
             * CAM_STICK_SPEED
