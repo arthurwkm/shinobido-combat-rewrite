@@ -469,3 +469,19 @@ fn remaining_hit_reactions_play_out_then_return_to_idle() {
         assert_eq!(p.state, State::Idle, "{name}");
     }
 }
+
+#[test]
+fn talk_and_idle_extras_play_once_then_idle() {
+    use super::player::{Player, State};
+    // ESTIMATE: triggers are caller-chosen one-shots with no cancels.
+    for name in ["TOJO_B01", "TALK_A01", "KIME_A01", "KIME_B01", "TALK_UP01", "FURI01", "WAIT01"] {
+        let mut p = Player::new();
+        p.special(name);
+        for _ in 0..action(name).frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{name}");
+    }
+}
