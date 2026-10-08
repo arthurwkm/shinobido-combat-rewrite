@@ -450,3 +450,12 @@ Survey by `tools/camera.py` (`ok: 110 .cmt parsed ...`).
 - Checks: parsed the seven motions with `tools.nmt.parse`; `cargo test -q` covers loop displacement,
   one-shot duration, selection during playback, interruption/re-entry and invalid selection fallback;
   `tools/compare.py` checks all 110 extracted clips against their source root displacement and duration.
+
+## Pose export (`tools/pose.py`, 2026-10-08) — viewer rig data
+Writes `extracted/anim/skeleton.bin` (28 nodes: parent id, rest offset x `SCALE` 0.84/9.5 to metres, ESTIMATE) and `clips.bin`
+(183 player/enemy clips sampled per frame: hips position, 21 local quaternions for node ids 0..20). Quaternions are used
+as stored (x, y, z, w), local to the parent, offset applied in the parent's frame; position tracks are interpolated linearly
+and quaternions by normalised lerp between keys (Hermite tangents ignored). Hypothesis, checked by FK on STOP01 frame 0
+(`sim::pose::Skeleton::joints`): spine rises, head ~1.26 m, ankles ~0.24 m above hips-0.84 ground, arms hang; the conjugate
+order puts the limbs through the body, so the stored order stands. Hips position is relative to the root (no double
+counting with root motion). Clips with another track count (DRINK_S05 66, SHEATH_BU05 68, LOOK07 22) are not exported.

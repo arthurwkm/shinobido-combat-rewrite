@@ -678,3 +678,46 @@ fn sandbox_terrain_has_roof_slope_stairs_corridor_and_crates() {
     assert_eq!(t.ground_height([3.1, 2.0, 3.5]), 2.0); // stacked crates
     assert!(t.ledge([10.0, 0.0, 4.0], [0.0, 1.0], 4.0).is_some()); // roof edge in reach of a high jump
 }
+
+#[test]
+fn pose_parses_and_poses_a_two_bone_chain() {
+    use super::pose::*;
+    // Skeleton: root id 23, hips (0) child of 23, id 7 child of hips offset 1 m along +z.
+    let mut sk = Vec::new();
+    sk.extend(28u32.to_le_bytes());
+    for n in 0..28i32 {
+        let (p, o): (i32, [f32; 3]) = match n {
+            23 => (-1, [0.0; 3]),
+            0 => (23, [0.0; 3]),
+            7 => (0, [0.0, 0.0, 1.0]),
+            _ => (23, [0.0; 3]),
+        };
+        sk.extend(p.to_le_bytes());
+        for x in o {
+            sk.extend(x.to_le_bytes());
+        }
+    }
+    let skeleton = Skeleton::parse(&sk).unwrap();
+    assert_eq!(skeleton.parent[7], Some(0));
+    assert_eq!(skeleton.parent[23], None);
+    // One clip, one frame: hips at y 1, node 0 identity, node 0 rotated 90 degrees about x (z -> -y).
+    let mut row = vec![0.0f32; 87];
+    row[1] = 1.0;
+    for n in 0..21 {
+        row[6 + 4 * n] = 1.0;
+    }
+    let s = std::f32::consts::FRAC_1_SQRT_2;
+    (row[3], row[6]) = (s, s);
+    let mut clips = Vec::new();
+    clips.extend(1u32.to_le_bytes());
+    clips.extend(b"T\0".iter().chain([0u8; 22].iter()));
+    clips.extend(1u32.to_le_bytes());
+    for x in &row {
+        clips.extend(x.to_le_bytes());
+    }
+    let clips = Clips::parse(&clips).unwrap();
+    assert!(clips.row("NOPE", 0).is_none());
+    let j = skeleton.joints(clips.row("T", 9).unwrap()); // frame past the end holds the last one
+    assert_eq!(j[0], [0.0, 1.0, 0.0]);
+    assert!((j[7][1] - 0.0).abs() < 1e-5 && j[7][2].abs() < 1e-5, "{:?}", j[7]);
+}

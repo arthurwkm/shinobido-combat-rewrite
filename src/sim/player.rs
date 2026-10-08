@@ -228,6 +228,11 @@ impl Player {
         self.world.action.name
     }
 
+    /// Frame of the current clip (for posing the rig).
+    pub fn world_frame(&self) -> u32 {
+        self.world.frame
+    }
+
     /// Start an evasive step from idle/run/halt. `dir`: "FRONT01", "BACK01", "RIGHT01" or "LEFT01".
     pub fn dodge(&mut self, dir: &str) {
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {

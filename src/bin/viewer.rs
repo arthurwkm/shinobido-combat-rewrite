@@ -8,6 +8,7 @@ use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::player::Player;
+use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
 
 #[derive(Resource, Default)]
@@ -24,6 +25,19 @@ struct Cam(Orbit);
 
 #[derive(Component)]
 struct Rig;
+
+/// One cuboid per skeleton node, stretched from its parent joint to its own (the game skeleton drawn as primitives).
+#[derive(Component)]
+struct Bone(usize);
+
+/// Game skeleton and sampled clips from `extracted/anim` (tools/pose.py); `None` leaves the capsule.
+#[derive(Resource)]
+struct Anim(Option<(Skeleton, Clips)>);
+
+fn load_anim() -> Anim {
+    let read = |n| std::fs::read(format!("extracted/anim/{n}.bin")).ok();
+    Anim(read("skeleton").and_then(|s| Skeleton::parse(&s)).zip(read("clips").and_then(|c| Clips::parse(&c))))
+}
 
 /// `--shot <png> [--yaw <deg>] [--steps <n>]`: render a fixed scene (n sim ticks running, camera
 /// swung by yaw degrees around the player), save the PNG and exit.
@@ -72,18 +86,27 @@ fn main() {
         .insert_resource(GlobalAmbientLight { brightness: 350.0, ..default() })
         .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
+        .insert_resource(load_anim())
         .add_systems(Startup, setup)
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (read_pad, orbit, draw, draw_grid).chain())
+        .add_systems(Update, (read_pad, orbit, draw, pose_bones, draw_grid).chain())
         .run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>, world: Res<World>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>, world: Res<World>, anim: Res<Anim>) {
     commands.spawn((Camera3d::default(), Transform::default()));
     commands.spawn((DirectionalLight { illuminance: 9000.0, shadow_maps_enabled: true, ..default() }, Transform::default().looking_to(Vec3::new(-0.5, -1.0, 0.35), Vec3::Y)));
     commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(400.0, 400.0))), MeshMaterial3d(mats.add(StandardMaterial { base_color: Color::srgb(0.2, 0.23, 0.2), perceptual_roughness: 0.95, ..default() }))));
     spawn_terrain(&mut commands, &mut meshes, &mut mats, &world.0);
-    commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(mats.add(Color::srgb(0.2, 0.2, 0.35))), Transform::default()));
+    let body = mats.add(Color::srgb(0.2, 0.2, 0.35));
+    if let Some((skel, _)) = &anim.0 {
+        let unit = meshes.add(Cuboid::new(0.08, 0.08, 1.0));
+        for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23)) {
+            commands.spawn((Bone(n), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default()));
+        }
+    } else {
+        commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(body), Transform::default()));
+    }
 }
 
 /// Plain grey blocks; ramps are slabs, or steps (top at each step's low edge) when steeper than `STAIRS_SLOPE`.
@@ -180,10 +203,26 @@ fn orbit(
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }
 
-fn draw(sim: Res<Sim>, mut rig: Single<&mut Transform, With<Rig>>) {
+fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
     let p = &sim.0;
-    rig.translation = Vec3::new(p.pos[0], p.pos[1] + 0.85, p.pos[2]);
-    rig.rotation = Quat::from_rotation_y(p.heading);
+    if let Some(rig) = rig.as_mut() {
+        rig.translation = Vec3::new(p.pos[0], p.pos[1] + 0.85, p.pos[2]);
+        rig.rotation = Quat::from_rotation_y(p.heading);
+    }
+}
+
+/// Poses the bone cuboids with the sim's current clip and frame (clips that were not exported keep the last pose).
+fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, mut bones: Query<(&Bone, &mut Transform)>) {
+    let Some((skel, clips)) = &anim.0 else { return };
+    let p = &sim.0;
+    let Some(row) = clips.row(p.world_action(), p.world_frame()) else { return };
+    let (at, yaw) = (Vec3::from(p.pos), Quat::from_rotation_y(p.heading));
+    let joints = skel.joints(row).map(|j| at + yaw * Vec3::from(j));
+    for (Bone(n), mut t) in &mut bones {
+        let (a, b) = (joints[skel.parent[*n].unwrap_or(*n)], joints[*n]);
+        let len = a.distance(b).max(1e-3);
+        *t = Transform::from_translation((a + b) / 2.0).looking_to(if len > 1e-3 { b - a } else { Vec3::Z }, Vec3::Y).with_scale(Vec3::new(1.0, 1.0, len));
+    }
 }
 
 /// With no textures, a grid is what makes speed and distance readable (as in the reference).

@@ -10,6 +10,7 @@ pub mod lockon;
 pub mod camera;
 pub mod stealth;
 pub mod player;
+pub mod pose;
 pub mod terrain;
 pub mod data;
 
