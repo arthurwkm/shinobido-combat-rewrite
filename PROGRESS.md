@@ -136,7 +136,7 @@ the game skeleton; the glTF/texture/skin-weight work stays as it is and is not w
 Rule: each player motion is reachable from the controls in the situation where the game uses it, driven by
 the cancel graph (type-3 events) and terrain contact, not by `Player::special` from tests. Today the pad
 reaches only run, walk, jump, attack, guard, dodge, drink and execute.
-- [ ] Widen the inventory: the crouch `_S`, carry `_K`, dash `_D` and hug `_H` variants (set 05 and others)
+- [x] (set-05 mode variants added via `MODES05` in tools/extract.py, 45 new actions, docs/player_motions.md regenerated; `cargo test -q` 43 passed, clippy clean, compare.py → 231/231 within tolerance; names read against movement/stealth clips by context only, no frame-level match: those motions are played by later items, where the viewer check happens) Widen the inventory: the crouch `_S`, carry `_K`, dash `_D` and hug `_H` variants (set 05 and others)
   were left out as a hypothesis. The clips show crouching (movement 30–34 s, stealth 6–12 s) and carrying
   (movement 42–44 s). Decide which belong to the player, extract them, update docs/player_motions.md and
   compare.py.
@@ -282,3 +282,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: character separation (Fight::separate, half push each, skipped during executions); seen in target/rec/hit/00180.png.
 - 2026-10-08 M13: reverted the uncommitted skinned-mesh viewer experiment (owner decision); mannequin parts (capsule/box/sphere) on both skeletons, B shows cuboids; radii ESTIMATE.
 - 2026-10-08 M13: katana props on both characters (right hand node 15 when drawn, hip when sheathed); soldier mannequin item closed with it; M13 done.
+- 2026-10-08 Claude: M14 inventory widened with set-05 crouch/carry/dash/hug variants (178 actions); ESTIMATE that they are the player's.

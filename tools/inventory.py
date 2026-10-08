@@ -8,12 +8,13 @@ Player set = every suffix-01 motion plus everything reachable through type-3 can
 
 import re
 
-from extract import player_ids
+from extract import MODES05, player_ids
 from iso import ROOT
 from nmt import MOTION, parse
 
 # (group, regex on the name), first match wins. Order matters.
 GROUPS = [
+    ("crouch, carry, dash and hug (set 05)", r"\w+_[SKDH]05$|CARRY05|KATU05|AT_SA05|AT_DASH05|THRO_DASH05|STOPL[LR]05|\w+_[RL]H05|WALK_\w05|KUGURI|DROP_A05"),
     ("locomotion", r"STOP\d\d|TIRED|RUN\d|RUN_|WALK_|HALT|TURN"),
     ("jumps and falls", r"JUMP|FALL|LAND|TRI_|UP_|FLIP|KICK_J|THRO_J|CLIMB_B"),
     ("rolls and evasion", r"FRONT|BACK01|RIGHT|LEFT|UKEMI"),
@@ -29,7 +30,7 @@ GROUPS = [
 def player_set():
     ids = player_ids()
     inv = {v: k for k, v in ids.items()}
-    seen = {n for n in ids if re.search(r"01(_H)?$", n)}
+    seen = {n for n in ids if re.search(r"01(_H)?$", n) or re.fullmatch(MODES05, n)}
     todo = list(seen)
     while todo:
         m = parse((MOTION / f"{todo.pop()}.nmt").read_bytes())

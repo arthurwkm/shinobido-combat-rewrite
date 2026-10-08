@@ -64,7 +64,7 @@ targets (arg0 = 0-based mtnfile index): 134 motions. Extra sets reached: `02` (W
 `06` (wall hug/corner/hang/climb: STOP_A/B, ONE, TWO, BACK, HANG_L/R, CLIMB, SHEATH06), `05` (only IKOU_B, STOP_ABU,
 SHEATH_BU), `27` (KICK27, FUTO27, KICK27_H). The rest of sets `05` and `27` (full parallel lists: RUN05, HI_*05, PEER27,
 SEARCH_*27 ...) are not reached from the player and look like other characters/NPC behaviours, so they are excluded
-(hypothesis; revisit when the enemy is picked). Set `03`/`04` unreached. Check: every motion appears in exactly one
+(hypothesis; revisit when the enemy is picked). **Decision 2026-10-08 (ESTIMATE)**: the mode variants of set `05` are the player's too: crouch `_S` (STOP/THROW/DRINK/PUT_S05, WALK_*05, KUGURI_A/B05), carry `_K` (+CARRY05, KATU05), dash `_D` (+AT_DASH05, THRO_DASH05), hug `_H` and `_RH/_LH` (STOP/HUG/LOOK/BACK/NAGE/SPRI), AT_SA05, KABE_D05, DROP_A05; names match what the clips show (crouching, carrying, wall hug). Regex `MODES05` in `tools/extract.py`; 178 actions extracted, compare.py 231/231 with the soldier. Set `03`/`04` unreached. Check: every motion appears in exactly one
 group of `docs/player_motions.md`.
 
 ## .nmt layout — confirmed on 1350 of 1441 top-level files by `python tools/nmt.py`
