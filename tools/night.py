@@ -8,9 +8,10 @@ Rules (thresholds below):
   - a worker whose weekly usage reaches WEEK is never used again this run; both gone -> exit
   - both 5h windows near full -> sleep until the earlier reset
   - a worker run that makes no commit is "idle"; all usable workers idle -> done or blocked, exit
-  - unanswered Blockers in PROGRESS.md (at start, and when all workers go idle): beep, print them and
-    wait at the console until the end time; a one-line answer is written under them as `- Owner: ...`,
-    committed, and the workers resume. Empty answer or no terminal: skip. Waiting uses no tokens.
+  - unanswered Blockers in PROGRESS.md (at start, and when all workers go idle): beep and ask each one
+    at the console, one at a time, until the end time. Answers are written under their blockers as
+    `  - Owner: ...` in one commit, then the workers start. Enter skips one; no terminal skips all.
+    Waiting uses no tokens.
 Usage comes from the CLIs themselves: Claude's `rate_limit_event` (stream-json) and Codex's
 `account/rateLimits/read` (app-server). Claude utilization is read as a fraction (0.4 = 40%).
 """
@@ -150,36 +151,48 @@ def commit_codex():
 
 
 def blockers():
-    """Lines of the Blockers section of PROGRESS.md, or [] if it is empty or already answered."""
-    lines = (ROOT / "PROGRESS.md").read_text().split("## Blockers\n", 1)[1].split("\n## ", 1)[0]
-    lines = [l for l in lines.strip().splitlines() if l.strip()]
-    return [] if not lines or lines[-1].startswith("- Owner:") else lines
+    """Unanswered Blockers in PROGRESS.md: top-level `- ` lines not followed by an `  - Owner:` line."""
+    text = (ROOT / "PROGRESS.md").read_text()
+    if "## Blockers\n" not in text:
+        return []
+    lines = [l for l in text.split("## Blockers\n", 1)[1].split("\n## ", 1)[0].splitlines() if l.strip()]
+    return [l for i, l in enumerate(lines) if l.startswith("- ")
+            and not (i + 1 < len(lines) and lines[i + 1].startswith("  - Owner:"))]
+
+
+def read_answer():
+    """One line from the console, beeping every 10 min; "" at the end time."""
+    while time.time() < END:
+        subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])
+        if select.select([sys.stdin], [], [], 600)[0]:
+            return sys.stdin.readline().strip()
+    return ""
 
 
 def ask_owner():
-    """Ask the owner about unanswered Blockers; True if an answer was written and committed."""
+    """Ask about each unanswered Blocker in turn, then write all answers in one commit.
+    True if any answer was written, so the workers start once with every answer in place."""
     todo = blockers()
     if not todo or not sys.stdin.isatty():
         return False
-    log("blockers need the owner, waiting for an answer at the console")
-    subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])
-    print("\n".join(["", "Blockers in PROGRESS.md:", *todo, "",
-                      "Answer in one line (Enter to skip; waits until the end time):"]), flush=True)
-    while time.time() < END:
-        if select.select([sys.stdin], [], [], 600)[0]:
-            answer = sys.stdin.readline().strip()
+    log(f"{len(todo)} blockers need the owner, waiting at the console")
+    answers = {}
+    for i, q in enumerate(todo):
+        print(f"\nBlockers remaining: {len(todo) - i}\n{q}\nAnswer in one line (Enter to skip):", flush=True)
+        if a := read_answer():
+            answers[q] = a
+        if time.time() >= END:
             break
-        subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])  # remind every 10 min
-    else:
-        answer = ""
-    if not answer:
-        log("no answer to the blockers")
+    if not answers:
+        log("no answers to the blockers")
         return False
     path = ROOT / "PROGRESS.md"
     text = path.read_text()
-    path.write_text(text.replace(todo[-1], f"{todo[-1]}\n- Owner: {answer}", 1))
-    git("commit", "-qm", "PROGRESS: owner answer to Blockers", "--", "PROGRESS.md")
-    log(f"owner answered: {answer}")
+    for q, a in answers.items():
+        text = text.replace(q + "\n", f"{q}\n  - Owner: {a}\n", 1)
+    path.write_text(text)
+    git("commit", "-qm", "PROGRESS: owner answers to Blockers", "--", "PROGRESS.md")
+    log(f"owner answered {len(answers)} of {len(todo)} blockers")
     return True
 
 
