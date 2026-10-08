@@ -83,3 +83,27 @@ fn attack_chains_only_inside_the_cancel_window() {
     }
     assert_eq!(p.state, State::Idle);
 }
+
+#[test]
+fn guard_goes_a_then_b_while_held_and_ends_with_y() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.guard_held = true;
+    p.step(false, false);
+    assert_eq!(p.world_action(), "GU_A01");
+    for _ in 0..8 {
+        p.step(false, false);
+    }
+    assert_eq!(p.world_action(), "GU_B01");
+    for _ in 0..300 {
+        p.step(false, false);
+    }
+    assert_eq!((p.state, p.world_action()), (State::Guard, "GU_B01"));
+    p.guard_held = false;
+    p.step(false, false);
+    assert_eq!(p.world_action(), "GU_Y01");
+    for _ in 0..26 {
+        p.step(false, false);
+    }
+    assert_eq!(p.state, State::Idle);
+}

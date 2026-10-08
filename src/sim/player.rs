@@ -6,6 +6,10 @@ pub enum State {
     Run,
     Halt,
     Attack,
+    /// GU_A01 then GU_B01 while held.
+    Guard,
+    /// GU_Y01 (hypothesis: guard release).
+    GuardEnd,
 }
 
 /// Idle / run / halt on top of `World`. ESTIMATE: the transitions (release while running plays HALT01 once, then
@@ -13,19 +17,41 @@ pub enum State {
 pub struct Player {
     world: World,
     pub state: State,
+    /// Guard button held. Guard is only entered from idle/run/halt, not mid-attack (ESTIMATE).
+    pub guard_held: bool,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
 }
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, pos: [0.0; 3] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, pos: [0.0; 3] }
     }
 
     /// `attack` is true on the frame the button goes down.
     pub fn step(&mut self, forward: bool, attack: bool) {
         if attack {
             self.press_attack();
+        }
+        match (self.state, self.guard_held) {
+            (State::Idle | State::Run | State::Halt, true) => self.start(State::Guard, "GU_A01"),
+            (State::Guard, false) => self.start(State::GuardEnd, "GU_Y01"),
+            (State::Guard, true) if self.world.done() && self.world.action.name == "GU_B01" => {
+                self.start(State::Guard, "GU_B01") // loops while held
+            }
+            (State::Guard, true) if self.world.action.name == "GU_A01" => {
+                // GU_A01's cancel window (event type 3) opens the move to GU_B01
+                let f = self.world.frame;
+                let to = self.world.action.cancels.iter().find(|c| c.1 <= f).and_then(|c| ACTIONS.iter().find(|x| x.id == c.0));
+                if let Some(t) = to {
+                    self.start(State::Guard, t.name);
+                }
+            }
+            (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, "STOP01"),
+            _ => {}
+        }
+        if matches!(self.state, State::Guard | State::GuardEnd) {
+            return self.advance();
         }
         if self.state == State::Attack {
             if self.world.done() {
@@ -45,7 +71,7 @@ impl Player {
                 State::Idle => "STOP01",
                 State::Run => "RUN01",
                 State::Halt => "HALT01",
-                State::Attack => unreachable!(),
+                State::Attack | State::Guard | State::GuardEnd => unreachable!(),
             });
         } else if self.world.done() && self.state != State::Halt {
             self.world = World::new(if self.state == State::Run { "RUN01" } else { "STOP01" });
