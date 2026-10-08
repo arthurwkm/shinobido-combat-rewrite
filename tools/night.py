@@ -15,7 +15,7 @@ Rules (thresholds below):
 Usage comes from the CLIs themselves: Claude's `rate_limit_event` (stream-json) and Codex's
 `account/rateLimits/read` (app-server). Claude utilization is read as a fraction (0.4 = 40%).
 """
-import json, select, subprocess, sys, threading, time
+import json, os, select, subprocess, sys, termios, threading, time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -162,10 +162,11 @@ def blockers():
 
 def read_answer():
     """One line from the console, beeping every 10 min; "" at the end time."""
+    termios.tcflush(sys.stdin, termios.TCIFLUSH)  # drop keys typed while the workers ran
     while time.time() < END:
         subprocess.run(["afplay", "/System/Library/Sounds/Glass.aiff"])
         if select.select([sys.stdin], [], [], 600)[0]:
-            return sys.stdin.readline().strip()
+            return os.read(sys.stdin.fileno(), 65536).decode(errors="replace").strip()  # unbuffered, so select stays true
     return ""
 
 
@@ -187,10 +188,11 @@ def ask_owner():
         log("no answers to the blockers")
         return False
     path = ROOT / "PROGRESS.md"
-    text = path.read_text()
+    head, section = path.read_text().split("## Blockers\n", 1)  # answers go only inside Blockers
+    lines = section.split("\n")
     for q, a in answers.items():
-        text = text.replace(q + "\n", f"{q}\n  - Owner: {a}\n", 1)
-    path.write_text(text)
+        lines.insert(lines.index(q) + 1, f"  - Owner: {a}")
+    path.write_text(head + "## Blockers\n" + "\n".join(lines))
     git("commit", "-qm", "PROGRESS: owner answers to Blockers", "--", "PROGRESS.md")
     log(f"owner answered {len(answers)} of {len(todo)} blockers")
     return True
