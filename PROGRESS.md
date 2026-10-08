@@ -92,7 +92,7 @@ Items per uncovered group (motions in docs/player_motions.md; sim has run/halt/i
 
 ## Milestone 11 — Reference-style viewer
 Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compare against `videos/`.
-- [ ] `--shot <path>` flag (AGENTS.md Done means): render a fixed scene for a few frames, save the PNG, exit; options to pick the clip/frame and camera angle. Check: the PNG exists and is not blank.
+- [ ] `--shot <path>` flag (AGENTS.md Done means): render a fixed scene for a few frames, save the PNG, exit; options to pick the clip/frame and camera angle. Check: the PNG exists and is not blank. (Code written in `src/bin/viewer.rs`: `--shot <png> [--yaw deg] [--steps n]`; builds and clippy clean, but the night sandbox has no GPU (`Unable to find a GPU`), so the PNG is unverified: run `target/debug/viewer --shot target/shots/a.png` with the owner present, then check this off.)
 - [ ] Sandbox look of `videos/eldenring viewer.mp4`: flat grid ground, grey primitive blocks, lighting, window title; the reference's `src/view` copied and adapted.
 - [ ] Orbit camera (mouse/right stick) with lock-on camera, parameters from M8 camera item; default framing matches the Shinobido clips (behind and above).
 - [ ] Input: gamepad with the PS2 layout and keyboard/mouse, from `docs/controls.md`, feeding the sim at 60 Hz.
@@ -174,3 +174,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Stealth in sim (stealth.rs): sight/hearing numbers ESTIMATE since not in files; alert is sticky; no occlusion yet.
 - 2026-10-08 Execution availability: three kinds (Back/Above/Front) from position and enemy state, thresholds ESTIMATE; 36 tests pass.
 - 2026-10-08 Executions: one S-variant pairing per kind (Back/Above/Front), other KI_HI variants (A/B/C/D chains) left unused; all ESTIMATE.
+- 2026-10-08 M11 `--shot` implemented (viewer.rs); not checked off: no GPU in the sandbox, PNG unverified. Decision: keep the item open, continue to the next M11 items needs the same GPU check, so each is built + clippy only.
