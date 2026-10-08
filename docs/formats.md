@@ -245,3 +245,7 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   `+0x580` by `m = 0x237950(actor[+0x45c])`: 0.5 if float `[+0x5c] < 0`, 1.0 if `== 0`, else 2.0.
 - **Hypothesis (strong):** `+0x580` is hit damage (arg0 = per-attack factor, `[+0x34]` = attacker power stat, `m` = bias),
   `+0x584` a hit-type/strength class. AT_A01 has `(frame 0, 35, 7, 0)`. Power stat value and `0x11dc90` not traced: `hit_damage` in `player.rs` takes power as input.
+
+### Walk/run analog threshold — lookup failed (2026-10-08, no result)
+
+- Tried: (1) strings in the executable (no walk/run/stick names; only libpad); (2) immediate loads of mtnfile IDs 168–174 (RUN_R/L, WALK_F/B/R/L02): hits at `0x2a6344–0x2a6374` and `0x11523c` are a motion-registration table and a switch on actor `+0x2e4` state values, not stick logic (state values 0xA7/0xA8 coincide with RUN_RE/LE IDs: **hypothesis** state id ≈ motion id); (3) direct `sw …, 0x2e4(actor)` after an immediate: only `0x10b55c`, so states are set through a helper call. Next idea: find that helper (callers of state setter) and trace the caller using state 3/171.

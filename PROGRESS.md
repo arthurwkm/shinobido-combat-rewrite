@@ -50,7 +50,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
 - [ ] What triggers each HI_* reaction. (BLOCKED, see Blockers)
 - [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
-- [ ] Walk/run analog threshold.
+- [ ] Walk/run analog threshold. (BLOCKED, see Blockers)
 - [ ] Mask category names (event types 5/6).
 - [ ] Input buffering rules.
 
@@ -58,6 +58,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
+- Walk/run analog threshold lookup failed 3 ways (formats.md, "Walk/run analog threshold"); continue by finding the actor state-setter helper and its run/walk callers, or skip? Owner: reply `skip` or `continue`.
 - HI_* trigger lookup failed 3 ways (formats.md, "HI_* reaction trigger"); continue by tracing writers of actor +0x2e4 states 0x23–0x2D from 0x1bfe40, or skip this item? Owner: reply `skip` or `continue`.
 
 ## Log
@@ -83,3 +84,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: turn-rate selection table documented (formats.md); 6b item 1 done.
 - 2026-10-08 Claude: HI_* trigger lookup blocked after 3 failed approaches; partial findings in formats.md.
 - 2026-10-08 Claude: event type 35 damage formula documented and wired (hit_damage); 6b damage item done.
+- 2026-10-08: walk/run analog threshold lookup failed 3 ways; blocked.
