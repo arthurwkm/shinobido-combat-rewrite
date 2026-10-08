@@ -23,22 +23,25 @@ run() {
   "$CLAUDE" -p "$1" "${@:2}" --model sonnet --permission-mode auto \
     --settings ./night-settings.json --output-format json >>"$LOG" 2>&1
 }
+say() { echo "$1" | tee -a "$LOG" }
 commits() { git rev-list --count HEAD 2>/dev/null || echo 0 }
 
-echo "== $(date) start, session $SID, until $(date -r $END +%H:%M)" >>"$LOG"
+say "== $(date) start, session $SID, until $(date -r $END +%H:%M). Running; log: $LOG"
 before=$(commits)
 run "$(<NIGHT_PROMPT.md)" --session-id "$SID"
 rc=$?
 while (( $(date +%s) < END )); do
   if (( rc != 0 )); then
-    echo "== $(date) exit $rc, waiting 30 min" >>"$LOG"
+    say "== $(date) exit $rc, waiting 30 min"
     sleep 1800
   elif (( $(commits) == before )); then
-    echo "== $(date) clean exit with no new commit: done or blocked" >>"$LOG"
+    say "== $(date) clean exit with no new commit: done or blocked"
     break
   fi
   before=$(commits)
-  run "Continue per AGENTS.md: next unchecked item in PROGRESS.md, or update it and exit if everything left is blocked." --resume "$SID"
+  say "== $(date) resuming"
+  run "Continue per AGENTS.md: next unchecked item in PROGRESS.md, or update it and exit if everything
+left is blocked." --resume "$SID"
   rc=$?
 done
-echo "== $(date) end" >>"$LOG"
+say "== $(date) end"
