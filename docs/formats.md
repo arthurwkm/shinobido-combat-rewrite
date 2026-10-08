@@ -125,6 +125,26 @@ a few Acquire-specific chunks (`0x1b`, `0x1000060`, unread).
   Quaternion component order inside a key is still unverified.
 - Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale unknown.
 
+## model\KAGETORA_BODY.rws geometry — confirmed by `python tools/model.py` (2026-10-08)
+
+Clump geometry list holds 2 geometries (`0x0f`): 412 verts/337 tris and 1095 verts/1004 tris (RW struct counts).
+Each has extensions `0x50e` (mesh table), `0x510` (PS2 native data), `0x116` (skin).
+- `0x50e` payload: `flags=1 (tristrip), numMeshes, totalIndices`, then `numMeshes × (numIndices, materialIndex)`;
+  the sum of numIndices equals totalIndices.
+- `0x510` payload: u32 platform 4, then per mesh a `(size, 0)` pair and VIF packets. Packet: DMA-like word pair
+  (`count | 0x30000000`, running vertex offset), then STMOD/STCYCL(CL 5, WL 1) + five UNPACKs at VU addresses 4 (V4-32, dummy: no
+  data bytes follow), 0 `0x68` V3-32 positions, 1 `0x64` V2-32 UV, 2 `0x6e` V4-8 (always 0,0,0,255 here), 3 `0x6a` V3-8
+  normals (signed bytes, length ≈127). Packets hold ≤42 vertices; consecutive packets of one mesh overlap by 2 vertices
+  (strip continuation), so numIndices = Σcount − 2·(packets−1) (confirmed on all 20 meshes). Each mesh is one triangle strip;
+  dropping triangles with two equal positions leaves exactly the struct's triangle count (337 and 1004).
+- `0x116` skin payload: platform 4, `numBones 28, numUsedBones, maxWeights 2, pad`, used-bone list, 28 inverse-bind
+  matrices (64 B, row-vector, translation in row 3), 28 trailing bytes. Matrix k belongs to node `nodes[k]` of the HAnim
+  list (DFS order, not id order): bone lengths from the matrices equal the frame offsets for all 27 bones (confirmed).
+  Used-bone entries are matrix indices (hypothesis: fits the body geometry better than node ids).
+- **Not found: per-vertex skin weights/indices.** The `V4-32` unpack at address 4 is the likely carrier (the DMA word's
+  second half grows by 40 per packet, a running vertex offset into a table not present in the file); the chunks `0x1b`
+  (1276 B) and `0x1000060` were not decoded. `tools/model.py` therefore skins rigidly to the nearest used bone segment (ESTIMATE).
+
 ## .nmt event consumer — targeted SCES_539.31 lookup (2026-10-07)
 
 Addresses below are **virtual addresses** in the disc's PAL executable. **Confirmed** means
