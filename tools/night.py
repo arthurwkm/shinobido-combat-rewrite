@@ -34,7 +34,9 @@ NOTE = {
              "read-only git (log, diff, status) is fine. The runner commits when `cargo test -q` passes. "
              "Network is off: if a step needs a new crate or PyPI package, do not record a Blocker; append "
              "`(needs download: <name>, for Claude)` to the item's line in PROGRESS.md and stop. "
-             "Update PROGRESS.md before you stop.",
+             "Your sandbox has no GPU, so you cannot run the viewer: when an item's last step is the viewer "
+             "check, leave it unchecked, append `(needs viewer check, for Claude)` to its line and continue "
+             "with the next item you can do. Update PROGRESS.md before you stop.",
 }
 
 

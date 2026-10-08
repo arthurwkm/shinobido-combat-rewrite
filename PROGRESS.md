@@ -103,8 +103,99 @@ Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compar
 - [x] (`sim::hud::eye_colour/compass` + test; viewer `setup_game_hud/update_game_hud`: red health bar top-left, eye icon coloured by `Stealth` level + meter bar top-centre, ki compass ring with orange needle top-right turning with enemy bearing vs camera, execution cue = existing diamond; `Stealth` stepped in `tick`; colours/sizes ESTIMATE; `cargo test -q` → 42 passed; clippy clean; compare.py 186/186; viewer builds; `--shot` still `Unable to find a GPU`, look unverified) Game HUD like the Shinobido clips: health bar top-left, eye awareness icon (alert colour + stealth meter bar) top-centre, ki compass top-right pointing at enemies, execution cue.
 - [x] (read viewer.rs and combat.rs in full; one gap fixed: nothing called `Fight::execute`, now E / pad North fires it in `tick`; LockOn still not wired into the viewer, follow-up; `cargo test -q` → 42 passed; clippy clean; compare.py 186/186; `--shot` needs a GPU, unverified) Review pass over the whole viewer and sim: bugs, dead code, duplication; tests green.
 
+## Milestone 12 — See and compare
+Owner review 2026-10-08: the viewer runs unattended (`target/debug/viewer --shot target/shots/a.png` saved under
+`night-settings.json`, Apple M1 found). The earlier "no GPU" came from Codex or from non-plain invocations.
+Every M11 item was checked as "look unverified"; this milestone verifies them. Seen in `target/shots/a.png`:
+- Kagetora's STOP01 pose looks wrong: legs splayed, bone cuboids not joined at the joints.
+- The game health bar and the debug player bar overlap top-left, and no hit log is visible.
+- The eye icon is a plain teal rectangle; the compass is a plain ring.
+- No katana; the enemy and Kagetora are bone cuboids.
+- [ ] `--record <dir> --script <file>`: the viewer plays a script of timed pad inputs (one line per input:
+  tick, button or stick value), saves a frame every N ticks and exits by itself. A tool tiles the recorded
+  frames next to frames of a Shinobido clip at given timestamps into one image (`target/cmp/<name>.png`).
+  Scripts live in `tools/scripts/`. Check: the run script's frames show Kagetora advancing across the grid.
+- [ ] Pose correctness: put RUN01, STOP01, AT_A01, JUMP01 and GU_B01 next to the same actions in the clips
+  (docs/video_notes.md timestamps). Fix bone axes, quaternion order and bind/rest composition until the
+  silhouettes match and limbs stay joined. Check the enemy's set-07 poses the same way.
+- [ ] Visual audit of every M11 item with shots and records, fixing what differs from the clips and the
+  reference: framing, ground and grid, light, blocks, both HUDs without overlaps, hit log visible.
+
+## Milestone 13 — The game's own characters
+- [ ] Kagetora's skinned mesh in the viewer: load the glTF from `tools/model.py` (body, head, textures),
+  skinned to the sim pose, replacing the bone cuboids (keep cuboids behind a debug key). Compare with the
+  clips: proportions, colours, cape/cloth.
+- [ ] Katana and scabbard: find the attach bone, sheathed out of combat and drawn in combat as in the clips
+  (no sword in the movement clip, sword low in the right hand in combat); SHEATH01 switches them.
+- [ ] The soldier's own model: extract the I_BUSHI body, head, weapon and textures, skinned on its skeleton,
+  replacing the red cuboids.
+- [ ] Skin weights: look again for real weights (3 approaches, record them in formats.md); else keep the
+  rigid ESTIMATE and smooth what shows the worst in shots.
+
+## Milestone 14 — Every action from the pad, in context
+Rule: each player motion is reachable from the controls in the situation where the game uses it, driven by
+the cancel graph (type-3 events) and terrain contact, not by `Player::special` from tests. Today the pad
+reaches only run, walk, jump, attack, guard, dodge, drink and execute.
+- [ ] Widen the inventory: the crouch `_S`, carry `_K`, dash `_D` and hug `_H` variants (set 05 and others)
+  were left out as a hypothesis. The clips show crouching (movement 30–34 s, stealth 6–12 s) and carrying
+  (movement 42–44 s). Decide which belong to the player, extract them, update docs/player_motions.md and
+  compare.py.
+- [ ] Context and cancel driver: one place that picks the next motion from input + state + terrain contact
+  + the extracted cancel windows, replacing hand-picked clip names. Existing behaviour stays and tests stay green.
+- [ ] Crouch: L1 crouch idle, crouch walk and turn, stand up; lower noise and a smaller sight profile in stealth.
+- [ ] Dash, if the `_D` set is the player's.
+- [ ] Wall hug and corner peek: at a wall plus the hug input, STOP_A/B06; side-step along the wall (ONE/TWO06);
+  peek at corners; release (IKOU_B, BACK06). The camera pulls close as in movement 38 s.
+- [ ] Wall run up and wall kick: running into a tall wall plus jump gives KABE_U01/TRI_J01/TRI_A01, rising to
+  a ledge in reach. KABE_E01 and RUN_RE/LE01 play by wall contact.
+- [ ] Ledge grab, hang, shimmy, climb: grab a ledge in reach while rising or falling; HANG_L/R06 shimmy;
+  CLIMB06 onto the top; drop down. Movement 28–32 s.
+- [ ] High jump onto rooftops: UP_FR/UP_BA01 (and CLIMB_B01) reach the sandbox roof from the ground or
+  crates, landing on the roof. Movement 20–32 s.
+- [ ] Air actions: KICK_J/KICK_JB/THRO_J01/FLIP_B01 only in the air, from attack and jump inputs; landing rules.
+- [ ] Attack set in context: AT_CA/AT_D/AT_DA/AT_E chains through the cancel windows, a running attack, the
+  kicks (KICK27/FUTO27/SOCCER01), the `_H` attacks from wall hug, CLAW_*/BLADE01 under the right condition.
+- [ ] Pick up, carry and throw crates and bodies: crates become movable sim objects. PICK01 near a crate or a
+  dead enemy; carry locomotion (`_K`); PUT01; THROW_A/B/BACK01 throws with gravity and can hit the enemy.
+  Movement 36–44 s.
+- [ ] Items: an item slot and use from the item button (DRINK heals, MAKIBISHI caltrops slow the enemy,
+  NINJYUTU, MAKI), each with a simple sim effect; ESTIMATE where the files are silent.
+- [ ] Hit reaction choice: pick HI_* by hit side and height (B/U/C letters), DEKA_* for heavy hits,
+  knock-down then UKEMI_A01 or a get-up; other reactions (NORI, BURA, SUI...) only where their context exists.
+- [ ] Draw and sheathe: sheathed while exploring, drawn on alert or attack (SHEATH01/SHEATH06/SHEATH_BU05);
+  idle and run use the right set for each.
+- [ ] Stairs as steps (step-up height) instead of a ramp, if the clips show stepping.
+
+## Milestone 15 — Enemy, combat and stealth as in the clips
+- [ ] Enemy attacks from its own data: find the soldier's real attack motions and hit windows (BLADE07 has no
+  hit events; search set 07 and the AI tables for the attack choice), replacing the ESTIMATE.
+- [ ] Enemy AI from `AI\`: patrol, investigate on suspicion, chase on alert, choose attack/guard/step from the
+  AIattle tables, give up and return. Compare with combat 0–44 s.
+- [ ] Perception: sight blocked by walls (terrain raycast), noise by crouch, walk or run, meter rise and decay.
+  The alert states drive the eye colours, sampled from stealth-clip frames.
+- [ ] Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
+- [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
+  (combat 46 s, 54–58 s; stealth 14 s); victim variants (A/B/C/D) by situation.
+- [ ] Death and body: the corpse stays, and it can be picked up and carried (with M14 carry).
+- [ ] Several soldiers of the same type in the sandbox (the combat clip shows a second one watching), so the ki
+  compass and target switching have something to do.
+
+## Milestone 16 — Camera, controls and HUD feel
+- [ ] Camera from the clips: distance, pitch, height and lag measured on frames; no clipping through walls;
+  pulls close at walls and corners; tilts on rooftop climbs. Compare records with the clips.
+- [ ] Full PS2 pad map from docs/controls.md, every action reachable; a controls legend in the debug HUD.
+- [ ] Game HUD fidelity: health bar with emblem, eye icon shape and colours, spiked ki compass ring. Crops
+  side by side with clip frames.
+- [ ] Sandbox fidelity: tiled sloping roofs, a garden patch for stealth, the walled corridor at the clip's
+  width; reference grey-block style.
+
+## Milestone 17 — Acceptance review
+- [ ] Acceptance review (AGENTS.md Loop step 9). For every in-scope line of AGENTS.md, record a scripted
+  sequence, compare it with the clip and the reference, and fill `docs/acceptance.md` (line, evidence,
+  verdict). Every "differs" becomes a new item inserted above this one. Check this only after a full pass
+  finds no gap.
+
 ## Requests
-- With the owner present: run `target/debug/viewer --shot target/shots/a.png` and compare it with `videos/eldenring viewer.mp4`; the unattended sandbox has no GPU, so every M11 look item is code-complete but unverified.
 Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
 - Lock-on in use (target switch, strafing) and guard against an attack: not in the current clips.
 - A stealth kill from behind and one from above, showing the cue before the input.
@@ -115,6 +206,7 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 (none)
 
 ## Log
+- 2026-10-08 owner + Claude: review found the list "done" but the goal not met; viewer verified runnable unattended (shot under night-settings), M12–M17 added (record/compare, poses, own models, every action from the pad in context, enemy AI/perception, camera/HUD feel, acceptance review); AGENTS.md/NIGHT_PROMPT.md: spirit of the goal, viewer check mandatory, review loop before exit.
 - 2026-10-08 M11 review: wired execution key (E / pad North) in viewer; no other bugs found in viewer/combat; lock-on viewer wiring left as follow-up.
 - 2026-10-08 Claude: game HUD (health, eye + stealth meter, ki compass, cue) in viewer; debug bar/log moved down 10 px to make room; no GPU so look unverified.
 - 2026-10-08 Input: sim::input + viewer read_pad; mouse motion always orbits (per controls.md), RMB is lock/guard; Alt+WASD walks.

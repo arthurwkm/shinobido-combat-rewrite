@@ -35,6 +35,19 @@ In scope:
 
 Out of scope: other enemy types, bosses, missions, story, cutscenes, full game stages, sound, menus.
 
+## The spirit of the goal
+The checklist serves the goal, not the other way round. The goal is met when someone who knows the
+game picks up the pad in the viewer and Kagetora **moves, fights and sneaks like he does in the
+Shinobido clips**, with every listed action reachable from the controls in the situation where the game
+uses it. Treat these as not done, whatever the checkbox says:
+- an action that only plays as a canned clip from a test or a debug call, not from the pad in context
+  (a wall hug happens at a wall, a ledge grab when a ledge is in reach, a carry after picking something up);
+- a feature never seen working in the viewer (built and unit-tested is not enough);
+- a look that differs visibly from the clips or the reference viewer (wrong pose, wrong camera, missing HUD
+  element, primitive stand-ins where the game's own model was asked for) without a recorded reason;
+- an `ESTIMATE` that could still be read from the files or the executable but wasn't tried three times.
+When the checklist and the spirit disagree, follow the spirit and add the missing work as items.
+
 Reference design (read-only, never edit): `/Users/arthursantos/arthurwkm_workspace/ELDEN-RING-Combat-Rewrite`.
 Copy its architecture: `src/sim/` is the whole game as an engine-free state machine, tested
 headless with `cargo test`; Python tools in `tools/` read the game files and generate
@@ -75,10 +88,20 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 ## Done means
 - `cargo test -q` passes and `.venv/bin/python tools/compare.py` reports every extracted action within tolerance.
 - Viewer items: `cargo build -q --bin viewer` succeeds and `cargo clippy -q --all-targets` is clean.
-- Viewer look: run `target/debug/viewer --shot target/shots/<name>.png` as a plain command (no pipes,
-  `&&` or redirects: only that exact form runs outside the night sandbox, which has no GPU). It must exit
-  by itself after saving. Compare the PNG with frames of `videos/eldenring viewer.mp4` and the Shinobido
-  clips, and name the shot in the item's evidence. Never run the viewer without `--shot`: it never exits.
+- **Seen working.** Every item that changes what the viewer shows or how it plays is checked in the
+  viewer, unattended, with no owner needed (tested 2026-10-08: Apple M1 GPU found under
+  `night-settings.json`):
+  - `target/debug/viewer --shot target/shots/<name>.png [options]` for a still, and
+    `target/debug/viewer --record target/rec/<name> --script <file> [options]` for a played sequence (scripted
+    pad input, frames saved, exits by itself) once the record item exists.
+  - Run them as plain commands: no pipes, `&&`, `;`, `cd`, `2>&1` or redirects. Only that exact form runs
+    outside the sandbox; any other form fails with "Unable to find a GPU". Never run the viewer without
+    `--shot` or `--record`, because it then never exits.
+  - Compare the result with frames of the same action in the Shinobido clips (ffmpeg into `target/`) and
+    with `videos/eldenring viewer.mp4`: put them side by side in one image and look at it.
+  - Write in the item's evidence the shot or record name, the clip timestamp, and what still differs.
+    Fix the differences, or record why they stay.
+  - An item whose result was not seen may not be checked. "Unverified" is never a done state.
 - Show evidence: the command you ran and the last lines of its output. Never claim success without it.
 
 ## Loop
@@ -103,8 +126,14 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 8. Blockers are only for these two cases: the next step would need work outside the project goal
    (including installing or configuring system software), or changing files outside this folder.
    Record it under Blockers in `PROGRESS.md`, commit and stop.
-9. If the milestone list is done, or every remaining item is blocked, exit without a commit:
-   the runner reads a session with no commit as "done or blocked" and ends the night.
+9. **Acceptance review.** When no unchecked item is left before the "Acceptance review" item in
+   `PROGRESS.md`, work on that item: hold the whole result up against the goal and its spirit (above).
+   Record a scripted sequence for every in-scope line, compare it with the clips, and fill `docs/acceptance.md`
+   with one row per line: evidence, then a verdict, either "matches" or "differs: how".
+   Every gap becomes a new unchecked item inserted before the Acceptance review item; commit, and the
+   loop goes on. Check the Acceptance review item only after a full pass that finds no gap.
+   Exit without a commit only when that item is checked or every remaining item is blocked: the runner
+   reads a session with no commit as "done or blocked" and ends the night.
 
 ## Scope (hard limits)
 - Only create or change files inside this folder. The `.iso` is read-only: never modify, move or rename it.
@@ -136,6 +165,9 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - `tools/night.py` alternates the two workers by usage: Claude until its 5-hour window is near full, then Codex,
   then it waits for a reset. You are one of them; do not hand work to the other yourself.
 - Codex does not commit or stage (read-only git is fine): the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
+- Codex's sandbox has no GPU, so Codex cannot run the viewer. When an item's last step is the viewer check,
+  Codex leaves it unchecked, appends `(needs viewer check, for Claude)` to its line, and moves on to the
+  next item it can do. Claude does those checks first in its next session.
 - Both workers keep `PROGRESS.md` current: the next worker starts from it with no other memory.
 - Either worker may do the long, token-heavy work (format surveys, executable lookups), split into bounded steps
   that each leave the suite green; finishing a step is not a reason to stop (see Loop step 6).
