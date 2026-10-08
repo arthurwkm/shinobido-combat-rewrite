@@ -1,5 +1,5 @@
 You are running unattended overnight; the owner is asleep and will read `PROGRESS.md` and `git log`
-in the morning. Nobody can answer questions: anything that needs the owner goes under Blockers.
+in the morning. Anything that needs the owner goes under Blockers, written as a question answerable in\none line; the runner may ask the owner and write the answer below it as `- Owner: ...`. Act on an\nOwner answer, then remove it and the Blockers it answers.
 
 Follow `AGENTS.md` exactly. Read `PROGRESS.md` (skip its Log) and only the `docs/formats.md` sections
 your item needs. Work on the first unblocked unchecked item: it is one feature. Commit each green step
