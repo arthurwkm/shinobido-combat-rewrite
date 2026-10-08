@@ -371,3 +371,21 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
   front, matching the owner's stealth-kill-from-behind/above request). Type 3 events inside `KI_HI*C07` chain the
   `S/A/B/C/D` variants (e.g. KI_HIBC07 → 261, 263). The player side is the normal attack motion (`AT_*`) with the
   victim switched to the matching `KI_HI*`; this is an ESTIMATE until a stealth-kill clip is supplied (PROGRESS Requests).
+
+## Enemy AI: `AI\battle\*.bin`, `AI\ActionSet\*.ass` — `tools/ai.py` (2026-10-08)
+All little-endian i32.
+- **`AI\battle\Busi*.bin` — layout confirmed** (`python tools/ai.py` → `ok: 10 Busi battle files, 1120 rows`, tables fill each file exactly).
+  `u32 ntables` (7), then per table `u32 rows` (16 in every table seen), per row `u32 n` and `n` records of 5 words
+  `(action id, weight, class 0/1/2, -1, -1)`. `n` is constant within a table (BusiKatana: 10, 9, 9, 8, 5, 6, 6).
+  Meaning is **hypothesis**: an attack/behaviour choice table; `action id` indexes the ActionSet action list, `weight` is a
+  percentage-like chance (values 0-180, rows do not sum to 100, so likely a per-id weight/range, not a probability),
+  `class` 0/1/2 a situation group, the 7 tables are situations (e.g. by distance) and the 16 rows are enemy "levels" or
+  pattern slots (the `BusiKatana01..05` files differ from `BusiKatana` only in weights). No sight or hearing numbers are here.
+- **`AI\ActionSet\*.ass` — layout hypothesis**: header `(6, N)` (N = 20/21/22 by variant: `Bushi_Fr`/`_Al` 20, `_St` 22, rest 21), then
+  a transition table of small ints: action ids, `-1` for none, `10000` (probably 100.00 %) and weights 30/50/70/300. The
+  `Bushi_*` variants differ in 4 (`Wt` vs `Pt`) to 263 (`St`) words, so the family is one table with per-role overrides
+  (Pt patrol, Wt wait, St stand, Al alert, Ba back, Bl block, Km, Fr). Exact record boundaries not decoded.
+- `ActionSet.asc` starts `(144, 1, 7)`, 4226 words, 80 % zero: a registry of ~65 actions; `Pack\AsPackName.fnt` is 65 × 256-byte names
+  (`AI/ActionSet/General_Pt.ass`, ...) and `Pack\AsPack.pac` 65 offsets + the same `.ass` data.
+- Sight range, hearing range and alert thresholds are **not in these files**; they are in the executable (or `chara\`).
+  Not looked up: the sim uses `ESTIMATE` values for them (Milestone 10 stealth).
