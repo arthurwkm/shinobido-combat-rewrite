@@ -278,7 +278,8 @@ impl Player {
         if self.wall_tall { self.hug_edge = 0.0; }
         let moving = side != 0.0 && side != self.hug_edge;
         if moving { self.hug_dir = side; }
-        let clip = if moving { "ONE06" } else if self.hug_edge != 0.0 { "STOP_B06" } else { "STOP_A06" };
+        // ESTIMATE: ONE06 / TWO06 are the two side-step directions; which is which is not readable from the files
+        let clip = if moving { if self.hug_dir > 0.0 { "ONE06" } else { "TWO06" } } else if self.hug_edge != 0.0 { "STOP_B06" } else { "STOP_A06" };
         if name != clip {
             self.start(State::Hug, clip);
         } else if self.world.done() {

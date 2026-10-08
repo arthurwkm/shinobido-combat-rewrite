@@ -7,11 +7,13 @@ use super::DT;
 pub struct Camera {
     pub yaw: f32,
     pub pitch: f32,
+    /// 0 = normal framing, 1 = pulled in beside the wall (wall hug).
+    pub pull: f32,
 }
 
 impl Default for Camera {
     fn default() -> Self {
-        Camera { yaw: 0.0, pitch: CAM_PITCH }
+        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0 }
     }
 }
 
@@ -33,11 +35,18 @@ impl Camera {
         self.yaw = wrap(self.yaw + wrap(want - self.yaw) * (CAM_LOCK_RATE * DT).min(1.0));
     }
 
+    /// Ease the hug pull-in toward 1 while hugging a wall, back to 0 otherwise.
+    pub fn follow_hug(&mut self, hugging: bool) {
+        let want = if hugging { 1.0 } else { 0.0 };
+        self.pull += (want - self.pull) * (CAM_HUG_RATE * DT).min(1.0);
+    }
+
     /// (eye, focus) in the world frame for a player at `pos`.
     pub fn eye(&self, pos: [f32; 3]) -> ([f32; 3], [f32; 3]) {
         let f = [pos[0], pos[1] + CAM_FOCUS_HEIGHT, pos[2]];
         let (cp, sp) = (self.pitch.cos(), self.pitch.sin());
-        let e = [f[0] - self.yaw.sin() * cp * CAM_DIST, f[1] + sp * CAM_DIST, f[2] - self.yaw.cos() * cp * CAM_DIST];
+        let dist = CAM_DIST + (CAM_HUG_DIST - CAM_DIST) * self.pull;
+        let e = [f[0] - self.yaw.sin() * cp * dist, f[1] + sp * dist, f[2] - self.yaw.cos() * cp * dist];
         (e, f)
     }
 }
@@ -56,6 +65,12 @@ mod tests {
         assert_eq!(c.pitch, CAM_PITCH_MAX);
         c.orbit([std::f32::consts::PI * 1.5, -10.0]);
         assert!(c.yaw < 0.0 && c.pitch == CAM_PITCH_MIN, "yaw wraps, pitch clamps");
+        let mut c = Camera::default();
+        for _ in 0..120 {
+            c.follow_hug(true);
+        }
+        let (e, f) = c.eye([0.0; 3]);
+        assert!((((e[0] - f[0]).powi(2) + (e[1] - f[1]).powi(2) + (e[2] - f[2]).powi(2)).sqrt() - CAM_HUG_DIST).abs() < 1e-2, "pulls in");
         let mut c = Camera::default();
         for _ in 0..120 {
             c.follow_lock([0.0; 3], [5.0, 0.0, 0.0]);

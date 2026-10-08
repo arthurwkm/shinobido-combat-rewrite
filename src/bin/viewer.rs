@@ -12,7 +12,7 @@ use shinobido_combat_rewrite::sim::combat::Fight;
 use shinobido_combat_rewrite::sim::enemy::Enemy;
 use shinobido_combat_rewrite::sim::execution;
 use shinobido_combat_rewrite::sim::stealth::{Alert, Stealth};
-use shinobido_combat_rewrite::sim::player::Player;
+use shinobido_combat_rewrite::sim::player::{Player, State};
 use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
 
@@ -449,6 +449,7 @@ fn orbit(
             * time.delta_secs();
     }
     cam.0.orbit([-d.x, d.y]); // looking down +z, screen-right is -x
+    cam.0.follow_hug(sim.0.player.state == State::Hug);
     let (e, f) = cam.0.eye(sim.0.player.pos);
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }

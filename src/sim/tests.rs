@@ -801,7 +801,11 @@ fn wall_hug_enters_slides_peeks_and_leaves() {
     let x0 = p.pos[0];
     for _ in 0..60 { p.target_heading = std::f32::consts::FRAC_PI_2; p.step_on(&t, true, false); }
     assert!(p.pos[0] > x0 + 0.5, "side-steps along the wall: {}", p.pos[0]);
-    assert_eq!(p.world_action(), "ONE06");
+    assert_eq!(p.world_action(), "TWO06");
+    p.target_heading = -std::f32::consts::FRAC_PI_2;
+    p.step_on(&t, true, false);
+    assert_eq!(p.world_action(), "ONE06", "other direction");
+    p.target_heading = std::f32::consts::FRAC_PI_2;
     for _ in 0..400 { p.step_on(&t, true, false); }
     assert!(p.pos[0] < -3.5, "stops at the wall end (x=-4): {}", p.pos[0]);
     assert_eq!(p.world_action(), "STOP_B06");
