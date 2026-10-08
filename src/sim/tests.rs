@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_130_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 130);
+fn all_133_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 133);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -434,5 +434,21 @@ fn ledge_wall_and_corner_play_once_then_idle() {
         p.step(false, false);
         // a climb ends above flat ground, so it may fall afterwards
         assert!(matches!(p.state, State::Idle | State::Fall), "{name}");
+    }
+}
+
+#[test]
+fn item_and_carry_clips_play_once_then_idle() {
+    use super::player::{Player, State};
+    // ESTIMATE: triggers are caller-chosen one-shots with no cancels.
+    for name in ["PICK01", "PUT01", "OPEN01", "CLOSE01", "MAKI01", "MAKURI01", "MAKURI_A01", "MAKURI_H01", "THROW_BACK01", "DRINK01", "DRINK01_H", "DRINK_K05", "DRINK_S05"] {
+        let mut p = Player::new();
+        p.special(name);
+        for _ in 0..action(name).frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{name}");
     }
 }

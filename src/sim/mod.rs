@@ -42,6 +42,7 @@ impl World {
 
     fn root_at(&self, f: u32) -> [f32; 3] {
         let k = self.action.root;
+        if k.is_empty() { return [0.0; 3]; } // static clip: no root keys
         let origin = k[0].1;
         let i = k.iter().rposition(|key| key.0 <= f).unwrap_or(0);
         let (a, b) = (k[i], k[(i + 1).min(k.len() - 1)]);
