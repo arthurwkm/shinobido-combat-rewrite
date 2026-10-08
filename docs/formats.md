@@ -57,6 +57,16 @@ Confirm by checking that the length matches the keyframe data's own duration acr
   are right.
 - Unsuffixed `AT01/AT02/AT03.nmt` exist in `motion\` but have no suffix-form entry; role unknown.
 
+## Player motion sets — hypothesis, `tools/inventory.py` (2026-10-08)
+
+The player set is every suffix-`01` motion (incl. `_H` variants) plus whatever is reached by following type-3 cancel
+targets (arg0 = 0-based mtnfile index): 134 motions. Extra sets reached: `02` (WALK_*, JUMP_F/B/R/L, STOP02, AT02),
+`06` (wall hug/corner/hang/climb: STOP_A/B, ONE, TWO, BACK, HANG_L/R, CLIMB, SHEATH06), `05` (only IKOU_B, STOP_ABU,
+SHEATH_BU), `27` (KICK27, FUTO27, KICK27_H). The rest of sets `05` and `27` (full parallel lists: RUN05, HI_*05, PEER27,
+SEARCH_*27 ...) are not reached from the player and look like other characters/NPC behaviours, so they are excluded
+(hypothesis; revisit when the enemy is picked). Set `03`/`04` unreached. Check: every motion appears in exactly one
+group of `docs/player_motions.md`.
+
 ## .nmt layout — confirmed on 1350 of 1441 top-level files by `python tools/nmt.py`
 
 Little-endian. Replaces the earlier ".nmt hypothesis" above for everything listed here.

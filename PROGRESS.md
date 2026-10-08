@@ -59,7 +59,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 
 ## Milestone 8 — Data for the full scope
 Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-on, stealth, reference-style viewer.
-- [ ] Moveset inventory: group every player motion in `docs/player_motions.md` by action (locomotion, run stop, jumps, flips, rolls, attacks, guard, ledge, wall, stealth, items, executions, other) with its sim status; each group not yet in the sim becomes an item in Milestone 9. The player set is wider than suffix `01`: following type-3 cancel targets from the `01` motions reaches sets `02` (walk, jumps), `06` (wall hug, hang, climb), `05` (STOP_ABU/IKOU_B/SHEATH_BU, and the set holds crouch `_S`, dash `_D`, carry `_K`, hug `_H` variants) and `27` (KICK/FUTO); decide per set whether it is the player's and record why in formats.md. Check: a tool asserts every player motion is listed exactly once.
+- [x] (`.venv/bin/python tools/inventory.py` → `ok: 134 motions, ...`; groups in docs/player_motions.md, sets in formats.md; items below) Moveset inventory: group every player motion in `docs/player_motions.md` by action (locomotion, run stop, jumps, flips, rolls, attacks, guard, ledge, wall, stealth, items, executions, other) with its sim status; each group not yet in the sim becomes an item in Milestone 9. The player set is wider than suffix `01`: following type-3 cancel targets from the `01` motions reaches sets `02` (walk, jumps), `06` (wall hug, hang, climb), `05` (STOP_ABU/IKOU_B/SHEATH_BU, and the set holds crouch `_S`, dash `_D`, carry `_K`, hug `_H` variants) and `27` (KICK/FUTO); decide per set whether it is the player's and record why in formats.md. Check: a tool asserts every player motion is listed exactly once.
 - [ ] Skeleton order: confirm the RWS HAnim bone order against the `.nmt` tracks (currently unverified), e.g. by posing the rest skeleton with IDLE frame 0 and checking bone lengths stay constant across all player clips.
 - [ ] Kagetora model: parse geometry, skin weights and textures of `model\KAGETORA_BODY/HEAD_H/WEAPON.rws` (+ TXD); `tools/model.py` writes a viewer-loadable file (e.g. glTF) to `extracted/`. Check: weights sum to 1, bone indices in range, vertex counts match the RW headers.
 - [ ] Executions: decode `motion\harakiri\*.nmp` (paired player/enemy motions?) and list each execution with its trigger condition (from files, executable or ESTIMATE) in formats.md.
@@ -71,7 +71,15 @@ Goal widened 2026-10-08 (AGENTS.md): full moveset, one enemy, executions, lock-o
 
 ## Milestone 9 — Full player moveset in the sim
 - [ ] Static world in the sim (engine-free): boxes and ramps as colliders, ground height, wall contact, ledge detection, falling off edges. Shared with the viewer terrain.
-Next: one `- [ ]` item per uncovered group, added here by the M8 inventory item (e.g. run stop, flips, rolls, jump variants and falling, ledge grab/hang/shimmy/climb, wall actions, stealth movement, jump attacks, remaining attacks, items).
+Items per uncovered group (motions in docs/player_motions.md; sim has run/halt/idle/walk/jump/land, AT_A/AT_C chain, guard, 4 evasions, HI_*, 7 specials):
+- [ ] Run stop and run variants: STOP_K01, RUN_R/L/RE/LE01, TIRED01, STOP02.
+- [ ] Jump variants and falling: FALL01, LAND_A/B01, JUMP_F/B/R/L02, TRI_J/TRI_A01, UP_FR/UP_BA01 (high jump), UKEMI_A01.
+- [ ] Flips and jump attacks: FLIP_B01, KICK_J/KICK_JB/THRO_J01, CLIMB_B01.
+- [ ] Remaining attacks: AT_CA/AT_D/AT_DA/AT_E01, SOCCER01, BLADE01, AT02, KICK27/FUTO27, CLAW_*.
+- [ ] Ledge, wall and corner: KABE_E/KABE_U01, STOP_A/B/ONE/TWO/BACK06, HANG_L/R06, CLIMB06, IKOU_B05/06.
+- [ ] Items and carrying: PICK/PUT/OPEN/CLOSE/MAKI/MAKURI*/THROW_BACK01/DRINK_H variants.
+- [ ] Remaining hit reactions: DEKA_HI*, NORI_*, BURA_HI, SUI_HI, SHOJI_HI, ITEM_HI, NAGERARE_A01.
+- [ ] Talk and idle extras: TOJO_B, TALK_*, KIME_*, FURI, WAIT01.
 
 ## Milestone 10 — Enemy and combat interactions
 - [ ] Enemy in the sim: state machine (idle, patrol, alert, attack, guard, hit, death) on its own motions.
@@ -135,3 +143,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: owner said go with recommendations; walk/run threshold closed as ESTIMATE (walk flag caller-chosen), Blocker removed. All milestones done.
 - 2026-10-08 Claude: goal refined from the owner's clips: viewer look/HUD/terrain per `videos/eldenring viewer.mp4` and the Shinobido clips (eye awareness icon, ki compass), moveset adds wall run/hug, crouch, carry; player motions span sets 01/02/05/06/27; emulator for attended sessions only (night sandbox blocks screencapture/osascript, tested).
 - 2026-10-08 Claude: night config review: Codex download needs no longer become Blockers (they ended nights early), M9 placeholder is no longer a checkbox, .venv python path, build timeout/no-release rules, viewer runs outside the night sandbox via `--shot` (GPU tested), display kept awake.
+- 2026-10-08 Claude: M8 moveset inventory done (tools/inventory.py, 134 motions in 9 groups; sets 05/27 beyond the reached motions excluded as hypothesis); M9 group items added.
