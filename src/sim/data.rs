@@ -43,3 +43,10 @@ pub const HEAR_WALK: f32 = 3.0;
 pub const HEAR_FILL: f32 = 0.5;
 pub const STEALTH_DECAY: f32 = 0.2;
 pub const SUSPICIOUS_AT: f32 = 0.4;
+// ESTIMATE: execution conditions (no stealth-kill clip yet, PROGRESS Requests). Max horizontal reach (m) of any execution;
+// minimum height (m) above the soldier for the from-above kill; minimum angle (rad) off the soldier's facing for the
+// from-behind kill; hp fraction at or below which a staggered soldier can be finished from the front.
+pub const EXEC_REACH: f32 = 1.5;
+pub const EXEC_ABOVE_MIN: f32 = 2.0;
+pub const EXEC_BEHIND_MIN: f32 = 2.4;
+pub const EXEC_FRONT_HP: f32 = 0.25;

@@ -4,6 +4,7 @@
 pub mod extracted;
 pub mod combat;
 pub mod enemy;
+pub mod execution;
 pub mod lockon;
 pub mod stealth;
 pub mod player;

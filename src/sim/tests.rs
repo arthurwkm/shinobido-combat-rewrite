@@ -612,3 +612,24 @@ fn stealth_fills_from_sight_and_noise_and_alerts() {
     run(&mut e, &mut s, [0.0, 0.0, -6.0], "WALK_F02", 600);
     assert_eq!(s.meter, 0.0);
 }
+
+#[test]
+fn execution_cue_needs_the_right_position_and_enemy_state() {
+    use super::{enemy::Enemy, execution::{available, Kind}, player::Player};
+    let mut p = Player::new();
+    let mut e = Enemy::new([0.0; 3]); // faces +z, Idle
+    p.pos = [0.0, 0.0, -1.0];
+    assert_eq!(available(&p, &e), Some(Kind::Back));
+    p.pos = [0.0, 0.0, 1.0]; // in front of an unaware soldier: no kill
+    assert_eq!(available(&p, &e), None);
+    p.pos = [0.0, 2.5, 0.5];
+    assert_eq!(available(&p, &e), Some(Kind::Above));
+    p.pos = [0.0, 0.0, -3.0]; // out of reach
+    assert_eq!(available(&p, &e), None);
+    // staggered and low: front finisher
+    e.hit("HI_BS07", 80);
+    p.pos = [0.0, 0.0, 1.0];
+    assert_eq!(available(&p, &e), Some(Kind::Front));
+    e.hit("HI_BS07", 100);
+    assert_eq!(available(&p, &e), None); // dead
+}
