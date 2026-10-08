@@ -387,3 +387,19 @@ fn walking_off_a_ledge_plays_fall_then_landing_by_drop_and_ground_jumps_are_acti
     for _ in 0..40 { p.step(false, false); }
     assert!(p.pos[2] > 3.0 && p.state == State::Idle, "{:?}", p.pos);
 }
+
+#[test]
+fn flips_and_jump_attacks_play_once_then_idle() {
+    use super::player::{Player, State};
+    // ESTIMATE: triggers are caller-chosen one-shots with no cancels (KICK_J/THRO_J are ground-based in the sim).
+    for name in ["FLIP_B01", "KICK_J01", "KICK_JB01", "THRO_J01", "CLIMB_B01"] {
+        let mut p = Player::new();
+        p.special(name);
+        for _ in 0..action(name).frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{name}");
+    }
+}
