@@ -34,6 +34,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Milestone 6 — Combat
 - [ ] Attack chains, guard, evasion, hit reactions — as found in the game's action data, each with a test.
+  - done: attack chain AT_A01 → AT_C01 only inside the cancel window (`cargo test -q` → 7 passed). Cancel target IDs are 0-based mtnfile indices (formats.md). Target choice among several is ESTIMATE (first). Not done: guard (GU_A01→GU_B01), evasion, hit reactions (HI_*), walk (suffix-02 motions, RUN01 cancels into WALK_*02).
 - [ ] Shinobido-specific actions discovered in Milestones 2–3 (list them here as they are found).
 
 ## Milestone 7 — Viewer
@@ -44,6 +45,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (5): Player attack chain through cancel windows; motion IDs are 0-based. Next: guard, hit reactions, suffix-02 walk.
 - 2026-10-07 night (4): Codex disassembled the event dispatcher (0x113220); nmt.py now reads the event count from header +0x1a (1356 files tile to EOF, was 1350). Hit/cancel windows now in extracted.rs. Next: M6 attack chain in Player using `cancels` (ids are mtnfile.bin indices: map to names), then guard/hit reactions.
 - 2026-10-07 night (3): run/halt/idle state machine in player.rs. Jump/turn need gravity and turn data (lookups); stopping.
 - 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.

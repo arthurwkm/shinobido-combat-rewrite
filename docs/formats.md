@@ -206,3 +206,10 @@ Baseline checks (unchanged simulation; these do not validate the new event hypot
 `cargo test -q` → `test result: ok. 5 passed; 0 failed`;
 `.venv/bin/python tools/compare.py` → `105/105 actions within tolerance`.
 `git diff --check` passed; tracked changes are limited to this file. No commit was made.
+
+### Motion IDs in events — confirmed by consistency (`tools/extract.py`)
+
+Type 3 arg0 is the **0-based** index into `mtnfile.bin` (the numbering in `docs/player_motions.md`). Checked on the targets:
+`AT_A01` → AT_C01, AT_CA01, SOCCER01; `AT_C01` → AT_CA01, AT_D01, AT_DA01, SOCCER01; `GU_A01` → GU_B01;
+`RUN01` → STOP02 and WALK_F02/B02/R02/L02. The 1-based reading gives self-cancels and unrelated targets.
+So walking lives in the suffix-`02` set (hypothesis: same character, another stance/weapon state), not in the suffix-`01` set.

@@ -42,15 +42,15 @@ fn holding_forward_runs_at_the_run_cycle_speed_then_halts_in_place() {
     use super::player::{Player, State};
     let mut p = Player::new();
     for _ in 0..120 {
-        p.step(true);
+        p.step(true, false);
     }
     assert_eq!(p.state, State::Run);
     assert!((p.pos[2] - 4.0 * 1.69).abs() < 0.05, "{:?}", p.pos); // 4 cycles of 30 frames
     let z = p.pos[2];
-    p.step(false);
+    p.step(false, false);
     assert_eq!(p.state, State::Halt);
     for _ in 0..60 {
-        p.step(false);
+        p.step(false, false);
     }
     assert_eq!(p.state, State::Idle);
     assert!((p.pos[2] - z).abs() < 0.2, "halt moved {}", p.pos[2] - z);
@@ -61,4 +61,25 @@ fn first_attack_has_hit_window_14_21_and_cancels_into_ids_30_31_34() {
     let a = action("AT_A01");
     assert_eq!(a.hits, [(14, 21)]);
     assert_eq!(a.cancels, [(30, 20, 24), (31, 20, 24), (34, 20, 26)]);
+}
+
+#[test]
+fn attack_chains_only_inside_the_cancel_window() {
+    use super::player::{Player, State};
+    let run = |press_at: u32| {
+        let mut p = Player::new();
+        p.step(false, true);
+        for f in 1..=press_at {
+            p.step(false, f == press_at);
+        }
+        (p.state, p.world_action())
+    };
+    assert_eq!(run(10), (State::Attack, "AT_A01")); // window is frames 20..24
+    assert_eq!(run(21), (State::Attack, "AT_C01"));
+    let mut p = Player::new();
+    p.step(false, true);
+    for _ in 0..80 {
+        p.step(false, false);
+    }
+    assert_eq!(p.state, State::Idle);
 }
