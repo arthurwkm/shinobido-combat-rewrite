@@ -35,10 +35,18 @@ impl Camera {
         self.yaw = wrap(self.yaw + wrap(want - self.yaw) * (CAM_LOCK_RATE * DT).min(1.0));
     }
 
-    /// Ease the hug pull-in toward 1 while hugging a wall, back to 0 otherwise.
-    pub fn follow_hug(&mut self, hugging: bool) {
-        let want = if hugging { 1.0 } else { 0.0 };
-        self.pull += (want - self.pull) * (CAM_HUG_RATE * DT).min(1.0);
+    /// Pull in beside the wall; heading points away from it. `dt` is elapsed render time.
+    pub fn follow_hug(&mut self, heading: Option<f32>, dt: f32) {
+        let blend = 1.0 - (-CAM_HUG_RATE * dt.max(0.0)).exp();
+        let want = if heading.is_some() { 1.0 } else { 0.0 };
+        self.pull += (want - self.pull) * blend;
+        if let Some(heading) = heading {
+            let centre = heading + std::f32::consts::PI;
+            let left = wrap(centre - CAM_HUG_ANGLE - self.yaw);
+            let right = wrap(centre + CAM_HUG_ANGLE - self.yaw);
+            let delta = if left.abs() <= right.abs() { left } else { right };
+            self.yaw = wrap(self.yaw + delta * blend);
+        }
     }
 
     /// (eye, focus) in the world frame for a player at `pos`.
@@ -56,6 +64,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn hug_camera_uses_elapsed_time_and_sits_outside_wall() {
+        let sample = |hz: usize| {
+            let mut c = Camera::default();
+            for _ in 0..hz { c.follow_hug(Some(0.0), 1.0 / hz as f32); }
+            c
+        };
+        let a = sample(30);
+        let mut b = sample(120);
+        assert!((a.pull - b.pull).abs() < 1e-5);
+        assert!(wrap(a.yaw - b.yaw).abs() < 1e-5);
+        let (eye, focus) = b.eye([0.0; 3]);
+        assert!(eye[2] > focus[2], "wall is behind the outward-facing player");
+        assert!(eye[0].abs() > 0.5, "view is beside the wall");
+        let yaw = b.yaw;
+        for _ in 0..120 { b.follow_hug(None, DT); }
+        assert!(b.pull < 0.001);
+        assert_eq!(b.yaw, yaw, "release preserves manual orbit");
+    }
+
+    #[test]
     fn camera_sits_behind_orbits_and_locks_on() {
         let mut c = Camera::default();
         let (e, f) = c.eye([0.0; 3]);
@@ -67,7 +95,7 @@ mod tests {
         assert!(c.yaw < 0.0 && c.pitch == CAM_PITCH_MIN, "yaw wraps, pitch clamps");
         let mut c = Camera::default();
         for _ in 0..120 {
-            c.follow_hug(true);
+            c.follow_hug(Some(0.0), DT);
         }
         let (e, f) = c.eye([0.0; 3]);
         assert!((((e[0] - f[0]).powi(2) + (e[1] - f[1]).powi(2) + (e[2] - f[2]).powi(2)).sqrt() - CAM_HUG_DIST).abs() < 1e-2, "pulls in");

@@ -63,6 +63,8 @@ pub const EXEC_DIST: f32 = 0.8;
 pub const CAM_DIST: f32 = 3.0; // ESTIMATE: closer and lower to match combat.mov framing (audit 2026-10-08)
 pub const CAM_HUG_DIST: f32 = 1.8; // ESTIMATE: movement.mov 38 s shows the camera close beside the wall
 pub const CAM_HUG_RATE: f32 = 4.0;
+// ESTIMATE: side view 60 degrees from the outward wall normal; awaiting movement 38 s comparison.
+pub const CAM_HUG_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
 pub const CAM_PITCH: f32 = 0.3;
 pub const CAM_PITCH_MIN: f32 = -0.2;
 pub const CAM_PITCH_MAX: f32 = 1.2;
