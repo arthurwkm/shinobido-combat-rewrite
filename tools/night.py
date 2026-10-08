@@ -15,7 +15,8 @@ import json, subprocess, sys, threading, time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-NEAR, WEEK, POLL = 90, 80, 30  # percent 5h cutoff, percent weekly cutoff, watchdog seconds
+NEAR, WEEK = 90, 80  # percent 5h cutoff, percent weekly cutoff
+POLL_MIN, POLL_MAX = 30, 600  # watchdog seconds: 30 s per percent of headroom left, clamped to this range
 END = float("inf")  # set in main(): a running worker is killed at this time
 CLAUDE = "/Users/arthursantos/.claude/local/claude"
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,8 +97,11 @@ def run(worker, prompt, seen):
     done, killed = threading.Event(), []
 
     def watch():
-        while not done.wait(POLL):
+        delay = 60
+        while not done.wait(delay):
             u = seen.get("claude") if worker == "claude" else codex_usage()
+            if u:
+                delay = min(max(30 * min(NEAR - u["five"], WEEK - u["week"]), POLL_MIN), POLL_MAX)
             if time.time() >= END or (u and (u["five"] >= NEAR or u["week"] >= WEEK)):
                 log(f"{worker} stopped: end time or usage limit ({u and (u['five'], u['week'])})")
                 killed.append(1)
