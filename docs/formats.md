@@ -353,3 +353,21 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
 - **Confirmed:** vtable-style refs to the `0x15cc50` cluster exist only as 4-word tables at `0x617734` and `0x61ea14` (`0x15cc50, 0x15d180, 0x15d9c0, 0x15da40`); `0x15d180` is a generic actor update with stick-like compares at +-0.8 (`0xbf4ccccd`/`0x3f4ccccd`, `0x15d31c`) calling `0x1893c0`/`0x1bf880` with +-1/-2: looks like menu/camera selection, not the player's walk/run.
 - **Observed:** registration code at `0x2a6330–0x2a63e0` binds motion ids 0xB2, 0xA8, 0xAB, 0xAE, 0x15A, 0xB0 to object slots `+0x88..0x9c` and stores float pairs 0.8/1.35 (`0x3f4ccccd`/`0x3faccccd`) at `+0x30/+0x34` of two of them (**hypothesis**: speed-scale or blend range of a locomotion blender, consumer not found).
 - Next idea if retried: find readers of `[obj+0x30]`/`[obj+0x34]` for the slots at `s3+0x8c/0x98`.
+
+## Execution packs and executions — `tools/harakiri.py` (2026-10-08)
+
+- **Confirmed** (`harakiri.py` → `ok: 46 packs, 4386 entries, all IDs named`): `motion\harakiri\C001..C046.nmp` is
+  little-endian `u32 count`, then `count × (u32 motion ID, u32 offset, u32 size)`; every ID is a valid 0-based
+  `mtnfile.bin` index and every blob ends inside the file. Offsets are not monotonic and a few entries (IDs 134, 148,
+  231, ...) have offsets inside the table and sizes ≈ file size: nested/index entries, not decoded.
+- **Confirmed by content**: a pack holds ~50–220 motions of several actor sets (`01` Kagetora, `05`, `06`, `07`
+  foot soldier, `12`, `13`, ...) i.e. the per-stage motion library; **it is not a set of paired executions** (the
+  name "harakiri" is the game's internal title). `motion\face\harakiri\*.fmp` is the face counterpart.
+- **No paired execution motions found.** Names never appear in `VOLUME.DAT` data (scripts refer to IDs);
+  `KIME_A01/B01/A05` (IDs 1131/1132/1138) are not referenced by any immediate in the executable (so script-driven,
+  out of scope). `AT_SA05` is only reached from `JUMP_*05` (a jump attack).
+- **Hypothesis**: kill reactions of the foot soldier (set `07`) are `KI_HI<dir><variant>07` (19 motions, IDs
+  257–294, listed in `docs/executions.md`); `dir` B/U/C follows the `HI_B*/HI_U*/HI_C*` hit naming (back / above /
+  front, matching the owner's stealth-kill-from-behind/above request). Type 3 events inside `KI_HI*C07` chain the
+  `S/A/B/C/D` variants (e.g. KI_HIBC07 → 261, 263). The player side is the normal attack motion (`AT_*`) with the
+  victim switched to the matching `KI_HI*`; this is an ESTIMATE until a stealth-kill clip is supplied (PROGRESS Requests).
