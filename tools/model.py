@@ -116,13 +116,14 @@ def build(d):
 
 
 def write_gltf(d, path):
-    """glTF 2.0 with the 28-joint skin, one primitive per RW mesh (material index in `extras`), no textures yet."""
+    """glTF 2.0 with the skin (every node of the HAnim list is a joint), one primitive per RW mesh (material index in `extras`), no textures yet."""
     import json
 
     prims = build(d)
     par, off, nodes = skeleton(d)
     ids = frame_ids(d)
     ibm = skin_info(d, geometries(d)[0][3])[2]
+    nb = len(ibm)
     by_id = {nid: m for (nid, *_), m in zip(nodes, ibm)}
     blob, views, acc = bytearray(), [], []
 
@@ -137,13 +138,13 @@ def write_gltf(d, path):
         acc.append(a)
         return len(acc) - 1
 
-    jn = [{"name": f"bone{i}"} for i in range(28)]
+    jn = [{"name": f"bone{i}"} for i in range(nb)]
     for f in range(1, len(ids)):
         jn[ids[f]]["translation"] = list(off[f])  # rest rotation assumed identity (bone lengths match, see check)
         if par[f] > 0:
             jn[ids[par[f]]].setdefault("children", []).append(ids[f])
     root = ids[1]
-    ibm_acc = add(b"".join(struct.pack("<16f", *[*by_id[i][:3], 0, *by_id[i][4:7], 0, *by_id[i][8:11], 0, *by_id[i][12:15], 1]) for i in range(28)), 5126, 28, "MAT4")
+    ibm_acc = add(b"".join(struct.pack("<16f", *[*by_id[i][:3], 0, *by_id[i][4:7], 0, *by_id[i][8:11], 0, *by_id[i][12:15], 1]) for i in range(nb)), 5126, nb, "MAT4")
     meshes = []
     for p in prims:
         vs = [v for t in p["tris"] for v in t]
@@ -164,9 +165,9 @@ def write_gltf(d, path):
     g = {
         "asset": {"version": "2.0", "generator": "tools/model.py"},
         "scene": 0,
-        "scenes": [{"nodes": [root] + list(range(28, len(nodes_out)))}],
+        "scenes": [{"nodes": [root] + list(range(nb, len(nodes_out)))}],
         "nodes": nodes_out,
-        "skins": [{"joints": list(range(28)), "inverseBindMatrices": ibm_acc, "skeleton": root}],
+        "skins": [{"joints": list(range(nb)), "inverseBindMatrices": ibm_acc, "skeleton": root}],
         "meshes": meshes,
         "accessors": acc,
         "bufferViews": views,
@@ -182,7 +183,7 @@ def check(d):
         assert sum(m[0] for m in meshes) == sum(n for n, _ in pk) - 2 * (len(pk) - len(meshes))  # strips overlap by 2
         assert all(len(v) == n for n, p in pk for v in p.values()) and all(len(p) == 4 for _, p in pk)
         nb, used, ibm, nid = skin_info(d, skin)
-        assert nb == 28 and max(used) < nb and sorted(nid) == list(range(28))
+        assert nb == len(nid) and max(used) < nb and sorted(nid) == list(range(nb))
         par, off, _ = skeleton(d)
         ids = frame_ids(d)
         pos = {nid[k]: bone_pos(m) for k, m in enumerate(ibm)}
@@ -190,17 +191,20 @@ def check(d):
             if par[f] > 0:
                 assert abs(math.dist(pos[ids[f]], pos[ids[par[f]]]) - math.dist(off[f], (0, 0, 0))) < 0.01
     prims = build(d)
-    gt = [g["tris"] for g, *_ in geometries(d)]
-    n0 = len(geometries(d)[0][1])
-    assert [sum(len(p["tris"]) for p in prims[:n0]), sum(len(p["tris"]) for p in prims[n0:])] == gt
+    k, got = 0, []
+    for g, meshes, *_ in geometries(d):
+        got.append(sum(len(p["tris"]) for p in prims[k : k + len(meshes)]))
+        k += len(meshes)
+    assert got == [g["tris"] for g, *_ in geometries(d)]
     nrm = [math.hypot(*v[1]) for p in prims for v in p["verts"]]
     assert all(abs(x - 127) < 3 for x in nrm)  # normals are signed bytes of length ~127
 
 
 if __name__ == "__main__":
-    d = (MODEL / "KAGETORA_BODY.rws").read_bytes()
-    check(d)
     out = MODEL.parent.parent / "model"
     out.mkdir(exist_ok=True)
-    write_gltf(d, out / "kagetora_body.gltf")
-    print("ok: geometry strips give the RW triangle counts, normals unit length, skin matrices match HAnim bone lengths")
+    for part in ("BODY", "HEAD_H", "HEAD_L", "WEAPON"):
+        d = (MODEL / f"KAGETORA_{part}.rws").read_bytes()
+        check(d)
+        write_gltf(d, out / f"kagetora_{part.lower()}.gltf")
+    print("ok: geometry strips give the RW triangle counts, normals unit length, skin matrices match HAnim bone lengths (body, heads, weapon)")

@@ -145,6 +145,15 @@ Each has extensions `0x50e` (mesh table), `0x510` (PS2 native data), `0x116` (sk
   second half grows by 40 per packet, a running vertex offset into a table not present in the file); the chunks `0x1b`
   (1276 B) and `0x1000060` were not decoded. `tools/model.py` therefore skins rigidly to the nearest used bone segment (ESTIMATE).
 
+### KAGETORA_HEAD_H / HEAD_L / WEAPON geometry — confirmed by `python tools/model.py` (2026-10-08)
+
+Same chunk layout as BODY (one clump with `0x50e`/`0x510`/`0x116` per geometry), so `tools/model.py` reads all four files;
+the strip/triangle-count check passes on each. HEAD_H: 3 geometries (42, 42, 584 tris; 7 meshes in the big one), 26-node
+HAnim skeleton (face/hair bones); HEAD_L: 3 geometries (42, 42, 568 tris), 3 nodes; WEAPON: 1 geometry (166 tris), 2 nodes.
+Each part has its own root frame; head files place frame 0 at y 15.3 / z 0.22 (model units, hypothesis: attach point on the
+body's head bone, bone 9 = head per id tree), the weapon at the origin (attach to a hand bone: unknown, hypothesis hand 15/20).
+Skin weights are missing here too (same rigid ESTIMATE). Texture dictionaries (`0x16`, native `0x15` textures) not yet decoded.
+
 ## .nmt event consumer — targeted SCES_539.31 lookup (2026-10-07)
 
 Addresses below are **virtual addresses** in the disc's PAL executable. **Confirmed** means
