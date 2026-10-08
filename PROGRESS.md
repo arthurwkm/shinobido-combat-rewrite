@@ -18,7 +18,7 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (evidence: nmt.py check, root motion RUN01 1.69 m/30 f) `.nmt` keyframes: bone tracks, frame rate, compression; which bone carries root motion.
 - [x] (evidence: `python tools/rws.py` → `ok: 29 frames, 28 HAnim nodes ... matches 24 .nmt tracks`; per-bone order unverified) `model\KAGETORA_BODY.rws`: RenderWare chunks, HAnim skeleton (bone IDs, hierarchy) matching the `.nmt` tracks. `tools/rws.py`.
 - [x] (layout only: `python tools/weapon.py` → `ok: 55 wpdata records, 25 wpset entries`; no damage/range fields found, see formats.md) `weapon\wpdata.bin` / `wpset.bin`: layout, which entries are the player's weapons, any damage or range fields.
-- [ ] List values the files don't hold (movement speeds not in root motion, gravity, cancel rules, input windows). For each: targeted executable lookup or `ESTIMATE`.
+- [x] (docs/missing_values.md) List values the files don't hold (movement speeds not in root motion, gravity, cancel rules, input windows). For each: targeted executable lookup or `ESTIMATE`.
 
 ## Milestone 3 — Extraction pipeline
 - [ ] `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
