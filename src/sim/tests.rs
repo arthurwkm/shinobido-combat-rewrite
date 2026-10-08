@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_105_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 105);
+fn all_109_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 109);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -120,4 +120,16 @@ fn dodges_move_by_their_root_motion_then_return_to_idle() {
         assert_eq!(p.state, State::Idle, "{dir}");
         assert!((p.pos[axis] - want).abs() < 0.05, "{dir} {:?}", p.pos);
     }
+}
+
+#[test]
+fn walking_covers_the_walk_cycle_root_motion() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.walk = true;
+    for _ in 0..160 {
+        p.step(true, false);
+    }
+    assert_eq!(p.state, State::Walk);
+    assert!((p.pos[2] - 2.0 * 1.65).abs() < 0.05, "{:?}", p.pos); // two 80-frame cycles
 }

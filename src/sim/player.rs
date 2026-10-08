@@ -4,6 +4,8 @@ use super::{extracted::ACTIONS, World};
 pub enum State {
     Idle,
     Run,
+    /// WALK_F02 loop (suffix-02 set; hypothesis: slow stick tilt).
+    Walk,
     Halt,
     Attack,
     /// GU_A01 then GU_B01 while held.
@@ -21,13 +23,15 @@ pub struct Player {
     pub state: State,
     /// Guard button held. Guard is only entered from idle/run/halt, not mid-attack (ESTIMATE).
     pub guard_held: bool,
+    /// Gentle forward input: walk instead of run (ESTIMATE: the game's analog threshold is not decoded).
+    pub walk: bool,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
 }
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, pos: [0.0; 3] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3] }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -36,7 +40,7 @@ impl Player {
             self.press_attack();
         }
         match (self.state, self.guard_held) {
-            (State::Idle | State::Run | State::Halt, true) => self.start(State::Guard, "GU_A01"),
+            (State::Idle | State::Run | State::Walk | State::Halt, true) => self.start(State::Guard, "GU_A01"),
             (State::Guard, false) => self.start(State::GuardEnd, "GU_Y01"),
             (State::Guard, true) if self.world.done() && self.world.action.name == "GU_B01" => {
                 self.start(State::Guard, "GU_B01") // loops while held
@@ -64,22 +68,24 @@ impl Player {
             }
             return self.advance();
         }
+        let loco = if self.walk { State::Walk } else { State::Run };
         let next = match (self.state, forward) {
-            (State::Run, false) => Some(State::Halt),
-            (State::Idle | State::Halt, true) => Some(State::Run),
+            (State::Run | State::Walk, false) => Some(State::Halt),
+            (State::Idle | State::Halt, true) => Some(loco),
+            (State::Run | State::Walk, true) if self.state != loco => Some(loco),
             (State::Halt, false) if self.world.done() => Some(State::Idle),
             _ => None,
         };
+        let clip = |s| match s {
+            State::Run => "RUN01",
+            State::Walk => "WALK_F02",
+            State::Halt => "HALT01",
+            _ => "STOP01",
+        };
         if let Some(s) = next {
-            self.state = s;
-            self.world = World::new(match s {
-                State::Idle => "STOP01",
-                State::Run => "RUN01",
-                State::Halt => "HALT01",
-                State::Attack | State::Guard | State::GuardEnd | State::Dodge => unreachable!(),
-            });
+            self.start(s, clip(s));
         } else if self.world.done() && self.state != State::Halt {
-            self.world = World::new(if self.state == State::Run { "RUN01" } else { "STOP01" });
+            self.world = World::new(clip(self.state));
         }
         self.advance();
     }
@@ -90,7 +96,7 @@ impl Player {
 
     /// Start an evasive step from idle/run/halt. `dir`: "FRONT01", "BACK01", "RIGHT01" or "LEFT01".
     pub fn dodge(&mut self, dir: &str) {
-        if matches!(self.state, State::Idle | State::Run | State::Halt) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
             self.start(State::Dodge, dir);
         }
     }

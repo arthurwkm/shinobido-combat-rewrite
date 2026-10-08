@@ -30,11 +30,11 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Milestone 5 — Movement
 - [ ] Walk, run, stop; jumps and landings; turning — each with a test against extracted data.
-  - done: run/halt/idle (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE). Not done: walk (no walk motion in the suffix-01 set), jump/land (JUMP01 root is 0 m, gravity unknown), turning.
+  - done: run/halt/idle (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE). Walk added (WALK_F02 loop, 1.65 m / 80 f, `walk` flag stands in for the analog threshold: ESTIMATE; `cargo test -q` → 10 passed, compare.py 109/109). Not done: jump/land (JUMP01 root is 0 m, gravity unknown), turning.
 
 ## Milestone 6 — Combat
 - [ ] Attack chains, guard, evasion, hit reactions — as found in the game's action data, each with a test.
-  - done: attack chain AT_A01 → AT_C01 only inside the cancel window (`cargo test -q` → 7 passed). Cancel target IDs are 0-based mtnfile indices (formats.md). Target choice among several is ESTIMATE (first). Guard done: GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis; `cargo test -q` → 8 passed). Evasion done: FRONT01/BACK01/RIGHT01/LEFT01 (30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed). Not done: hit reactions (HI_*), walk (suffix-02 motions, RUN01 cancels into WALK_*02).
+  - done: attack chain AT_A01 → AT_C01 only inside the cancel window (`cargo test -q` → 7 passed). Cancel target IDs are 0-based mtnfile indices (formats.md). Target choice among several is ESTIMATE (first). Guard done: GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis; `cargo test -q` → 8 passed). Evasion done: FRONT01/BACK01/RIGHT01/LEFT01 (30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed). Not done: hit reactions (HI_*), backward/sideways walk (WALK_B/R/L02 are extracted, not wired).
 - [ ] Shinobido-specific actions discovered in Milestones 2–3 (list them here as they are found).
 
 ## Milestone 7 — Viewer
@@ -45,6 +45,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (8): forward walk from the suffix-02 set. Left: jump/land/turn (need lookups), hit reactions, viewer.
 - 2026-10-07 night (7): evasive steps in Player. Remaining M6: hit reactions (trigger/damage rules unknown). M5: jump/land/turn/walk need lookups.
 - 2026-10-07 night (6): guard states in Player. Next: hit reactions (HI_*), evasion, suffix-02 walk.
 - 2026-10-07 night (5): Player attack chain through cancel windows; motion IDs are 0-based. Next: guard, hit reactions, suffix-02 walk.
