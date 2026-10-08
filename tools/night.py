@@ -57,8 +57,12 @@ def parse_claude(event):
 
 
 def claude_usage():
-    r = subprocess.run([CLAUDE, "-p", "ok", "--model", "haiku", "--output-format", "stream-json", "--verbose"],
-                       cwd=ROOT, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    try:
+        r = subprocess.run([CLAUDE, "-p", "ok", "--model", "haiku", "--output-format", "stream-json", "--verbose"],
+                           cwd=ROOT, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=120)
+    except subprocess.TimeoutExpired:
+        log("claude usage read timed out")
+        return dict(five=100, week=0, reset=time.time() + 1800, unknown=True)
     for l in r.stdout.splitlines():
         if '"rate_limit_event"' in l:
             return parse_claude(json.loads(l))
@@ -104,9 +108,9 @@ def run(worker, prompt, seen):
         delay = 60
         while not done.wait(delay):
             u = seen.get("claude") if worker == "claude" else codex_usage()
-            if u and u.get("unknown"):  # a failed read is not evidence of a full window
-                u = None
-            if u:
+            if u and u.get("unknown"):  # a failed or timed-out read is not evidence of a full window
+                u, delay = None, POLL_MIN  # check again soon, for either worker
+            elif u:
                 delay = poll_delay(min(NEAR - u["five"], WEEK - u["week"]))
             if time.time() >= END or (u and (u["five"] >= NEAR or u["week"] >= WEEK)):
                 log(f"{worker} stopped: end time or usage limit ({u and (u['five'], u['week'])})")
