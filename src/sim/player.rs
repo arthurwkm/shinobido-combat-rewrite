@@ -52,6 +52,10 @@ pub struct Player {
     pub walk: bool,
     /// Clip used while walking: WALK_F02 (default), WALK_B02, WALK_R02 or WALK_L02 (ESTIMATE: picking by input direction).
     pub walk_clip: &'static str,
+    /// RUN01, RUN_R01 or RUN_L01; selection policy is ESTIMATE (data.rs).
+    pub run_clip: &'static str,
+    /// STOP01, STOP02 or TIRED01; selection policy is ESTIMATE (data.rs).
+    pub idle_clip: &'static str,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
     /// Yaw in radians; forward is (sin h, cos h) in x/z. `pos` is in the world frame.
@@ -70,7 +74,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -99,6 +103,9 @@ impl Player {
     }
 
     fn step_action(&mut self, forward: bool, attack: bool) {
+        // Keep caller-selected clips within their supported locomotion families.
+        if !super::data::RUN_CLIPS.contains(&self.run_clip) { self.run_clip = "RUN01"; }
+        if !super::data::IDLE_CLIPS.contains(&self.idle_clip) { self.idle_clip = "STOP01"; }
         if attack {
             self.press_attack();
         }
@@ -122,7 +129,7 @@ impl Player {
                     self.start(State::Guard, t.name);
                 }
             }
-            (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, "STOP01"),
+            (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, self.idle_clip),
             _ => {}
         }
         if self.state == State::Jump {
@@ -138,22 +145,22 @@ impl Player {
         }
         if self.state == State::Land {
             if self.world.done() {
-                self.start(State::Idle, "STOP01");
+                self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
         }
         if self.state == State::Dodge && self.world.done() {
-            self.start(State::Idle, "STOP01");
+            self.start(State::Idle, self.idle_clip);
         }
         if matches!(self.state, State::Hit | State::Special) && self.world.done() {
-            self.start(State::Idle, "STOP01");
+            self.start(State::Idle, self.idle_clip);
         }
         if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit | State::Special) {
             return self.advance();
         }
         if self.state == State::Attack {
             if self.world.done() {
-                self.start(State::Idle, "STOP01");
+                self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
         }
@@ -161,17 +168,21 @@ impl Player {
         let next = match (self.state, forward) {
             (State::Run | State::Walk, false) => Some(State::Halt),
             (State::Idle | State::Halt, true) => Some(loco),
+            (State::Idle, false) if self.world.action.name != self.idle_clip => Some(State::Idle),
+            (State::Run, true) if !self.walk && self.world.action.name != self.run_clip => Some(State::Run),
             (State::Walk, true) if self.walk && self.world.action.name != self.walk_clip => Some(State::Walk),
             (State::Run | State::Walk, true) if self.state != loco => Some(loco),
             (State::Halt, false) if self.world.done() => Some(State::Idle),
             _ => None,
         };
         let walk_clip = self.walk_clip;
+        let run_clip = self.run_clip;
+        let idle_clip = self.idle_clip;
         let clip = |s| match s {
-            State::Run => "RUN01",
+            State::Run => run_clip,
             State::Walk => walk_clip,
             State::Halt => "HALT01",
-            _ => "STOP01",
+            _ => idle_clip,
         };
         if let Some(s) = next {
             self.start(s, clip(s));
@@ -198,6 +209,7 @@ impl Player {
         self.start(State::Hit, reaction);
     }
 
+    /// Also used for RUN_RE01/RUN_LE01 and STOP_K01 until wall-state selection is implemented.
     /// Start a one-shot ninja action from idle/run/walk/halt; it plays to its end, then returns to idle (ESTIMATE: no cancels).
     pub fn special(&mut self, name: &str) {
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {

@@ -5,3 +5,8 @@ pub const BODY_HEIGHT: f32 = 1.7;
 pub const COLLISION_STEP: f32 = 0.05;
 // ESTIMATE: support tolerance absorbs floating-point roundoff in metre coordinates.
 pub const SUPPORT_EPS: f32 = 0.0001;
+
+// ESTIMATE: caller selects the run/idle family, as with walk_clip; no decoded wall or fatigue trigger.
+// ponytail: RE/LE and STOP_K use one-shot Special; replace caller selection when wall states exist.
+pub const RUN_CLIPS: &[&str] = &["RUN01", "RUN_R01", "RUN_L01"];
+pub const IDLE_CLIPS: &[&str] = &["STOP01", "STOP02", "TIRED01"];

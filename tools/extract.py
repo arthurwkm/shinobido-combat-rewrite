@@ -1,4 +1,4 @@
-"""Write src/sim/extracted.rs: one entry per player motion (mtnfile.bin names ending in 01).
+"""Write src/sim/extracted.rs: one entry per player motion (mtnfile.bin suffix 01 plus supported suffix-02 locomotion).
 
     python tools/extract.py        (needs extracted/volume/motion; run `python tools/volume.py extract 'motion\\'`)
 
@@ -27,7 +27,7 @@ def player_names():
     n = int.from_bytes(d[:4], "little")
     offs = [int.from_bytes(d[4 + 4 * i : 8 + 4 * i], "little") for i in range(n)]
     names = [d[o : d.index(b"\0", o)].decode() for o in offs]
-    return [x[:-4] for x in names if re.fullmatch(r"([A-Z_]+01|WALK_[FBRL]02)\.nmt", x)]
+    return [x[:-4] for x in names if re.fullmatch(r"([A-Z_]+01|WALK_[FBRL]02|STOP02)\.nmt", x)]
 
 
 def windows(events, open_t, close_t, key):

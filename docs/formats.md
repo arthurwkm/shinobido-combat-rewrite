@@ -428,3 +428,25 @@ Survey by `tools/camera.py` (`ok: 110 .cmt parsed ...`).
   `target/controls-guide-wide.png: 512x512; upload 256x256 PSMCT32, 4 pages across`;
   PNG visually inspected. Temporary decoder and image stay in ignored `target/`.
   This is a targeted image decode, not a generalized wide-texture parser.
+
+### Run/stop variants — motion consistency survey (2026-10-08)
+
+- **Confirmed from parsed tracks:** RUN_R01/L01 last keys are frame 27 with +1.899902 m Z displacement
+  and zero X/Y; 21 of 22 rotation tracks have equal first/last poses. TIRED01 (70 frames) and STOP02
+  (80 frames) have zero root displacement and all 22 rotation endpoints match. These support looping
+  playback (**hypothesis**); header floats 2/3 span 0..duration for each, but their loop semantics are unconfirmed.
+- **Confirmed:** RUN_RE01/LE01 are 24 frames with only −0.006104 m Y root displacement;
+  STOP_K01 is 36 frames with zero root displacement. Their endpoint poses differ and header floats
+  2/3 are −1/−1. One-shot playback is a **hypothesis**.
+- **Confirmed:** STOP_K01 enables TWO06/ONE06/BACK06 at frame 1. STOP_K01 and the R/L/RE/LE
+  variants share category bit 0x200 with KABE_E01. **Hypothesis:** these are wall-related variants,
+  not ordinary steering animations; RUN_R/L have no lateral root translation. HALT01 remains the
+  ordinary release clip. Its track duration is 32 frames versus 38 in the header, a known duration mismatch.
+- **ESTIMATE (src/sim/data.rs):** callers select supported run/idle loops, as with walk_clip; changes
+  start the selected clip at frame zero, with no guessed fatigue or wall trigger. RUN_RE/LE and STOP_K
+  use the existing one-shot Special path, returning to the selected idle. Wall-driven selection remains
+  in the wall/ledge item. STOP02 is extracted alongside WALK_*02; RUN01 permits it at frame 0 and HALT01
+  at frame 3. No cancel requirement is imposed on idle selection (ESTIMATE).
+- Checks: parsed the seven motions with `tools.nmt.parse`; `cargo test -q` covers loop displacement,
+  one-shot duration, selection during playback, interruption/re-entry and invalid selection fallback;
+  `tools/compare.py` checks all 110 extracted clips against their source root displacement and duration.

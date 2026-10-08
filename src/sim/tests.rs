@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_109_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 109);
+fn all_110_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 110);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -285,4 +285,85 @@ fn terrain_sweeps_thin_walls_slides_and_descends_ramps() {
     assert_eq!(wall.ledge([0.0; 3], [0.0, 1.0], 2.0), None);
     let blocked = Terrain { colliders: vec![wall.colliders[0], Collider::new([-2.0, 3.5, 0.0], [2.0, 4.0, 2.0], false)] };
     assert_eq!(blocked.ledge([0.0; 3], [0.0, 1.0], 3.1), None);
+}
+
+#[test]
+fn run_variants_loop_switch_and_stop_with_extracted_motion() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    for name in ["RUN01", "RUN_R01", "RUN_L01"] {
+        p.run_clip = name;
+        let before = p.pos;
+        let a = action(name);
+        for _ in 0..2 * a.frames { p.step(true, false); }
+        assert_eq!((p.state, p.world_action()), (State::Run, name));
+        for (i, start) in before.iter().enumerate() {
+            let delta = a.root.last().unwrap().1[i] - a.root[0].1[i];
+            assert!((p.pos[i] - start - 2.0 * delta).abs() < 0.001, "{name}: {:?}", p.pos);
+        }
+    }
+    p.step(false, false);
+    assert_eq!((p.state, p.world_action()), (State::Halt, "HALT01"));
+    p.step(true, false);
+    assert_eq!((p.state, p.world_action()), (State::Run, "RUN_L01"));
+    p.walk = true;
+    p.step(true, false);
+    assert_eq!(p.state, State::Walk);
+}
+
+#[test]
+fn idle_variants_loop_and_resume_after_interruptions() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    for name in ["TIRED01", "STOP02", "STOP01"] {
+        p.idle_clip = name;
+        for _ in 0..2 * action(name).frames + 1 {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Idle, name));
+        }
+        p.step(true, false);
+        assert_eq!(p.state, State::Run);
+        for _ in 0..action("HALT01").frames + 1 { p.step(false, false); }
+        assert_eq!((p.state, p.world_action()), (State::Idle, name));
+        p.special("PICK01");
+        for _ in 0..action("PICK01").frames + 1 { p.step(false, false); }
+        assert_eq!((p.state, p.world_action()), (State::Idle, name));
+    }
+}
+
+#[test]
+fn run_end_and_wall_stop_variants_play_once_then_selected_idle() {
+    use super::player::{Player, State};
+    for name in ["RUN_RE01", "RUN_LE01", "STOP_K01"] {
+        let mut p = Player::new();
+        p.idle_clip = "STOP02";
+        p.special(name);
+        let a = action(name);
+        for _ in 0..a.frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        assert_eq!((p.state, p.world_action()), (State::Idle, "STOP02"));
+    }
+}
+
+#[test]
+fn locomotion_selection_switches_mid_cycle_and_rejects_other_clips() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.step(true, false);
+    p.run_clip = "RUN_R01";
+    let before = p.pos;
+    p.step(true, false);
+    let mut first = super::World::new("RUN_R01");
+    first.step();
+    assert_eq!(p.world_action(), "RUN_R01");
+    assert!((p.pos[2] - before[2] - first.pos[2]).abs() < 0.001);
+    p.run_clip = "RUN_RE01"; // one-shot, not a locomotion loop
+    p.step(true, false);
+    assert_eq!((p.state, p.world_action()), (State::Run, "RUN01"));
+    p.idle_clip = "missing";
+    for _ in 0..action("HALT01").frames + 1 { p.step(false, false); }
+    assert_eq!((p.state, p.world_action()), (State::Idle, "STOP01"));
 }
