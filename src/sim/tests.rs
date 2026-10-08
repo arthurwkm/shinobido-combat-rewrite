@@ -227,3 +227,62 @@ fn at_a01_damage_param_scales_with_power_and_bias() {
     assert_eq!(super::player::hit_damage(e.2, 10.0, -1.0), 35);
     assert_eq!(super::player::hit_damage(e.2, 10.0, 1.0), 140);
 }
+
+#[test]
+fn terrain_walls_ramps_ledges_and_falling() {
+    use super::{terrain::{Collider, Terrain}, player::Player};
+    let terrain = Terrain { colliders: vec![Collider::new([ -2.0, 0.0, 1.0], [2.0, 2.0, 2.0], false)] };
+    let mut p = Player::new();
+    for _ in 0..120 { p.step_on(&terrain, true, false); }
+    assert!(p.pos[2] <= 0.701 && p.pos[2] > 0.6, "{:?}", p.pos);
+    assert_eq!(p.wall_normal, Some([0.0, 0.0, -1.0]));
+    assert_eq!(terrain.ledge(p.pos, [0.0, 1.0], 2.1), Some([0.0, 2.0, 1.0]));
+    p.pos = [0.0, 2.0, 1.5];
+    for _ in 0..120 { p.step_on(&terrain, true, false); }
+    assert_eq!(p.pos[1], 0.0);
+    assert!(p.pos[2] > 3.0);
+    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)] };
+    let mut p = Player::new();
+    for _ in 0..50 { p.step_on(&ramp, true, false); }
+    assert!((p.pos[1] - p.pos[2] / 4.0).abs() < 0.001, "{:?}", p.pos);
+    assert!(p.pos[1] > 0.5);
+}
+
+#[test]
+fn terrain_jump_lands_on_roof_and_ceiling_stops_ascent() {
+    use super::{terrain::{Collider, Terrain}, player::{Player, State}};
+    let roof = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)] };
+    let mut p = Player::new();
+    p.pos[1] = 2.0;
+    p.jump();
+    let mut peak = 2.0_f32;
+    for _ in 0..120 { p.step_on(&roof, false, false); peak = peak.max(p.pos[1]); }
+    assert!(peak > 2.5);
+    assert_eq!(p.pos[1], 2.0);
+    assert_eq!(p.state, State::Idle);
+    let ceiling = Terrain { colliders: vec![Collider::new([-2.0, 1.9, -2.0], [2.0, 2.0, 2.0], false)] };
+    let mut p = Player::new();
+    p.jump();
+    for _ in 0..120 { p.step_on(&ceiling, false, false); assert!(p.pos[1] <= 0.201); }
+    assert_eq!(p.pos[1], 0.0);
+}
+
+#[test]
+fn terrain_sweeps_thin_walls_slides_and_descends_ramps() {
+    use super::terrain::{Collider, Terrain};
+    let wall = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 1.0], [2.0, 3.0, 1.01], false)] };
+    let (p, normal, _) = wall.move_body([0.0; 3], [1.0, 0.0, 5.0], true);
+    assert!(p[2] <= 0.701);
+    assert!((p[0] - 1.0).abs() < 0.001);
+    assert_eq!(normal, Some([0.0, 0.0, -1.0]));
+    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)] };
+    let (p, _, _) = ramp.move_body([0.0, 0.75, 3.0], [0.0, 0.75, 1.0], true);
+    assert!((p[1] - 0.25).abs() < 0.001, "{p:?}");
+    let (p, normal, _) = ramp.move_body([0.0, 0.0, 5.0], [0.0, 0.0, 3.0], true);
+    assert!(p[2] >= 4.3 - 0.001);
+    assert_eq!(normal, Some([0.0, 0.0, 1.0]));
+    assert_eq!(wall.ledge([0.0; 3], [0.0, -1.0], 4.0), None);
+    assert_eq!(wall.ledge([0.0; 3], [0.0, 1.0], 2.0), None);
+    let blocked = Terrain { colliders: vec![wall.colliders[0], Collider::new([-2.0, 3.5, 0.0], [2.0, 4.0, 2.0], false)] };
+    assert_eq!(blocked.ledge([0.0; 3], [0.0, 1.0], 3.1), None);
+}

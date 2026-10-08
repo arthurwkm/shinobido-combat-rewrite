@@ -3,6 +3,8 @@
 #[allow(clippy::excessive_precision)] // generated floats keep the game's full precision
 pub mod extracted;
 pub mod player;
+pub mod terrain;
+pub mod data;
 
 #[cfg(test)]
 mod tests;

@@ -58,6 +58,7 @@ pub struct Player {
     pub heading: f32,
     /// Direction the stick asks for (radians); the heading turns toward it at `TURN_RATE`.
     pub target_heading: f32,
+    pub wall_normal: Option<[f32; 3]>,
     vy: f32,
 }
 
@@ -69,11 +70,35 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, vy: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, vy: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
     pub fn step(&mut self, forward: bool, attack: bool) {
+        self.step_on(&super::terrain::Terrain::default(), forward, attack);
+    }
+
+    /// Advance on shared terrain. Falling keeps the current clip until the falling-motion item.
+    pub fn step_on(&mut self, terrain: &super::terrain::Terrain, forward: bool, attack: bool) {
+        let before = self.pos;
+        let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
+        self.step_action(forward, attack);
+        let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
+        if !jumping && !grounded {
+            self.vy += gravity(self.vy) * super::DT;
+            self.pos[1] += self.vy * super::DT * UNIT_M;
+        }
+        let (pos, wall, ceiling) = terrain.move_body(before, self.pos, grounded && !jumping);
+        self.pos = pos;
+        self.wall_normal = wall;
+        if ceiling { self.vy = 0.0; }
+        if self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
+            self.vy = 0.0;
+            if jumping || !grounded { self.start(State::Land, "LAND01"); }
+        }
+    }
+
+    fn step_action(&mut self, forward: bool, attack: bool) {
         if attack {
             self.press_attack();
         }
@@ -108,10 +133,6 @@ impl Player {
                 }
                 self.vy += gravity(self.vy) * super::DT;
                 self.pos[1] += self.vy * super::DT * UNIT_M;
-                if self.pos[1] <= 0.0 && self.vy < 0.0 {
-                    self.pos[1] = 0.0;
-                    self.start(State::Land, "LAND01");
-                }
             }
             return;
         }
