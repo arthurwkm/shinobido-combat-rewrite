@@ -160,7 +160,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             _ => eprintln!("script: bad line `{cmd}`"),
         }
     }
-    if t > 0 && t % rec.every == 0 {
+    if t > 0 && t.is_multiple_of(rec.every) {
         commands.spawn(Screenshot::primary_window()).observe(save_to_disk(format!("{}/{t:05}.png", rec.dir)));
     }
     if t >= rec.ticks + 30 {
