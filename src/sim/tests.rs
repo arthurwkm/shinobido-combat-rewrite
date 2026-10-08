@@ -183,3 +183,21 @@ fn walking_backward_and_sideways_follows_each_clip_root_motion() {
         assert!((p.pos[axis] - want).abs() < 0.05, "{clip} {:?}", p.pos);
     }
 }
+
+#[test]
+fn hit_reactions_play_out_then_return_to_idle() {
+    use super::{extracted::ACTIONS, player::{Player, State}};
+    for a in ACTIONS.iter().filter(|a| a.name.starts_with("HI_")) {
+        let mut p = Player::new();
+        p.guard_held = true;
+        p.step(false, false);
+        p.hit(a.name);
+        assert_eq!((p.state, p.world_action()), (State::Hit, a.name));
+        for _ in 0..a.frames {
+            p.step(false, false);
+        }
+        assert_eq!(p.state, State::Hit, "{} still plays on its last frame", a.name);
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{}", a.name);
+    }
+}

@@ -18,6 +18,8 @@ pub enum State {
     Jump,
     /// LAND01 after touching down.
     Land,
+    /// A HI_*01 hit reaction (hypothesis: B/U/C letters are the hit side or height; which one the game picks is ESTIMATE).
+    Hit,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -120,7 +122,10 @@ impl Player {
         if self.state == State::Dodge && self.world.done() {
             self.start(State::Idle, "STOP01");
         }
-        if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge) {
+        if self.state == State::Hit && self.world.done() {
+            self.start(State::Idle, "STOP01");
+        }
+        if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit) {
             return self.advance();
         }
         if self.state == State::Attack {
@@ -162,6 +167,12 @@ impl Player {
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
             self.start(State::Dodge, dir);
         }
+    }
+
+    /// Take a hit: interrupts any state and plays the given reaction (`HI_BS01`, `HI_US01`, ...) to its end.
+    pub fn hit(&mut self, reaction: &str) {
+        self.vy = 0.0;
+        self.start(State::Hit, reaction);
     }
 
     pub fn jump(&mut self) {

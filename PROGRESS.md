@@ -41,7 +41,7 @@ Each item is one feature, as found in the game's action data, with a test.
 - [x] (AT_A01 → AT_C01 only inside the cancel window; cancel target IDs are 0-based mtnfile indices (formats.md); target choice among several is ESTIMATE (first); `cargo test -q` → 7 passed) Attack chain.
 - [x] (GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis); `cargo test -q` → 8 passed) Guard.
 - [x] (FRONT01/BACK01/RIGHT01/LEFT01, 30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed) Evasion.
-- [ ] Hit reactions (HI_*).
+- [x] (`Player::hit(name)` plays any HI_* clip then returns to idle, interrupting any state; which reaction the game picks per hit is ESTIMATE/unresolved; `cargo test -q` → 14 passed, compare.py 109/109) Hit reactions (HI_*).
 - [ ] Shinobido-specific actions discovered in Milestones 2–3 (list them here as they are found).
 
 ## Milestone 7 — Viewer
@@ -69,3 +69,4 @@ Each item is one feature, as found in the game's action data, with a test.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.
 - 2026-10-08 Claude: backward/sideways walk done (walk_clip); M5 complete.
+- 2026-10-08 Claude: hit reactions done (Player::hit, HI_* clips play out to idle).
