@@ -123,16 +123,14 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
 
 - [x] (evidence: `Fight::separate` pushes bodies to 2*BODY_RADIUS, test `fight_pushes_overlapping_bodies_apart`; `cargo test -q` -> 43 passed; clippy clean; compare.py 186/186; `target/debug/viewer --record target/rec/hit --script tools/scripts/hit.txt --every 30 --ticks 240` -> `target/rec/hit/00180.png` shows the figures apart; limbs still reach into each other in the hit reaction, expected for cuboid stand-ins) Character separation: player and soldier must not overlap.
 
-## Milestone 13 — The game's own characters
-- [ ] Kagetora's skinned mesh in the viewer: load the glTF from `tools/model.py` (body, head, textures),
-  skinned to the sim pose, replacing the bone cuboids (keep cuboids behind a debug key). Compare with the
-  clips: proportions, colours, cape/cloth.
-- [ ] Katana and scabbard: find the attach bone, sheathed out of combat and drawn in combat as in the clips
-  (no sword in the movement clip, sword low in the right hand in combat); SHEATH01 switches them.
-- [ ] The soldier's own model: extract the I_BUSHI body, head, weapon and textures, skinned on its skeleton,
-  replacing the red cuboids.
-- [ ] Skin weights: look again for real weights (3 approaches, record them in formats.md); else keep the
-  rigid ESTIMATE and smooth what shows the worst in shots.
+## Milestone 13 — Mannequin characters
+Owner decision 2026-10-08: no textured or skinned game meshes. Characters are reference-style mannequins on
+the game skeleton; the glTF/texture/skin-weight work stays as it is and is not wired into the viewer.
+- [ ] Kagetora mannequin like the reference's: capsule limbs, sphere joints and head, box torso on the game
+  bones, limbs joined, proportions roughly as in the clips; the bone cuboids stay behind a debug key.
+- [ ] Katana and scabbard props: find the attach bone; sheathed out of combat and drawn in combat as in the
+  clips (no sword in the movement clip, sword low in the right hand in combat); SHEATH01 switches them.
+- [ ] Soldier mannequin: the same build in its own colour on its skeleton, with its weapon prop.
 
 ## Milestone 14 — Every action from the pad, in context
 Rule: each player motion is reachable from the controls in the situation where the game uses it, driven by

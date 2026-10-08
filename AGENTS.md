@@ -11,7 +11,7 @@ In scope:
   picking up, carrying and throwing crates and bodies, items, and every other player action found
   in the motion data. The player's motions span several suffix sets (`01`, `02`, `05`, `06`, `27`,
   reached through the cancel graph), not only `01`.
-- **One enemy** (the most common foot soldier): its own model and motions, a simple AI driven by
+- **One enemy** (the most common foot soldier): its own skeleton and motions, a simple AI driven by
   the game's AI files (`AI\`) where readable, attacks that hit the player, hit reactions, death.
 - **Combat interactions**: lock-on (target select, strafing, lock-on camera), hits both ways, guard.
 - **Executions**: every player execution (`motion\harakiri\`, paired player/enemy motions), the
@@ -24,9 +24,10 @@ In scope:
     Terrain holds what the moveset needs: tall walls (wall run, wall hug, corners to peek around),
     tiled rooftops with ledges reachable by the high jump, stairs, slopes, a narrow walled corridor
     (the combat clip's arena), and crates to climb, carry and throw.
-  - Kagetora's own skinned model from `model\KAGETORA_*.rws` playing the extracted animations
-    (fallback: primitive shapes on the game skeleton, as the reference's mannequin does), and the
-    enemy's own model.
+  - Characters are simple mannequins like the reference's: primitive shapes (capsules, spheres, boxes)
+    on the game's own skeleton, playing the extracted animations, limbs joined at the joints, roughly
+    the clip's proportions, a plain katana prop. Kagetora and the soldier differ by colour. No textured
+    or skinned game meshes (owner decision 2026-10-08).
   - HUD in two parts. Debug readout like the reference: player bars and a hit log top-left; action,
     frame/length, speed, height, lock-on and queued input top-right; target name and health bar at the
     bottom. Game HUD like the Shinobido clips: health bar top-left, the eye awareness icon top-centre
@@ -44,7 +45,7 @@ uses it. Treat these as not done, whatever the checkbox says:
   (a wall hug happens at a wall, a ledge grab when a ledge is in reach, a carry after picking something up);
 - a feature never seen working in the viewer (built and unit-tested is not enough);
 - a look that differs visibly from the clips or the reference viewer (wrong pose, wrong camera, missing HUD
-  element, primitive stand-ins where the game's own model was asked for) without a recorded reason;
+  element, a mannequin whose pose doesn't read like the clip) without a recorded reason;
 - an `ESTIMATE` that could still be read from the files or the executable but wasn't tried three times.
 When the checklist and the spirit disagree, follow the spirit and add the missing work as items.
 
