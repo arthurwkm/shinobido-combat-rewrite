@@ -79,7 +79,7 @@ Items per uncovered group (motions in docs/player_motions.md; sim has run/halt/i
 - [x] (AT02/KICK27/FUTO27 added to extract.py; all 12 played via `Player::special`, one-shot, triggers ESTIMATE; `_H` hug variants go with the wall item; `cargo test -q` → 26 passed; clippy clean; compare.py → 117/117 actions within tolerance) Remaining attacks: AT_CA/AT_D/AT_DA/AT_E01, SOCCER01, BLADE01, AT02, KICK27/FUTO27, CLAW_*.
 - [x] (13 clips added to extract.py, played via `Player::special`, one-shot, wall/ledge-driven selection and triggers ESTIMATE; Special no longer gets gravity/landing so root-motion climbs aren't cut by Land; `cargo test -q` → 27 passed; clippy clean; compare.py → 130/130 actions within tolerance) Ledge, wall and corner: KABE_E/KABE_U01, STOP_A/B/ONE/TWO/BACK06, HANG_L/R06, CLIMB06, IKOU_B05/06.
 - [x] (PICK/PUT/OPEN/CLOSE/MAKI/MAKURI*/THROW_BACK01 were already extracted; added DRINK01_H, DRINK_K05, DRINK_S05 (crouch clip has no root keys: `root_at` and compare.py treat as zero); played via `Player::special`, one-shot, triggers ESTIMATE; `cargo test -q` → 28 passed; clippy clean; compare.py → 133/133 actions within tolerance) Items and carrying: PICK/PUT/OPEN/CLOSE/MAKI/MAKURI*/THROW_BACK01/DRINK_H variants.
-- [ ] Remaining hit reactions: DEKA_HI*, NORI_*, BURA_HI, SUI_HI, SHOJI_HI, ITEM_HI, NAGERARE_A01.
+- [x] (all 20 already extracted via the `[A-Z_]+01` pattern; played via `Player::hit`, caller-chosen; test `remaining_hit_reactions_play_out_then_return_to_idle`; `cargo test -q` → 29 passed; clippy clean; compare.py 133/133) Remaining hit reactions: DEKA_HI*, NORI_*, BURA_HI, SUI_HI, SHOJI_HI, ITEM_HI, NAGERARE_A01.
 - [ ] Talk and idle extras: TOJO_B, TALK_*, KIME_*, FURI, WAIT01.
 
 ## Milestone 10 — Enemy and combat interactions
@@ -166,3 +166,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Claude: remaining attacks done; 9 were already extracted, added AT02/KICK27/FUTO27 to extract.py (117 actions); all one-shot specials (triggers ESTIMATE), no chain cancels wired.
 - 2026-10-08 Claude: ledge/wall/corner clips (13) extracted and played as one-shot specials; Special skips gravity/landing so CLIMB06's root-motion rise works. Wall-driven selection stays ESTIMATE.
 - 2026-10-08 Claude: items/carrying done; only DRINK01_H, DRINK_K05, DRINK_S05 were missing (133 actions); static clips with no root keys now return zero root (sim + compare.py); one-shot specials, triggers ESTIMATE.
+- 2026-10-08 Claude: remaining hit reactions done; all 20 were already extracted, only a test was missing (played through Player::hit, selection stays caller-chosen).

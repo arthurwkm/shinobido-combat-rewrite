@@ -452,3 +452,20 @@ fn item_and_carry_clips_play_once_then_idle() {
         assert_eq!(p.state, State::Idle, "{name}");
     }
 }
+
+#[test]
+fn remaining_hit_reactions_play_out_then_return_to_idle() {
+    use super::{extracted::ACTIONS, player::{Player, State}};
+    let names = ["DEKA_HIBA01", "DEKA_HIBBA01", "DEKA_HIBC01", "DEKA_HIBB01", "DEKA_HIBD01", "DEKA_HIUA01", "DEKA_HIUB01", "DEKA_HIC01", "DEKA_HICA01", "DEKA_HICCA01", "DEKA_HICC01", "DEKA_HICB01", "DEKA_HICD01", "NORI_RHI01", "NORI_LHI01", "BURA_HI01", "SUI_HI01", "SHOJI_HI01", "ITEM_HI01", "NAGERARE_A01"];
+    for name in names {
+        let a = ACTIONS.iter().find(|a| a.name == name).unwrap_or_else(|| panic!("{name} not extracted"));
+        let mut p = Player::new();
+        p.hit(name);
+        for _ in 0..a.frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Hit, name));
+        }
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{name}");
+    }
+}
