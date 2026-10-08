@@ -121,7 +121,7 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
 - [x] (evidence: `target/debug/viewer --shot target/shots/a.png`, `--record target/rec/hit --script tools/scripts/hit.txt --every 30 --ticks 240` -> `Screenshot saved to target/rec/hit/00240.png`; `tools/tile.py target/cmp/hit.png "videos/shinobido combat.mov" 11,12,13,14 target/rec/hit 60,90,120,180`; fixed: debug bar/log moved below the game bar (no overlap, hit log shows `154 enemy BLADE07 hits you -20`), camera 4->3 m and pitch 0.45->0.3 ESTIMATE to match the clip's closer framing; still differs: clip is dark and textured, figures are cuboids (M13), player and soldier overlap (new item below), game HUD is plain rects vs the clip's framed icons) Visual audit of every M11 item with shots and records, fixing what differs from the clips and the
   reference: framing, ground and grid, light, blocks, both HUDs without overlaps, hit log visible.
 
-- [ ] Character separation: player and soldier must not overlap (push apart in `Fight`, test), seen overlapping in `target/rec/hit/00180.png`.
+- [x] (evidence: `Fight::separate` pushes bodies to 2*BODY_RADIUS, test `fight_pushes_overlapping_bodies_apart`; `cargo test -q` -> 43 passed; clippy clean; compare.py 186/186; `target/debug/viewer --record target/rec/hit --script tools/scripts/hit.txt --every 30 --ticks 240` -> `target/rec/hit/00180.png` shows the figures apart; limbs still reach into each other in the hit reaction, expected for cuboid stand-ins) Character separation: player and soldier must not overlap.
 
 ## Milestone 13 — The game's own characters
 - [ ] Kagetora's skinned mesh in the viewer: load the glTF from `tools/model.py` (body, head, textures),
