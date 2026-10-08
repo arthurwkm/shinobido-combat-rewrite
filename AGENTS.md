@@ -83,7 +83,7 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 ## Claude and Codex
 - `tools/night.py` alternates the two workers by usage: Claude until its 5-hour window is near full, then Codex,
   then it waits for a reset. You are one of them; do not hand work to the other yourself.
-- Codex does not run git: the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
+- Codex does not commit or stage (read-only git is fine): the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
 - Both workers keep `PROGRESS.md` current: the next worker starts from it with no other memory.
 - Either worker may do the long, token-heavy work (format surveys, executable lookups), split into bounded steps
   that each leave the suite green; finishing a step is not a reason to stop (see Loop step 4).

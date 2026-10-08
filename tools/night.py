@@ -25,7 +25,8 @@ PROTECTED = ["AGENTS.md", "CLAUDE.md", "NIGHT_PROMPT.md", "night.sh", "night-set
              "tools/night.py", ".claude", ".codex"]
 NOTE = {
     "claude": "You are the Claude worker. Commit after each green step.",
-    "codex": "You are the Codex worker. Do NOT run git: the runner commits when `cargo test -q` passes. "
+    "codex": "You are the Codex worker. Do not commit or stage (`.git` is read-only in your sandbox); "
+             "read-only git (log, diff, status) is fine. The runner commits when `cargo test -q` passes. "
              "Network is off; if you need a download, record a Blocker. Update PROGRESS.md before you stop.",
 }
 
