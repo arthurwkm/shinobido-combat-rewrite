@@ -83,6 +83,12 @@ impl Enemy {
         }
     }
 
+    /// Killed by an execution: play the victim clip `reaction` (`KI_HIBS07`, ...) and stay dead.
+    pub fn execute(&mut self, reaction: &str) {
+        self.hp = 0;
+        self.start(State::Dead, reaction);
+    }
+
     fn start(&mut self, state: State, clip: &str) {
         self.state = state;
         self.world = World::new(clip);

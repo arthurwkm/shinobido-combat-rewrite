@@ -633,3 +633,36 @@ fn execution_cue_needs_the_right_position_and_enemy_state() {
     e.hit("HI_BS07", 100);
     assert_eq!(available(&p, &e), None); // dead
 }
+
+#[test]
+fn every_execution_plays_paired_and_kills() {
+    use super::{combat::Fight, enemy::{Enemy, State}, execution::Kind, player::{Player, State as PS}};
+    for kind in [Kind::Back, Kind::Above, Kind::Front] {
+        let mut p = Player::new();
+        let mut e = Enemy::new([0.0; 3]); // faces +z
+        match kind {
+            Kind::Back => p.pos = [0.0, 0.0, -1.2],
+            Kind::Above => p.pos = [0.0, 2.5, 0.5],
+            Kind::Front => {
+                e.hit("HI_BS07", 80);
+                p.pos = [0.0, 0.0, 1.2];
+            }
+        }
+        let mut f = Fight::new(p, e);
+        assert!(f.execute(), "{kind:?}");
+        let (pc, ec) = kind.clips();
+        assert_eq!((f.player.world_action(), f.enemy.action()), (pc, ec));
+        assert_eq!((f.enemy.state, f.enemy.hp), (State::Dead, 0));
+        let d = (f.enemy.pos[0] - f.player.pos[0]).hypot(f.enemy.pos[2] - f.player.pos[2]);
+        assert!((d - super::data::EXEC_DIST).abs() < 1e-4);
+        for _ in 0..400 {
+            f.step(false, false);
+        }
+        assert_eq!(f.player.state, PS::Idle);
+        assert_eq!(f.enemy.state, State::Dead);
+        assert!(f.enemy.frame() >= 30);
+    }
+    // nothing to execute
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 9.0]));
+    assert!(!f.execute());
+}

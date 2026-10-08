@@ -88,7 +88,7 @@ Items per uncovered group (motions in docs/player_motions.md; sim has run/halt/i
 - [x] (`src/sim/lockon.rs` `LockOn::select/switch/release/drive`: nearest-to-facing pick in range/cone, clockwise/ccw switch, faces target and picks WALK_F/B/R/L02 from input; range 12 m and cone 90° ESTIMATE in data.rs; test `lock_on_selects_switches_releases_and_strafes`; `cargo test -q` → 34 passed; clippy clean; compare.py 186/186) Lock-on: target select/switch/release, strafe locomotion while locked, facing.
 - [x] (`src/sim/stealth.rs` `Stealth::step`: sight cone + RUN/WALK noise radius fill a 0..1 meter, levels Unaware/Suspicious/Alerted, alerted calls `Enemy::alert`; all numbers ESTIMATE in data.rs, no wall occlusion; test `stealth_fills_from_sight_and_noise_and_alerts`; `cargo test -q` → 35 passed; clippy clean; compare.py 186/186) Stealth: enemy awareness from sight/sound and alert state, exposed as a stealth meter value.
 - [x] (`src/sim/execution.rs` `available(player, enemy) -> Option<Kind>` Back/Above/Front, all conditions ESTIMATE in data.rs; test `execution_cue_needs_the_right_position_and_enemy_state`; `cargo test -q` green; clippy clean; compare.py 186/186) Execution availability: conditions per execution and the "can execute" cue state.
-- [ ] Executions: every execution from M8 plays paired (alignment, both motions, enemy dies), with a test each.
+- [x] (`Fight::execute`: `execution::available` kind -> aligned pair, `Kind::clips` KIME_A01/B01 + KI_HIBS/UIS/HICS07 ESTIMATE in data.rs, `Enemy::execute` kills; test `every_execution_plays_paired_and_kills`; `cargo test -q` → 37 passed; clippy clean; compare.py 186/186) Executions: every execution from M8 plays paired (alignment, both motions, enemy dies), with a test each.
 
 ## Milestone 11 — Reference-style viewer
 Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compare against `videos/`.
@@ -173,3 +173,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Lock-on done in sim (lockon.rs); strafe uses walk clips with the player facing the target; viewer wiring stays in M11. Range/cone ESTIMATE.
 - 2026-10-08 Stealth in sim (stealth.rs): sight/hearing numbers ESTIMATE since not in files; alert is sticky; no occlusion yet.
 - 2026-10-08 Execution availability: three kinds (Back/Above/Front) from position and enemy state, thresholds ESTIMATE; 36 tests pass.
+- 2026-10-08 Executions: one S-variant pairing per kind (Back/Above/Front), other KI_HI variants (A/B/C/D chains) left unused; all ESTIMATE.

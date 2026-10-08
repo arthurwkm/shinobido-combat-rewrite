@@ -14,6 +14,13 @@ pub enum Kind {
     Front,
 }
 
+impl Kind {
+    /// ESTIMATE pairing (data.rs): the player clip and the victim clip.
+    pub fn clips(self) -> (&'static str, &'static str) {
+        data::EXEC_CLIPS[self as usize]
+    }
+}
+
 /// The execution the player could start now, if any. Shows as the cue.
 pub fn available(p: &Player, e: &Enemy) -> Option<Kind> {
     if e.state == State::Dead {
