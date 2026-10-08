@@ -97,7 +97,7 @@ def run(worker, prompt, seen):
     """Run one worker turn; kill it if its usage crosses a limit. Returns (rc, killed)."""
     if worker == "claude":
         cmd = [CLAUDE, "-p", prompt, "--model", "sonnet", "--permission-mode", "auto", "--settings",
-               "./night-settings.json", "--output-format", "stream-json", "--verbose", "--max-turns", "60"]
+               "./night-settings.json", "--output-format", "stream-json", "--verbose", "--max-turns", "300"]
     else:
         cmd = ["codex", "exec", "--json", "-C", str(ROOT), "-s", "workspace-write", prompt]
     p = subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,

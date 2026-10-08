@@ -1,6 +1,6 @@
 # Progress
 
-Update this file before stopping every session. Check an item only with evidence (command + result).
+Update this file in every commit. Check an item only with evidence (command + result). One item = one feature = one session.
 
 ## Milestone 0 — Environment
 - [x] Versions: cargo 1.99.0, rustc 1.99.0, Python 3.14.7 (`.venv`), Claude Code 2.1.293. 33 GB free.
@@ -29,19 +29,26 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (`python tools/compare.py` → `105/105 actions within tolerance`; checks frames and root displacement only) `tools/compare.py`: runs each action through the simulation (via a test binary or `cargo test` output) and compares timings against the extracted table, printing mismatches.
 
 ## Milestone 5 — Movement
-- [ ] Walk, run, stop; jumps and landings; turning — each with a test against extracted data.
-  - done: run/halt/idle (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE). Walk added (WALK_F02 loop, 1.65 m / 80 f, `walk` flag stands in for the analog threshold: ESTIMATE; `cargo test -q` → 10 passed, compare.py 109/109). Jump/land done: JUMP01 then LAND01, gravity from the executable, launch velocity 155 u/s and 9.8/450 m per unit are ESTIMATE (tuned so airborne time ≈ JUMP01 take-off/landing events at frames 5/56; `cargo test -q` → 11 passed). Not done: turning.
+Each item is one feature with a test against extracted data.
+- [x] (`src/sim/player.rs`, `cargo test -q` → 5 passed; run = 1.69 m per 30-frame cycle, HALT01 root 0 m; transitions are ESTIMATE) Run, halt, idle.
+- [x] (WALK_F02 loop, 1.65 m / 80 f, `walk` flag stands in for the analog threshold: ESTIMATE; `cargo test -q` → 10 passed, compare.py 109/109) Forward walk.
+- [x] (JUMP01 then LAND01, gravity from the executable, launch velocity 155 u/s and 9.8/450 m per unit are ESTIMATE, tuned so airborne time ≈ JUMP01 take-off/landing events at frames 5/56; `cargo test -q` → 11 passed) Jump and land.
+- [ ] Turning.
+- [ ] Backward and sideways walk (WALK_B/R/L02 are extracted, not wired).
 
 ## Milestone 6 — Combat
-- [ ] Attack chains, guard, evasion, hit reactions — as found in the game's action data, each with a test.
-  - done: attack chain AT_A01 → AT_C01 only inside the cancel window (`cargo test -q` → 7 passed). Cancel target IDs are 0-based mtnfile indices (formats.md). Target choice among several is ESTIMATE (first). Guard done: GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis; `cargo test -q` → 8 passed). Evasion done: FRONT01/BACK01/RIGHT01/LEFT01 (30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed). Not done: hit reactions (HI_*), backward/sideways walk (WALK_B/R/L02 are extracted, not wired).
+Each item is one feature, as found in the game's action data, with a test.
+- [x] (AT_A01 → AT_C01 only inside the cancel window; cancel target IDs are 0-based mtnfile indices (formats.md); target choice among several is ESTIMATE (first); `cargo test -q` → 7 passed) Attack chain.
+- [x] (GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis); `cargo test -q` → 8 passed) Guard.
+- [x] (FRONT01/BACK01/RIGHT01/LEFT01, 30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed) Evasion.
+- [ ] Hit reactions (HI_*).
 - [ ] Shinobido-specific actions discovered in Milestones 2–3 (list them here as they are found).
 
 ## Milestone 7 — Viewer
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- Remaining items all wait on executable lookups (do via Codex after its quota resets 2026-10-08 02:53, one bounded step each): (1) gravity/jump arc/land and turn-rate constants for M5; (2) what triggers each HI_* reaction and the damage use of event type 35 for M6; (3) the walk/run analog threshold. M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download). Nothing else is unblocked.
+- Remaining items all wait on executable lookups (either worker): (1) turn-rate constants for M5 (gravity found, see Log); (2) what triggers each HI_* reaction and the damage use of event type 35 for M6; (3) the walk/run analog threshold. M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download). Nothing else is unblocked.
 - (event meanings:) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log

@@ -47,6 +47,12 @@ pub struct Player {
     vy: f32,
 }
 
+impl Default for Player {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Player {
     pub fn new() -> Self {
         Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3], vy: 0.0 }
@@ -154,8 +160,8 @@ impl Player {
     fn advance(&mut self) {
         let before = self.world.pos;
         self.world.step();
-        for c in 0..3 {
-            self.pos[c] += self.world.pos[c] - before[c];
+        for (p, (now, was)) in self.pos.iter_mut().zip(self.world.pos.iter().zip(before)) {
+            *p += now - was;
         }
     }
 

@@ -1,5 +1,6 @@
 //! The game as an engine-free state machine (grows in Milestone 4).
 
+#[allow(clippy::excessive_precision)] // generated floats keep the game's full precision
 pub mod extracted;
 pub mod player;
 

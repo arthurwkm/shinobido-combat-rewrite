@@ -39,11 +39,16 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Show evidence: the command you ran and the last lines of its output. Never claim success without it.
 
 ## Loop
-1. Read `PROGRESS.md` first. Work on the first unchecked item of the current milestone.
+1. Read `PROGRESS.md` first (skip its Log). Work on the first unblocked unchecked item of the current
+   milestone. Each checklist item is one feature.
 2. Write or extend a failing test, make it pass, run the full suite. For format work with no Rust yet,
    the test is a check in the Python tool that fails when the parse is wrong.
-3. Commit locally after each green step (`git commit`). Never push; there is no remote.
-4. Before stopping for any reason, update `PROGRESS.md`: done (with evidence), next, blockers.
+3. Commit locally after each green step (`git commit`), once `cargo clippy -q --all-targets` is warning-free.
+   Update `PROGRESS.md` in the same commit: the item's done (with evidence) and next. Never push; there is no remote.
+4. Feature boundary: when an item is checked off or blocked, add one Log line, commit and stop. The next
+   feature starts in a fresh session. Otherwise continue with the next step; never stop just to report.
+   Before checking off a milestone's last item, do one cleanup pass over that milestone's code
+   (dead code, duplication), tests green.
 5. If the same approach fails 3 times, record it under Blockers in `PROGRESS.md` and move to the next
    unblocked item. Anything that needs the owner (installing software, a decision, missing data) is a
    Blocker, not a workaround.
@@ -69,7 +74,7 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Quiet commands: `cargo build -q`, `cargo test -q`. Send long output to `target/logs/<name>.log`
   and read only the errors or the tail.
 - Never print whole binary, generated or extracted files. Use `rg`, `head -c`, hex dumps of small
-  ranges, and read file ranges, not whole large files.
+  ranges, and read file ranges, not whole large files. Find the `docs/formats.md` section you need with `rg`.
 - Use a subagent for broad searches or format surveys; keep the main session for edits.
 - Smallest change that passes the test. No speculative abstractions or features outside `PROGRESS.md`.
 - Status notes: one line per step. The detailed record goes in `PROGRESS.md`.
@@ -79,5 +84,6 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
   then it waits for a reset. You are one of them; do not hand work to the other yourself.
 - Codex does not run git: the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
 - Both workers keep `PROGRESS.md` current: the next worker starts from it with no other memory.
-- Either worker may do the long, token-heavy work (format surveys, executable lookups); one bounded step at a time.
+- Either worker may do the long, token-heavy work (format surveys, executable lookups), split into bounded steps
+  that each leave the suite green; finishing a step is not a reason to stop (see Loop step 4).
   Codex being out of quota is never a Blocker: do the lookup yourself.
