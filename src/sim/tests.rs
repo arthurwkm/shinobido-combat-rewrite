@@ -133,3 +133,21 @@ fn walking_covers_the_walk_cycle_root_motion() {
     assert_eq!(p.state, State::Walk);
     assert!((p.pos[2] - 2.0 * 1.65).abs() < 0.05, "{:?}", p.pos); // two 80-frame cycles
 }
+
+#[test]
+fn jump_leaves_the_ground_at_frame_5_and_lands_about_51_frames_later() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.jump();
+    let (mut peak, mut land) = (0.0f32, None);
+    for f in 1..=120 {
+        p.step(false, false);
+        peak = peak.max(p.pos[1]);
+        if p.state == State::Land && land.is_none() {
+            land = Some(f);
+        }
+    }
+    assert!((55..=62).contains(&land.unwrap()), "{land:?}");
+    assert!(peak > 0.5 && peak < 1.5, "{peak}");
+    assert_eq!(p.state, State::Idle);
+}

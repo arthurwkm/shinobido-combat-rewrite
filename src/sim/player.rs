@@ -14,7 +14,24 @@ pub enum State {
     GuardEnd,
     /// FRONT01 / BACK01 / RIGHT01 / LEFT01 (hypothesis: evasive steps; 30 frames, 1.5-1.6 m of root motion each).
     Dodge,
+    /// JUMP01 animation; height from the game's gravity update (jump launch velocity and unit scale are ESTIMATE).
+    Jump,
+    /// LAND01 after touching down.
+    Land,
 }
+
+/// Gravity update from the executable (0x1102b0, formats.md), in game units.
+fn gravity(vy: f32) -> f32 {
+    let m = vy.abs();
+    if m > 15.0 { -450.0 } else { -100.0 - 0.4 * m }
+}
+/// ESTIMATE: launch velocity in game units/s; chosen so the airborne time (~51 frames) matches JUMP01's footstep
+/// events at frames 5 (take-off) and 56 (landing). The launch value itself was not found in the executable.
+const JUMP_V0: f32 = 155.0;
+/// ESTIMATE: metres per game unit, so that -450 u/s^2 is 9.8 m/s^2.
+const UNIT_M: f32 = 9.8 / 450.0;
+/// JUMP01 event (5, 7, ...) marks take-off.
+const TAKEOFF_FRAME: u32 = 5;
 
 /// Idle / run / halt on top of `World`. ESTIMATE: the transitions (release while running plays HALT01 once, then
 /// idle; pressing forward during HALT01 interrupts it) are guessed; the motions and root motion are from the files.
@@ -27,11 +44,12 @@ pub struct Player {
     pub walk: bool,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
+    vy: f32,
 }
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3], vy: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -55,6 +73,27 @@ impl Player {
             }
             (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, "STOP01"),
             _ => {}
+        }
+        if self.state == State::Jump {
+            self.advance();
+            if self.world.frame >= TAKEOFF_FRAME {
+                if self.world.frame == TAKEOFF_FRAME {
+                    self.vy = JUMP_V0;
+                }
+                self.vy += gravity(self.vy) * super::DT;
+                self.pos[1] += self.vy * super::DT * UNIT_M;
+                if self.pos[1] <= 0.0 && self.vy < 0.0 {
+                    self.pos[1] = 0.0;
+                    self.start(State::Land, "LAND01");
+                }
+            }
+            return;
+        }
+        if self.state == State::Land {
+            if self.world.done() {
+                self.start(State::Idle, "STOP01");
+            }
+            return self.advance();
         }
         if self.state == State::Dodge && self.world.done() {
             self.start(State::Idle, "STOP01");
@@ -98,6 +137,12 @@ impl Player {
     pub fn dodge(&mut self, dir: &str) {
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
             self.start(State::Dodge, dir);
+        }
+    }
+
+    pub fn jump(&mut self) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+            self.start(State::Jump, "JUMP01");
         }
     }
 
