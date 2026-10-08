@@ -25,8 +25,8 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (evidence: removed extracted.rs, `cargo build` prints the setup.py hint, `python tools/setup.py` + `cargo test -q` → 3 passed) `tools/setup.py` runs every generator; `build.rs` explains clearly when generated files are missing (as in the reference).
 
 ## Milestone 4 — Simulation skeleton
-- [ ] (Cargo project, build.rs and 3 data tests exist; `World::step` not written) Cargo project without Bevy: `src/sim/` engine-free 60 Hz `World::step`, `cargo test -q` green.
-- [ ] `tools/compare.py`: runs each action through the simulation (via a test binary or `cargo test` output) and compares timings against the extracted table, printing mismatches.
+- [x] (`cargo test -q` → 4 passed; World plays one action's root motion only, no state machine yet) Cargo project without Bevy: `src/sim/` engine-free 60 Hz `World::step`, `cargo test -q` green.
+- [x] (`python tools/compare.py` → `105/105 actions within tolerance`; checks frames and root displacement only) `tools/compare.py`: runs each action through the simulation (via a test binary or `cargo test` output) and compares timings against the extracted table, printing mismatches.
 
 ## Milestone 5 — Movement
 - [ ] Walk, run, stop; jumps and landings; turning — each with a test against extracted data.
@@ -45,5 +45,6 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
+- 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.

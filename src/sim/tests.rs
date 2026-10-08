@@ -24,3 +24,15 @@ fn all_105_player_actions_have_increasing_root_keys() {
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
+
+#[test]
+fn stepping_run_for_its_length_covers_its_root_motion() {
+    let mut w = super::World::new("RUN01");
+    let mut n = 0;
+    while !w.done() {
+        w.step();
+        n += 1;
+    }
+    assert_eq!(n, 30);
+    assert!((w.pos[2] - 1.69).abs() < 0.01, "{:?}", w.pos);
+}
