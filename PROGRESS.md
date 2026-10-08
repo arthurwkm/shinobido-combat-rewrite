@@ -100,7 +100,7 @@ Copy the reference's `src/` layout (camera, input, rig, anim, hud, view); compar
 - [x] (fallback path: bone cuboids on the game skeleton; `tools/pose.py` → `ok: 183 clips, 28 nodes`, `sim::pose` FK + test `pose_parses_and_poses_a_two_bone_chain`; viewer `pose_bones` poses them from `Player::world_action/world_frame`; skinned mesh not drawn (rigid-weight ESTIMATE glTF exists, loading it is a follow-up); `cargo test -q` → 41 passed; clippy clean; compare.py 186/186; `--shot` still `Unable to find a GPU`, look unverified) Kagetora's model playing the sim's current clip and frame.
 - [x] (viewer `Sim(Fight)`: soldier at z=6 posed on the shared game skeleton from its set-07 clips as red bone cuboids (own mesh not drawn, same fallback as Kagetora), `Fight::step_enemy` drives it each tick; execution cue = spinning yellow diamond over its head while `execution::available`; no key triggers `Fight::execute` yet; `cargo build -q --bin viewer` ok; clippy clean; `cargo test -q` → 41 passed; compare.py 186/186; `--shot` → `Unable to find a GPU`, look unverified) Enemy model and animations; execution cue effect.
 - [x] (`sim::hud::Debug` observe/readout + `player_bar/enemy_bar`, test `log_records_hp_loss_and_readout_shows_queue`; viewer `setup_hud/update_hud`: player bar + hit log top-left, action/frame/speed/height/lock/queued top-right, "Soldier" bar bottom; lock-on shows R1 held since LockOn isn't wired into the viewer; `cargo test -q` → 42 passed; clippy clean; compare.py 186/186; `--shot` → `Unable to find a GPU`, look unverified) Debug HUD like the reference: player bars and hit log top-left; action, frame/length, speed, height, lock-on, queued input top-right; target name and health bar at the bottom.
-- [ ] Game HUD like the Shinobido clips: health bar top-left, eye awareness icon (alert colour + stealth meter bar) top-centre, ki compass top-right pointing at enemies, execution cue.
+- [x] (`sim::hud::eye_colour/compass` + test; viewer `setup_game_hud/update_game_hud`: red health bar top-left, eye icon coloured by `Stealth` level + meter bar top-centre, ki compass ring with orange needle top-right turning with enemy bearing vs camera, execution cue = existing diamond; `Stealth` stepped in `tick`; colours/sizes ESTIMATE; `cargo test -q` → 42 passed; clippy clean; compare.py 186/186; viewer builds; `--shot` still `Unable to find a GPU`, look unverified) Game HUD like the Shinobido clips: health bar top-left, eye awareness icon (alert colour + stealth meter bar) top-centre, ki compass top-right pointing at enemies, execution cue.
 - [ ] Review pass over the whole viewer and sim: bugs, dead code, duplication; tests green.
 
 ## Requests
@@ -115,6 +115,7 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 (none)
 
 ## Log
+- 2026-10-08 Claude: game HUD (health, eye + stealth meter, ki compass, cue) in viewer; debug bar/log moved down 10 px to make room; no GPU so look unverified.
 - 2026-10-08 Input: sim::input + viewer read_pad; mouse motion always orbits (per controls.md), RMB is lock/guard; Alt+WASD walks.
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
 - (newest first, one line per session)

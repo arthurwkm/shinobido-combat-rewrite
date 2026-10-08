@@ -11,6 +11,7 @@ use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
 use shinobido_combat_rewrite::sim::enemy::Enemy;
 use shinobido_combat_rewrite::sim::execution;
+use shinobido_combat_rewrite::sim::stealth::Stealth;
 use shinobido_combat_rewrite::sim::player::Player;
 use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
@@ -35,6 +36,18 @@ struct Pad(Input);
 
 #[derive(Resource, Default)]
 struct Dbg(Debug);
+
+#[derive(Resource, Default)]
+struct Aware(Stealth);
+
+/// Game HUD pieces (Shinobido clips): health top-left, eye icon and stealth meter top-centre, ki compass top-right, execution cue.
+#[derive(Component)]
+enum Game {
+    Health,
+    Eye,
+    Meter,
+    Needle,
+}
 
 /// Debug HUD pieces (reference hud.rs layout): bars and log top-left, readout top-right, target bar bottom.
 #[derive(Component)]
@@ -117,10 +130,11 @@ fn main() {
         .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
         .init_resource::<Dbg>()
+        .init_resource::<Aware>()
         .insert_resource(load_anim())
-        .add_systems(Startup, (setup, setup_hud))
+        .add_systems(Startup, (setup, setup_hud, setup_game_hud))
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid, update_hud).chain())
+        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
         .run();
 }
 
@@ -214,9 +228,13 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>) {
+fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
+    if sim.0.enemy.hp > 0 {
+        let (pos, action) = (sim.0.player.pos, sim.0.player.world_action());
+        aware.0.step(&mut sim.0.enemy, pos, action);
+    }
     dbg.0.observe(&sim.0);
 }
 
@@ -233,11 +251,56 @@ fn setup_hud(mut commands: Commands) {
         ..default()
     };
     let red = Color::srgb(0.62, 0.12, 0.1);
-    bar(&mut commands, Node { width: px(240), height: px(11), ..abs(Some(px(28)), None, Some(px(24)), None) }, Hud::PlayerBar, red);
-    commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(44)), None)));
+    bar(&mut commands, Node { width: px(240), height: px(11), ..abs(Some(px(28)), None, Some(px(34)), None) }, Hud::PlayerBar, red);
+    commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(54)), None)));
     commands.spawn((Text::new(""), font(15.0), Hud::Readout, abs(None, Some(px(20)), Some(px(20)), None)));
     commands.spawn((Text::new("Soldier"), font(18.0), abs(Some(percent(25)), None, None, Some(px(66)))));
     bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
+}
+
+fn setup_game_hud(mut commands: Commands) {
+    let back = Color::srgba(0.0, 0.0, 0.0, 0.6);
+    let abs = |left: Option<Val>, right: Option<Val>, top: Val, w: f32, h: f32| Node {
+        position_type: PositionType::Absolute, left: left.unwrap_or(Val::Auto), right: right.unwrap_or(Val::Auto), top, width: px(w), height: px(h), ..default()
+    };
+    // Health: red bar, top-left.
+    let outer = commands.spawn((abs(Some(px(28)), None, px(8), 300.0, 14.0), BackgroundColor(back))).id();
+    commands.spawn((Node { width: percent(100), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.75, 0.1, 0.08)), Game::Health, ChildOf(outer)));
+    // Eye icon with the stealth meter under it, top-centre.
+    commands.spawn((abs(Some(percent(50)), None, px(8), 44.0, 22.0), UiTransform::from_xy(px(-22), px(0)), BackgroundColor(Color::WHITE), Game::Eye));
+    let meter = commands.spawn((abs(Some(percent(50)), None, px(34), 60.0, 6.0), UiTransform::from_xy(px(-30), px(0)), BackgroundColor(back))).id();
+    commands.spawn((Node { width: percent(0), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.9, 0.9, 0.8)), Game::Meter, ChildOf(meter)));
+    // Ki compass: ring with an orange needle, top-right under the readout.
+    let ring = commands.spawn((Node { border: UiRect::all(px(3)), border_radius: BorderRadius::MAX, ..abs(None, Some(px(24)), px(170), 64.0, 64.0) }, BorderColor::all(Color::srgb(0.8, 0.8, 0.75)), BackgroundColor(back))).id();
+    let needle = commands.spawn((Node { width: percent(100), height: percent(100), justify_content: JustifyContent::Center, ..default() }, Game::Needle, ChildOf(ring))).id();
+    commands.spawn((Node { width: px(5), height: px(26), ..default() }, BackgroundColor(Color::srgb(1.0, 0.55, 0.1)), ChildOf(needle)));
+}
+
+type GameParts = (&'static Game, Option<&'static mut Node>, Option<&'static mut BackgroundColor>, Option<&'static mut UiTransform>);
+
+fn update_game_hud(
+    sim: Res<Sim>,
+    aware: Res<Aware>,
+    cam: Res<Cam>,
+    mut q: Query<GameParts>,
+) {
+    let f = &sim.0;
+    let bearing = hud::compass(f, cam.0.yaw);
+    for (kind, node, bg, tr) in &mut q {
+        match (kind, node, bg, tr) {
+            (Game::Health, Some(mut n), ..) => n.width = percent(100.0 * hud::player_bar(f)),
+            (Game::Meter, Some(mut n), ..) => n.width = percent(100.0 * aware.0.meter),
+            (Game::Eye, _, Some(mut b), ..) => {
+                let c = hud::eye_colour(aware.0.level());
+                b.0 = Color::srgb(c[0], c[1], c[2]);
+            }
+            (Game::Needle, Some(mut n), _, Some(mut t)) => {
+                n.display = if bearing.is_some() { Display::Flex } else { Display::None };
+                t.rotation = Rot2::radians(bearing.unwrap_or(0.0));
+            }
+            _ => {}
+        }
+    }
 }
 
 fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, Option<&mut Text>, Option<&mut Node>)>) {

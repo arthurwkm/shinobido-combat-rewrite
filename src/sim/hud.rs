@@ -1,6 +1,6 @@
 //! Debug readout text and hit log (engine-free; the viewer only draws the strings).
 
-use super::{combat::Fight, data, input::Input};
+use super::{combat::Fight, data, input::Input, stealth::Alert};
 
 const LOG_LINES: usize = 6;
 
@@ -59,6 +59,23 @@ pub fn enemy_bar(f: &Fight) -> f32 {
     f.enemy.hp.max(0) as f32 / data::ENEMY_HP as f32
 }
 
+/// Eye awareness icon colour (RGB). ESTIMATE: calm teal as seen in the stealth clip, amber, red (docs/video_notes.md).
+pub fn eye_colour(a: Alert) -> [f32; 3] {
+    match a {
+        Alert::Unaware => [0.2, 0.7, 0.6],
+        Alert::Suspicious => [0.95, 0.7, 0.15],
+        Alert::Alerted => [0.85, 0.12, 0.1],
+    }
+}
+
+/// Ki compass needle: bearing of the living enemy relative to the camera, radians, 0 = straight ahead, clockwise +.
+pub fn compass(f: &Fight, cam_yaw: f32) -> Option<f32> {
+    use std::f32::consts::{PI, TAU};
+    if f.enemy.hp <= 0 { return None; }
+    let (dx, dz) = (f.enemy.pos[0] - f.player.pos[0], f.enemy.pos[2] - f.player.pos[2]);
+    Some((dx.atan2(dz) - cam_yaw + PI).rem_euclid(TAU) - PI)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,6 +95,12 @@ mod tests {
         assert_eq!(d.log.len(), LOG_LINES, "log is capped");
         let r = d.readout(&f, &Input { jump: true, lock: true, ..Default::default() });
         assert!(r.contains("queued  jump") && r.contains("lock-on held") && r.contains("frame   0/"));
+        assert!(compass(&f, 0.0).unwrap().abs() < 1e-5, "enemy dead ahead");
+        assert!((compass(&f, std::f32::consts::FRAC_PI_2).unwrap() + std::f32::consts::FRAC_PI_2).abs() < 1e-5, "camera turned right: enemy to the left");
+        assert_ne!(eye_colour(Alert::Unaware), eye_colour(Alert::Alerted));
+        f.enemy.hp = 0;
+        assert!(compass(&f, 0.0).is_none());
+        f.enemy.hp = 95;
         assert!((player_bar(&f) - 0.8).abs() < 1e-5 && (enemy_bar(&f) - 0.95).abs() < 1e-5);
     }
 }
