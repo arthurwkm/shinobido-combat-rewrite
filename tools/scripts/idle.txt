@@ -1,0 +1,2 @@
+# idle
+0 stick 0 0

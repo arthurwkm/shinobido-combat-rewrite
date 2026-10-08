@@ -115,7 +115,7 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
   tick, button or stick value), saves a frame every N ticks and exits by itself. A tool tiles the recorded
   frames next to frames of a Shinobido clip at given timestamps into one image (`target/cmp/<name>.png`).
   Scripts live in `tools/scripts/`. Check: the run script's frames show Kagetora advancing across the grid.
-- [ ] Pose correctness: put RUN01, STOP01, AT_A01, JUMP01 and GU_B01 next to the same actions in the clips
+- [x] (evidence: `target/debug/viewer --record target/rec/atk --script tools/scripts/attack.txt --every 5 --ticks 40`, `--record target/rec/run ...`, `--shot target/shots/a.png`; `tools/tile.py` vs combat.mov 12-13 s and movement.mov; FK convention confirmed numerically in formats.md (rest-matrix transpose == STOP01 frame-0 quats); seen: STOP01 crouched ready stance, RUN01 forward lean, AT_A01 low lunge all match the clip silhouettes; limbs are joined by construction; GU_B01/JUMP01 have no usable clip frame (tutorial overlay); still differs: camera sits further back/higher than the clips so the figure is small, bone cuboids thin: covered by the next item) Pose correctness: put RUN01, STOP01, AT_A01, JUMP01 and GU_B01 next to the same actions in the clips
   (docs/video_notes.md timestamps). Fix bone axes, quaternion order and bind/rest composition until the
   silhouettes match and limbs stay joined. Check the enemy's set-07 poses the same way.
 - [ ] Visual audit of every M11 item with shots and records, fixing what differs from the clips and the

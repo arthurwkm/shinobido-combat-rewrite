@@ -1,0 +1,2 @@
+0 stick 0 0
+5 jump

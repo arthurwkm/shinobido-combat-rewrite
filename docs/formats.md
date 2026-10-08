@@ -457,5 +457,5 @@ Writes `extracted/anim/skeleton.bin` (28 nodes: parent id, rest offset x `SCALE`
 as stored (x, y, z, w), local to the parent, offset applied in the parent's frame; position tracks are interpolated linearly
 and quaternions by normalised lerp between keys (Hermite tangents ignored). Hypothesis, checked by FK on STOP01 frame 0
 (`sim::pose::Skeleton::joints`): spine rises, head ~1.26 m, ankles ~0.24 m above hips-0.84 ground, arms hang; the conjugate
-order puts the limbs through the body, so the stored order stands. Hips position is relative to the root (no double
+order puts the limbs through the body, so the stored order stands. **Confirmed 2026-10-08**: the quaternion of each frame's rest matrix *transposed* (RW row-vector matrices) matches STOP01 frame 0 (|dot| 0.87-0.99 for 17 of 21 tracks; the rest are w≈0 pairs), so stored quats are absolute local rotations in standard column convention, which is what `Skeleton::joints` assumes. Hips position is relative to the root (no double
 counting with root motion). Clips with another track count (DRINK_S05 66, SHEATH_BU05 68, LOOK07 22) are not exported.
