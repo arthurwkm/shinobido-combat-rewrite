@@ -111,7 +111,7 @@ Every M11 item was checked as "look unverified"; this milestone verifies them. S
 - The game health bar and the debug player bar overlap top-left, and no hit log is visible.
 - The eye icon is a plain teal rectangle; the compass is a plain ring.
 - No katana; the enemy and Kagetora are bone cuboids.
-- [ ] `--record <dir> --script <file>`: the viewer plays a script of timed pad inputs (one line per input:
+- [x] (evidence: `target/debug/viewer --record target/rec/run --script tools/scripts/run.txt --every 20` → `Screenshot saved to target/rec/run/00160.png`; `.venv/bin/python tools/tile.py target/cmp/run.png "videos/shinobido movement.mov" 3,5,7,9 target/rec/run 20,60,100,140` → `wrote target/cmp/run.png`; seen: Kagetora runs RUN01 across the grid toward the soldier, speed 5.17 m/s in the readout; still differs: poses/camera/look, covered by the next items. One first run saved all-black frames, not reproduced) `--record <dir> --script <file>`: the viewer plays a script of timed pad inputs (one line per input:
   tick, button or stick value), saves a frame every N ticks and exits by itself. A tool tiles the recorded
   frames next to frames of a Shinobido clip at given timestamps into one image (`target/cmp/<name>.png`).
   Scripts live in `tools/scripts/`. Check: the run script's frames show Kagetora advancing across the grid.
@@ -277,3 +277,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 M11 Kagetora rig: took the primitive-bones fallback (bone cuboids on the game skeleton, clips sampled by tools/pose.py); skin scale and quaternion order are checked by FK only; skinned mesh deferred.
 - 2026-10-08 M11 enemy: soldier drawn as red bones (primitive fallback, own model deferred), viewer runs Fight; cue is a diamond; execute key left for the HUD/input pass (ESTIMATE: placement 6 m ahead); look unverified (no GPU).
 - 2026-10-08 M11 debug HUD: text/log/bars built engine-free in sim::hud (testable), viewer only draws; speed = per-tick horizontal delta, hit log from hp drops, lock-on line shows the guard/R1 hold until LockOn is wired.
+- 2026-10-08 M12 record: `--record/--script/--every/--ticks` runs one sim tick per rendered frame with scripted pad (format in viewer.rs doc), `tools/tile.py` stacks clip frames over recorded frames.

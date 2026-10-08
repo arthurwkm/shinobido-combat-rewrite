@@ -107,8 +107,71 @@ fn parse_shot() -> Option<Shot> {
     })
 }
 
+/// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
+/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | yaw <deg>`, `#` comments),
+/// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
+#[derive(Resource)]
+struct Record {
+    dir: String,
+    script: Vec<(u32, String)>,
+    every: u32,
+    ticks: u32,
+    tick: u32,
+}
+
+fn parse_record() -> Option<Record> {
+    let a: Vec<String> = std::env::args().collect();
+    let val = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1));
+    let dir = val("--record")?.clone();
+    let text = std::fs::read_to_string(val("--script")?).expect("script unreadable");
+    let script: Vec<(u32, String)> = text
+        .lines()
+        .filter_map(|l| {
+            let l = l.split('#').next()?.trim();
+            let (t, cmd) = l.split_once(' ')?;
+            Some((t.parse().ok()?, cmd.trim().to_string()))
+        })
+        .collect();
+    let last = script.iter().map(|s| s.0).max().unwrap_or(0);
+    Some(Record {
+        dir,
+        script,
+        every: val("--every").and_then(|v| v.parse().ok()).unwrap_or(6),
+        ticks: val("--ticks").and_then(|v| v.parse().ok()).unwrap_or(last + 30),
+        tick: 0,
+    })
+}
+
+fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut cam: ResMut<Cam>, mut commands: Commands, mut exit: MessageWriter<AppExit>) {
+    let t = rec.tick;
+    for (_, cmd) in rec.script.iter().filter(|s| s.0 == t) {
+        let mut w = cmd.split_whitespace();
+        let v: Vec<f32> = w.clone().skip(1).filter_map(|x| x.parse().ok()).collect();
+        let i = &mut pad.0;
+        match (w.next(), v.as_slice()) {
+            (Some("stick"), [x, y]) => i.stick = [*x, *y],
+            (Some("lock"), [b]) => i.lock = *b != 0.0,
+            (Some("crouch"), [b]) => i.crouch = *b != 0.0,
+            (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
+            (Some("attack"), _) => i.attack = true,
+            (Some("jump"), _) => i.jump = true,
+            (Some("item"), _) => i.item = true,
+            (Some("exec"), _) => exec.0 = true,
+            _ => eprintln!("script: bad line `{cmd}`"),
+        }
+    }
+    if t > 0 && t % rec.every == 0 {
+        commands.spawn(Screenshot::primary_window()).observe(save_to_disk(format!("{}/{t:05}.png", rec.dir)));
+    }
+    if t >= rec.ticks + 30 {
+        exit.write(AppExit::Success); // slack for the last async screenshots
+    }
+    rec.tick += 1;
+}
+
 fn main() {
     let shot = parse_shot();
+    let rec = parse_record();
     let mut app = App::new();
     if let Some(shot) = shot {
         if let Some(dir) = std::path::Path::new(&shot.path).parent() {
@@ -122,6 +185,11 @@ fn main() {
         app.insert_resource(sim).insert_resource(Cam(Orbit { yaw: shot.yaw.to_radians(), ..default() })).insert_resource(shot).add_systems(Update, shoot);
     } else {
         app.init_resource::<Sim>().init_resource::<Cam>();
+        if let Some(rec) = rec {
+            let _ = std::fs::remove_dir_all(&rec.dir);
+            let _ = std::fs::create_dir_all(&rec.dir);
+            app.insert_resource(rec);
+        }
     }
     app
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -138,8 +206,11 @@ fn main() {
         .init_resource::<Aware>()
         .insert_resource(load_anim())
         .add_systems(Startup, (setup, setup_hud, setup_game_hud))
-        .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>| s.is_none()))
-        .add_systems(Update, (read_pad, orbit, draw, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
+        .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>, r: Option<Res<Record>>| s.is_none() && r.is_none()))
+        .add_systems(Update, (
+            (record_step, tick).chain().run_if(resource_exists::<Record>),
+            read_pad.run_if(|r: Option<Res<Record>>| r.is_none()),
+            orbit, draw, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
         .run();
 }
 
