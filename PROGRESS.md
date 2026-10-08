@@ -34,7 +34,7 @@ Each item is one feature with a test against extracted data.
 - [x] (WALK_F02 loop, 1.65 m / 80 f, `walk` flag stands in for the analog threshold: ESTIMATE; `cargo test -q` → 10 passed, compare.py 109/109) Forward walk.
 - [x] (JUMP01 then LAND01, gravity from the executable, launch velocity 155 u/s and 9.8/450 m per unit are ESTIMATE, tuned so airborne time ≈ JUMP01 take-off/landing events at frames 5/56; `cargo test -q` → 11 passed) Jump and land.
 - [x] (no TURN motion exists in the player set; heading turns toward a target at 2.5 pi rad/s, default branch of executable turn function 0x10bf80 (formats.md); which branch applies per action is ESTIMATE; `cargo test -q` → 12 passed, compare.py 109/109) Turning.
-- [ ] Backward and sideways walk (WALK_B/R/L02 are extracted, not wired).
+- [x] (`Player::walk_clip` selects WALK_B/R/L02; root -1.55 z / -1.6 x / +1.6 x per 80 f; choosing the clip from input direction is ESTIMATE; `cargo test -q` → 13 passed, compare.py 109/109) Backward and sideways walk.
 
 ## Milestone 6 — Combat
 Each item is one feature, as found in the game's action data, with a test.
@@ -68,3 +68,4 @@ Each item is one feature, as found in the game's action data, with a test.
 - 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.
+- 2026-10-08 Claude: backward/sideways walk done (walk_clip); M5 complete.

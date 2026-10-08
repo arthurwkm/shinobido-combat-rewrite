@@ -46,6 +46,8 @@ pub struct Player {
     pub guard_held: bool,
     /// Gentle forward input: walk instead of run (ESTIMATE: the game's analog threshold is not decoded).
     pub walk: bool,
+    /// Clip used while walking: WALK_F02 (default), WALK_B02, WALK_R02 or WALK_L02 (ESTIMATE: picking by input direction).
+    pub walk_clip: &'static str,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
     /// Yaw in radians; forward is (sin h, cos h) in x/z. `pos` is in the world frame.
@@ -63,7 +65,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, vy: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, walk: false, walk_clip: "WALK_F02", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, vy: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -131,13 +133,15 @@ impl Player {
         let next = match (self.state, forward) {
             (State::Run | State::Walk, false) => Some(State::Halt),
             (State::Idle | State::Halt, true) => Some(loco),
+            (State::Walk, true) if self.walk && self.world.action.name != self.walk_clip => Some(State::Walk),
             (State::Run | State::Walk, true) if self.state != loco => Some(loco),
             (State::Halt, false) if self.world.done() => Some(State::Idle),
             _ => None,
         };
+        let walk_clip = self.walk_clip;
         let clip = |s| match s {
             State::Run => "RUN01",
-            State::Walk => "WALK_F02",
+            State::Walk => walk_clip,
             State::Halt => "HALT01",
             _ => "STOP01",
         };

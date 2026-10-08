@@ -168,3 +168,18 @@ fn turning_around_takes_pi_over_turn_rate_then_run_goes_backwards() {
     }
     assert!(p.pos[2] < -1.6 && p.pos[0].abs() < 0.01, "{:?}", p.pos);
 }
+
+#[test]
+fn walking_backward_and_sideways_follows_each_clip_root_motion() {
+    use super::player::Player;
+    for (clip, axis, want) in [("WALK_B02", 2, -1.55), ("WALK_R02", 0, -1.6), ("WALK_L02", 0, 1.6)] {
+        let mut p = Player::new();
+        p.walk = true;
+        p.walk_clip = clip;
+        for _ in 0..80 {
+            p.step(true, false);
+        }
+        assert_eq!(p.world_action(), clip);
+        assert!((p.pos[axis] - want).abs() < 0.05, "{clip} {:?}", p.pos);
+    }
+}
