@@ -229,6 +229,7 @@ The table covers every type in `AT_A01` plus the other specifically requested ty
 | 5 | `0x1139ac` / `0x1c11b0` | **Confirmed: enable transition-category mask arg0**, OR into controller `+0x74`. Checker `0x1c1268–0x1c1288` intersects this with target motion header `+0x14` OR controller `+0x180`, allowing the transition when nonzero. Individual category names remain **hypothesis/unresolved**. |
 | 6 | `0x1139d4` / `0x1c11c0` | **Confirmed: disable transition-category bits arg0**, AND with complement at controller `+0x74`. |
 | 7 | `0x113480` | **Confirmed: effect sub-dispatch**, `0x114430 → 0x1c5340`, indexed by arg0 (16 cases, table `0x606fe0`). **Hypothesis (strong): subtype arg0=1 is footstep/contact feedback**: calls `0x1c5610`, branches on contact state, chooses bone 3/6 using arg1 bit `0x10`, selects an effect/cue using arg1 low nibble and a surface-like byte, and calls `0x119030`. RUN01 uses this subtype at frames 8/23 with arg1 20/4. Type 7 as a whole is **not** synonymous with footstep: subtype 7 calls `0x1c78c0` with arg1 low/high halves. |
+| 9 | `0x113350` | **Confirmed, conditional impulse:** `0x1133b8` loads float(arg0), `0x1133c0` calls `0x2c4ab0` to scale actor vector `+0x350`, `0x1133d0` calls `0x162c50` to add it to velocity `+0x310` (Y=`+0x314`). Helpers use `vmulx.xyzw` at `0x2c4abc` and `vadd.xyz` at `0x162c58`. Direct-add path requires nonnegative existing Y velocity and clear actor `+0x280` bit `0x10000`; other branches/state flags are not modeled. Launch initializer identity remains unresolved; see wall ascent lookup below. |
 | 13 | `0x113dd4` | **Confirmed:** shared handler with 53; nonnegative arg0 goes to `0x119030`, subject to actor state and arg1 flags. Arg1 bit0 controls retained handle behavior, bit1 can suppress dispatch for actor kind 1. **Hypothesis: character-relative sound/cue playback**, via `0x23f2f0 → 0x2408a0`; exact cue identity unverified, no sound assets decoded. |
 | 18 | `0x113618` | **Confirmed:** calls `0x116fc0`, which changes actor `+0x288` bit8 and calls `0x1c7400(actor[+0x44c],1,-1)` plus `0x1deac0`; counterpart type19 reverses the bit through `0x117040`. **Hypothesis: weapon draw/equip state**; gameplay name unresolved. It is not the type1/2 activation pair. |
 | 22 | `0x11370c` | **Confirmed:** routes arg0/arg1 through actor `+0x458` helpers `0x1e2b90` / `0x1e23f0` (arg1 sign changes branch), optionally notifies actor callback with message `0x1c`. **Hypothesis: equipment/attachment action**; exact meaning unresolved. |
@@ -459,3 +460,61 @@ and quaternions by normalised lerp between keys (Hermite tangents ignored). Hypo
 (`sim::pose::Skeleton::joints`): spine rises, head ~1.26 m, ankles ~0.24 m above hips-0.84 ground, arms hang; the conjugate
 order puts the limbs through the body, so the stored order stands. **Confirmed 2026-10-08**: the quaternion of each frame's rest matrix *transposed* (RW row-vector matrices) matches STOP01 frame 0 (|dot| 0.87-0.99 for 17 of 21 tracks; the rest are w≈0 pairs), so stored quats are absolute local rotations in standard column convention, which is what `Skeleton::joints` assumes. Hips position is relative to the root (no double
 counting with root motion). 66-track clips (set-05 modes) are exported too: track 0 empty, track 1 root T (root motion), then a (T, Q) pair per bone j=0..31 at tracks 1+2j / 2+2j, bone j = HAnim node j-1 (**confirmed 2026-10-08**: the static T tracks equal the skeleton rest offsets in DFS order, e.g. thigh 0.068/-0.014, spine 0.132). Other counts (SHEATH_BU05 68, LOOK07 22) are not exported.
+
+
+### Wall hug versus ledge poses (2026-10-08)
+
+- **Confirmed from source tracks:** `HUG_RH05` / `HUG_LH05` translate along local
+  −X / +X by 0.599854 m over 52 frames, with matching rotation endpoints (every
+  quaternion absolute dot > .99). These are lateral loops; the old 1 m/s is removed.
+- **Confirmed by endpoint consistency:** `LOOK_RH05` connects `STOP_RH05` to `STOPLR05`,
+  and `BACK_RH05` returns from that peek pose; LH connects `STOP_LH05` and `STOPLL05`.
+  BACK is a peek return, not a wall exit. All use the already-supported 24-track layout.
+  Check: `.venv/bin/python tools/hug.py` asserts source displacement, loop endpoints,
+  and all LOOK/BACK endpoint matches for both directions.
+- **Confirmed:** ONE06 ends at STOP_B06 and TWO06 at STOP_A06, with different start/end
+  poses and zero root displacement. **Hypothesis:** these are one-/two-handed ledge
+  transitions, not opposite side-step loops. Existing FK places both STOP_A06 hands
+  overhead (~1.84 m), only one STOP_B06 hand overhead; STOP_H05 hands are near the hips
+  (~.94/.97 m). Their cancel targets include CLIMB06 and HANG_L/R06. This corrects the
+  earlier wall-hug interpretation of set 06; reserve these for the ledge item.
+- **Visual evidence of the old bug:** inspected existing `target/hug_sheet.png` and
+  `target/clip38.png` (movement 38 s): viewer arms overhead versus game arms low beside
+  the wall. No new viewer output was produced by Codex. Set-05 selection is a strong
+  hypothesis pending the same comparison after this change; no bone-axis correction
+  is justified by these data.
+- **ESTIMATE:** contact/input selects the set-05 states (no events in these files), direct
+  wall entry uses STOP_H05, release exits to idle/crouch, and the outward-facing heading
+  is retained. Camera easing/side angle also awaits viewer validation. LOOK tracks hold
+  27 frames versus 26 header frames; use the existing extracted-track duration.
+
+
+### Wall ascent and impulse — bounded lookup (2026-10-08)
+
+- **Confirmed from parsed motions:** KABE_U01 and TRI_A01 have zero root translation;
+  TRI_J01 has +0.226807 m Z and no Y; KABE_E01 has −0.652344 m Z and no Y.
+  KABE_U01 has 36 track frames versus 22 header frames. These cannot supply an ascent
+  trajectory by playing root motion alone.
+- **Confirmed events:** KABE_U01 emits type 9 float 1 at frame 0; TRI_J01 does so at frame 2.
+  TRI_J01 permits STOP_K01/RUN_R01/RUN_L01 at frame 8; KABE_E01 permits KICK_J01 at frame 1.
+  TRI_A01 emits type 9 float .8 at frame 3 and has hit window [34,47), damage low-half 15,
+  plus approach/facing events 31/33. **Hypothesis:** attack-specific wall action; do not
+  treat it as a passive ascent continuation.
+- **Lookup 1, confirmed hit:** event 9's dispatcher and two vector helpers establish an
+  impulse mechanism (table above), not an animation-rate change.
+- **Lookup 2, confirmed constants; identity unresolved:** impulse Y at actor +0x354 is
+  written by 0x15de1c, 0x15dfe0 and 0x15e1fc from floats 120.0 at 0x604a28/0x604a48.
+  The last path follows a successful action-slot 0x3c request at 0x15e1bc and zeros existing
+  velocity (Y store 0x15e1ec). Another path, 0x15e310–0x15e34c, uses Y=120 and horizontal
+  actor-direction components scaled by −40 before requesting slot 0x47.
+- **Lookup 3, unresolved wall binding:** no KABE_U/TRI_J/TRI_A executable strings, no
+  adjacent u16/u32 sequence for motion IDs A2/A3/A4/A5. A5/A6/A7 appears at 0x530220
+  in a mapping-like u16 sequence; its relationship to actor +0x2f0 is unproven.
+  **Not confirmed:** that either launch path is KABE_U01/TRI_J01, or a metres conversion.
+  Do not replace the sim's launch ESTIMATE with 120 on this evidence alone.
+- Check: `.venv/bin/python target/check_wall_launch.py` checks the event-table pointer,
+  the two R5900 vector operations and both float constants; prints the narrow initializer
+  instructions and ends `ok: event9 adds arg0-scaled actor+0x350 impulse to actor+0x310
+  velocity; impulse Y initializers read 120.0; wall action-slot mapping and metres scale
+  unresolved`. Scratch check/listings stay in ignored target/. Production wall ascent
+  is not implemented; next step is binding action slots to the identified motions.

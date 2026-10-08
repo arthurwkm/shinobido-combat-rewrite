@@ -1,8 +1,12 @@
-# crouch toward the tall wall (z=8), hug, side-step to the wall end (x=-4), peek, leave
+# Crouch into z=8, then move along +x with the pulled-in camera settled at yaw +60.
 0 at -8 6
+0 yaw 1
 0 crouch 1
 1 stick 0 1
 100 stick 0 0
-160 stick -1 0
-420 stick 0 0
-460 stick 0 -1
+160 stick -0.5 0.8660254
+600 stick 0 0
+# Return from the right corner and reverse to show the other lateral clip.
+650 stick 0.5 -0.8660254
+760 stick 0 0
+800 crouch 0

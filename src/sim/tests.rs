@@ -796,24 +796,64 @@ fn wall_hug_enters_slides_peeks_and_leaves() {
     assert_eq!(p.state, State::Hug);
     assert!((p.heading - (-std::f32::consts::PI)).abs() < 1e-3 || (p.heading - std::f32::consts::PI).abs() < 1e-3, "back to wall, faces -z");
     for _ in 0..70 { p.step_on(&t, false, false); }
-    assert_eq!(p.world_action(), "STOP_A06");
+    assert_eq!(p.world_action(), "STOP_H05");
     // facing -z, screen-left of the player is +x: stick toward +x
     let x0 = p.pos[0];
     for _ in 0..60 { p.target_heading = std::f32::consts::FRAC_PI_2; p.step_on(&t, true, false); }
     assert!(p.pos[0] > x0 + 0.5, "side-steps along the wall: {}", p.pos[0]);
-    assert_eq!(p.world_action(), "TWO06");
+    assert_eq!(p.world_action(), "HUG_RH05");
+    let expected = super::World::new("HUG_RH05");
+    let cycle = expected.root_at(expected.action.frames)[0];
+    assert!((p.pos[0] - x0 + cycle + expected.root_at(8)[0]).abs() < 1e-4, "uses extracted lateral motion over a loop");
     p.target_heading = -std::f32::consts::FRAC_PI_2;
     p.step_on(&t, true, false);
-    assert_eq!(p.world_action(), "ONE06", "other direction");
+    assert_eq!(p.world_action(), "HUG_LH05", "other direction");
     p.target_heading = std::f32::consts::FRAC_PI_2;
     for _ in 0..400 { p.step_on(&t, true, false); }
     assert!(p.pos[0] < -3.5, "stops at the wall end (x=-4): {}", p.pos[0]);
-    assert_eq!(p.world_action(), "STOP_B06");
+    assert_eq!(p.world_action(), "STOPLR05");
     p.target_heading = p.heading; // stick away from the wall
     p.step_on(&t, true, false);
-    assert_eq!(p.world_action(), "BACK06");
+    assert_eq!(p.state, State::Idle);
     for _ in 0..90 { p.step_on(&t, false, false); }
     assert_eq!(p.state, State::Crouch, "crouch is still held after leaving");
+}
+
+#[test]
+fn hug_peeks_both_corners_and_returns_before_moving() {
+    use super::player::{Player, State};
+    use super::terrain::{Terrain, Collider};
+    let terrain = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 2.0], [1.0, 4.0, 3.0], false)] };
+    for direction in [-1.0_f32, 1.0] {
+        let mut p = Player::new();
+        p.crouch_held = true;
+        for _ in 0..180 { p.step_on(&terrain, true, false); }
+        assert_eq!(p.state, State::Hug);
+        p.target_heading = direction * std::f32::consts::FRAC_PI_2;
+        let (look, hold, back, walk) = if direction > 0.0 {
+            ("LOOK_RH05", "STOPLR05", "BACK_RH05", "HUG_LH05")
+        } else { ("LOOK_LH05", "STOPLL05", "BACK_LH05", "HUG_RH05") };
+        let mut saw_look = false;
+        for _ in 0..220 {
+            p.step_on(&terrain, true, false);
+            saw_look |= p.world_action() == look;
+        }
+        assert!(saw_look);
+        assert_eq!(p.world_action(), hold);
+        let corner = p.pos;
+        for _ in 0..100 { p.step_on(&terrain, true, false); }
+        assert_eq!(p.pos, corner, "cannot walk beyond the corner");
+        p.target_heading = -p.target_heading;
+        p.step_on(&terrain, true, false);
+        assert_eq!(p.world_action(), back);
+        assert_eq!(p.pos, corner, "return from peek before translating");
+        for _ in 0..45 { p.step_on(&terrain, true, false); }
+        assert_eq!(p.world_action(), walk);
+        assert!(p.pos[0].abs() < corner[0].abs());
+        p.crouch_held = false;
+        p.step_on(&terrain, false, false);
+        assert_eq!(p.state, State::Idle);
+    }
 }
 
 #[test]
@@ -826,4 +866,33 @@ fn low_blocks_do_not_allow_a_hug() {
     p.crouch_held = true;
     for _ in 0..120 { p.target_heading = 0.0; p.step_on(&t, true, false); }
     assert_ne!(p.state, State::Hug, "crate is 1 m tall");
+}
+
+#[test]
+fn hug_pad_sequence_survives_camera_pull_in() {
+    use super::{camera::Camera, input::Input, player::{Player, State}, terrain::Terrain};
+    let mut p = Player::new();
+    p.pos = [-8.0, 0.0, 6.0];
+    let mut input = Input { crouch: true, ..Default::default() };
+    let mut camera = Camera { yaw: 1.0_f32.to_radians(), ..Default::default() };
+    let terrain = Terrain::sandbox();
+    let mut clips = std::collections::HashSet::new();
+    // Same pad sequence as tools/scripts/hug.txt, with a 60 Hz render clock.
+    for tick in 0..840 {
+        match tick {
+            1 => input.stick = [0.0, 1.0],
+            100 | 600 | 760 => input.stick = [0.0; 2],
+            160 => input.stick = [-0.5, 0.8660254],
+            650 => input.stick = [0.5, -0.8660254],
+            800 => input.crouch = false,
+            _ => {}
+        }
+        input.apply(&mut p, &terrain, camera.yaw);
+        camera.follow_hug((p.state == State::Hug).then_some(p.heading), super::DT);
+        clips.insert(p.world_action());
+    }
+    for name in ["HUG_RH05", "HUG_LH05", "LOOK_RH05", "STOPLR05", "BACK_RH05"] {
+        assert!(clips.contains(name), "pad sequence must reach {name}; saw {clips:?}, yaw {}, position {:?}", camera.yaw, p.pos);
+    }
+    assert_eq!(p.state, State::Idle);
 }

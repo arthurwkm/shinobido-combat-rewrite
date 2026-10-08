@@ -9,7 +9,7 @@ pub enum State {
     Halt,
     /// L1 held: STOP_S05 idle, WALK_F05 moving (set 05 `_S` variants).
     Crouch,
-    /// Back to a tall wall: IKOU_B06 in, STOP_A06 idle, ONE06 side-step, STOP_B06 peek at a wall end, BACK06 out.
+    /// Back to a tall wall: set-05 idle, lateral root motion and directional corner peek.
     Hug,
     Attack,
     /// GU_A01 then GU_B01 while held.
@@ -210,7 +210,8 @@ impl Player {
             if -(s * n[0] + c * n[2]) > 0.7 {
                 self.heading = n[0].atan2(n[2]);
                 self.hug_edge = 0.0;
-                self.start(State::Hug, "IKOU_B06");
+                self.hug_dir = 0.0;
+                self.start(State::Hug, "STOP_H05");
                 return self.advance();
             }
         }
@@ -254,22 +255,17 @@ impl Player {
         self.advance();
     }
 
-    /// Hug: the wall is behind the player (heading faces away from it). Stick sideways along the wall side-steps at
-    /// `HUG_SPEED`, a wall end stops it and peeks, stick away or releasing crouch plays BACK06.
+    /// Set-05 lateral root motion; a wall end plays LOOK then holds the peek until the stick returns.
     fn step_hug(&mut self, forward: bool) {
         let name = self.world.action.name;
         let d = self.target_heading - self.heading;
         let (side, away) = if forward { (d.sin(), d.cos() > 0.7) } else { (0.0, false) };
         let side = if side.abs() > 0.5 { side.signum() } else { 0.0 };
-        if name == "BACK06" {
-            if self.world.done() { self.start(State::Idle, self.idle_clip); }
-            return self.advance();
-        }
         if !self.crouch_held || away {
-            self.start(State::Hug, "BACK06");
+            self.start(State::Idle, self.idle_clip);
             return self.advance();
         }
-        if name == "IKOU_B06" && !self.world.done() {
+        if matches!(name, "BACK_RH05" | "BACK_LH05") && !self.world.done() {
             return self.advance();
         }
         if !self.wall_tall && self.hug_edge == 0.0 {
@@ -277,18 +273,22 @@ impl Player {
         }
         if self.wall_tall { self.hug_edge = 0.0; }
         let moving = side != 0.0 && side != self.hug_edge;
-        if moving { self.hug_dir = side; }
-        // ESTIMATE: ONE06 / TWO06 are the two side-step directions; which is which is not readable from the files
-        let clip = if moving { if self.hug_dir > 0.0 { "ONE06" } else { "TWO06" } } else if self.hug_edge != 0.0 { "STOP_B06" } else { "STOP_A06" };
-        if name != clip {
-            self.start(State::Hug, clip);
-        } else if self.world.done() {
-            self.world = World::new(clip);
+        if moving && matches!(name, "LOOK_RH05" | "LOOK_LH05" | "STOPLR05" | "STOPLL05") {
+            self.start(State::Hug, if self.hug_dir < 0.0 { "BACK_RH05" } else { "BACK_LH05" });
+            return self.advance();
         }
-        if moving {
-            let n = self.heading;
-            self.pos[0] += n.cos() * side * super::data::HUG_SPEED * super::DT;
-            self.pos[2] -= n.sin() * side * super::data::HUG_SPEED * super::DT;
+        if moving { self.hug_dir = side; }
+        let right = self.hug_dir < 0.0; // RH translates along local -X in the source tracks.
+        let clip = if moving {
+            if right { "HUG_RH05" } else { "HUG_LH05" }
+        } else if self.hug_edge != 0.0 {
+            if matches!(name, "STOPLR05" | "STOPLL05") || matches!(name, "LOOK_RH05" | "LOOK_LH05") && self.world.done() {
+                if right { "STOPLR05" } else { "STOPLL05" }
+            } else if right { "LOOK_RH05" } else { "LOOK_LH05" }
+        } else if self.hug_dir == 0.0 { "STOP_H05" }
+        else if right { "STOP_RH05" } else { "STOP_LH05" };
+        if name != clip || self.world.done() {
+            self.start(State::Hug, clip);
         }
         self.advance();
     }
