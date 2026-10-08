@@ -59,8 +59,11 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 
 ## Blockers
 - Input buffering lookup: controller has none (formats.md, "Input buffering"); player input struct at actor +0x450 is untraced. Continue by tracing the writers of +0x5e0/+0x614 (pad edge/timer fields), or skip? Owner: reply `skip` or `continue`.
+  - Owner: do your recommendation. if this is not needed to get the goal just skip, else continue
 - Walk/run analog threshold lookup failed 3 ways (formats.md, "Walk/run analog threshold"); continue by finding the actor state-setter helper and its run/walk callers, or skip? Owner: reply `skip` or `continue`.
+  - Owner: continue
 - HI_* trigger lookup failed 3 ways (formats.md, "HI_* reaction trigger"); continue by tracing writers of actor +0x2e4 states 0x23–0x2D from 0x1bfe40, or skip this item? Owner: reply `skip` or `continue`.
+  - Owner: do your recommendation. if this is not needed to get the goal just skip, else continue
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
