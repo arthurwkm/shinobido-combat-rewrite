@@ -21,7 +21,7 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (docs/missing_values.md) List values the files don't hold (movement speeds not in root motion, gravity, cancel rules, input windows). For each: targeted executable lookup or `ESTIMATE`.
 
 ## Milestone 3 — Extraction pipeline
-- [x] (partial: name, frames, raw root keys, raw events; no hit/cancel windows yet, event types unnamed; `cargo test -q` → 3 passed) `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
+- [x] (`cargo test -q` → 6 passed; frames, root keys, raw events, hit windows from types 1/2 and cancel windows from 3/4; AT_A01 → hit [14,21), cancels into 30/31/34 at 20–24/26; windows are hypothesis-level per formats.md) `tools/extract.py` writes `src/sim/extracted.rs` (ignored by git) with each player action's length, hit windows, cancel windows and root motion.
 - [x] (evidence: removed extracted.rs, `cargo build` prints the setup.py hint, `python tools/setup.py` + `cargo test -q` → 3 passed) `tools/setup.py` runs every generator; `build.rs` explains clearly when generated files are missing (as in the reference).
 
 ## Milestone 4 — Simulation skeleton
@@ -44,7 +44,7 @@ Update this file before stopping every session. Check an item only with evidence
 
 ## Log
 - (newest first, one line per session)
-- 2026-10-07 night (4): Codex disassembled the event dispatcher (0x113220); nmt.py now reads the event count from header +0x1a (1356 files tile to EOF, was 1350). Next: extract hit/cancel windows from events into extracted.rs (M3), then M6.
+- 2026-10-07 night (4): Codex disassembled the event dispatcher (0x113220); nmt.py now reads the event count from header +0x1a (1356 files tile to EOF, was 1350). Hit/cancel windows now in extracted.rs. Next: M6 attack chain in Player using `cancels` (ids are mtnfile.bin indices: map to names), then guard/hit reactions.
 - 2026-10-07 night (3): run/halt/idle state machine in player.rs. Jump/turn need gravity and turn data (lookups); stopping.
 - 2026-10-07 night (2): setup.py, World::step (root motion playback), compare.py. All remaining items need event meanings (Blocker) or are M5+.
 - 2026-10-07 night: decoded .nmt (header, events, position/quaternion tracks, root motion), tools/nmt.py. rws.py, weapon.py, extract.py, Cargo skeleton done (see items). setup.py done. Next: event-type dispatch in the executable (Blocker below).

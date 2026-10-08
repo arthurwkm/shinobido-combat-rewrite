@@ -55,3 +55,10 @@ fn holding_forward_runs_at_the_run_cycle_speed_then_halts_in_place() {
     assert_eq!(p.state, State::Idle);
     assert!((p.pos[2] - z).abs() < 0.2, "halt moved {}", p.pos[2] - z);
 }
+
+#[test]
+fn first_attack_has_hit_window_14_21_and_cancels_into_ids_30_31_34() {
+    let a = action("AT_A01");
+    assert_eq!(a.hits, [(14, 21)]);
+    assert_eq!(a.cancels, [(30, 20, 24), (31, 20, 24), (34, 20, 26)]);
+}
