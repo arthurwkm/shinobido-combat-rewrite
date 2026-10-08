@@ -48,7 +48,7 @@ Each item is one feature, as found in the game's action data, with a test.
 Targeted lookups in `SCES_539.31` (AGENTS.md method step 2); record each in formats.md with addresses and wire it into the sim with a test.
 Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 - [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
-- [ ] What triggers each HI_* reaction.
+- [ ] What triggers each HI_* reaction. (BLOCKED, see Blockers)
 - [ ] Damage use of event type 35 (currently a hypothesis).
 - [ ] Walk/run analog threshold.
 - [ ] Mask category names (event types 5/6).
@@ -58,6 +58,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
+- HI_* trigger lookup failed 3 ways (formats.md, "HI_* reaction trigger"); continue by tracing writers of actor +0x2e4 states 0x23–0x2D from 0x1bfe40, or skip this item? Owner: reply `skip` or `continue`.
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
@@ -80,3 +81,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: Shinobido-specific one-shot actions done (Player::special); M6 complete, M7 blocked on Bevy go-ahead.
 - 2026-10-08: Owner approved Bevy for M7; lookups moved from Blockers into Milestone 6b.
 - 2026-10-08 Claude: turn-rate selection table documented (formats.md); 6b item 1 done.
+- 2026-10-08 Claude: HI_* trigger lookup blocked after 3 failed approaches; partial findings in formats.md.

@@ -231,3 +231,8 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   state flags (actor `+0x280/+0x284/+0x2e8`): 20.944 (flag 0x40 at +0x284), 10.472, 7.854 (2.5 pi, the fall-through
   default at `0x10c1f4`), 1.963, 5.24 etc. **Hypothesis:** 7.854 rad/s is the ordinary ground rate; flag-to-action mapping not decoded.
 - **Confirmed (disassembly, 0x10c0d4–0x10c240):** rate selection tests actor `+0x284` bits 0x20 (rate loaded from float at `+0x568`), 0x100, 0x40 (20.944 = 6.667 pi); `+0x280` bit 0x10000; `+0x2e8` bits 0x800, 0x1000 (with `+0x28C`==1: 2.5 pi-class values 7.854 or 3.927 scaled by `+0x364`/`+0x36c`), 0x4000 (1.963 = 0.625 pi); otherwise 7.854. Names of these flags are unknown (**hypothesis:** 0x4000 is a slow/guard-like state), so the sim keeps 7.854 for all locomotion.
+
+### HI_* reaction trigger — partial lookup (2026-10-08, no result)
+
+- **Tried (no hit):** (1) u32/u16/u8 tables of consecutive mtnfile ids 36–56 in the executable: only ASCII digit strings; (2) clusters of `addiu/ori rX,zero,36..56` immediates: all are switches on *actor state* or message type, not motion ids; (3) string search for `HI_`/damage names: only `damage_honoo*.rws` (0x6060c0, effect model).
+- **Hypothesis:** actor `+0x2e4` states 0x23–0x2D (plus 0x44/0x45) are the damage/reaction states: the same set is tested together by predicates at `0x3f0c30`, `0x1bfe40`, `0x1de6c0`. The state→motion-id mapping and the hit→state choice were not found; likely needs tracing writers of `+0x2e4` (start from `0x1bfe40`).
