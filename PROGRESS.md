@@ -44,13 +44,20 @@ Each item is one feature, as found in the game's action data, with a test.
 - [x] (`Player::hit(name)` plays any HI_* clip then returns to idle, interrupting any state; which reaction the game picks per hit is ESTIMATE/unresolved; `cargo test -q` → 14 passed, compare.py 109/109) Hit reactions (HI_*).
 - [x] (`Player::special(name)` plays SHEATH01/PICK01/THROW_A01/THROW_B01/DRINK01/NINJYUTU01/MAKIBISHI01 to the end then idle, no cancels (ESTIMATE); `cargo test -q` → 15 passed, compare.py 109/109. Not done, add as items if wanted: jump kicks KICK_J/THRO_J, SOCCER01, wall/climb KABE_*/CLIMB_B01, MAKURI*, UKEMI_A01) Shinobido-specific actions discovered in Milestones 2–3.
 
+## Milestone 6b — Executable lookups
+Targeted lookups in `SCES_539.31` (AGENTS.md method step 2); record each in formats.md with addresses and wire it into the sim with a test.
+Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
+- [ ] Turn-rate constants for Turning (gravity found, see Log).
+- [ ] What triggers each HI_* reaction.
+- [ ] Damage use of event type 35 (currently a hypothesis).
+- [ ] Walk/run analog threshold.
+- [ ] Mask category names (event types 5/6).
+- [ ] Input buffering rules.
+
 ## Milestone 7 — Viewer
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- M7 (Bevy viewer) needs the owner's go-ahead on adding Bevy (large download).
-- Not blockers, work for either worker (executable lookups, AGENTS.md method step 2): (1) turn-rate constants for Turning (gravity found, see Log); (2) what triggers each HI_* reaction and the damage use of event type 35; (3) the walk/run analog threshold.
-- (event meanings:) Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
@@ -71,3 +78,4 @@ Each item is one feature, as found in the game's action data, with a test.
 - 2026-10-08 Claude: backward/sideways walk done (walk_clip); M5 complete.
 - 2026-10-08 Claude: hit reactions done (Player::hit, HI_* clips play out to idle).
 - 2026-10-08 Claude: Shinobido-specific one-shot actions done (Player::special); M6 complete, M7 blocked on Bevy go-ahead.
+- 2026-10-08: Owner approved Bevy for M7; lookups moved from Blockers into Milestone 6b.
