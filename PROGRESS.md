@@ -59,6 +59,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 
 ## Blockers
 - Walk/run threshold: 3 more angles failed (formats.md "Walk/run analog threshold", 2nd attempt); the walk/run choice is in untraced code. Keep the `walk` flag ESTIMATE and skip, or give a hint? Owner: reply `skip` or `continue`.
+  - Owner: continue
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
