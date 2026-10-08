@@ -236,3 +236,12 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
 
 - **Tried (no hit):** (1) u32/u16/u8 tables of consecutive mtnfile ids 36–56 in the executable: only ASCII digit strings; (2) clusters of `addiu/ori rX,zero,36..56` immediates: all are switches on *actor state* or message type, not motion ids; (3) string search for `HI_`/damage names: only `damage_honoo*.rws` (0x6060c0, effect model).
 - **Hypothesis:** actor `+0x2e4` states 0x23–0x2D (plus 0x44/0x45) are the damage/reaction states: the same set is tested together by predicates at `0x3f0c30`, `0x1bfe40`, `0x1de6c0`. The state→motion-id mapping and the hit→state choice were not found; likely needs tracing writers of `+0x2e4` (start from `0x1bfe40`).
+
+### Damage use of event type 35 (found 2026-10-08)
+
+- **Confirmed:** handler `0x11391c` stores `+0x580 = trunc(float(u16 arg0) * float[actor[+0x45c]+0x34])`,
+  `+0x584 = arg0 >> 16` (signed), `+0x588 = arg1`. Consumers `0x10e5d4–0x10e608` (query returning two values) and
+  `0x11404c–0x114088` (calls `0x11dc90` with `+0x580 * m` as a2, `+0x584` as a3, float 30.0 in f12) both multiply
+  `+0x580` by `m = 0x237950(actor[+0x45c])`: 0.5 if float `[+0x5c] < 0`, 1.0 if `== 0`, else 2.0.
+- **Hypothesis (strong):** `+0x580` is hit damage (arg0 = per-attack factor, `[+0x34]` = attacker power stat, `m` = bias),
+  `+0x584` a hit-type/strength class. AT_A01 has `(frame 0, 35, 7, 0)`. Power stat value and `0x11dc90` not traced: `hit_damage` in `player.rs` takes power as input.

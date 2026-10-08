@@ -218,3 +218,12 @@ fn ninja_actions_play_out_then_return_to_idle() {
         assert_eq!(p.state, State::Idle, "{n}");
     }
 }
+
+#[test]
+fn at_a01_damage_param_scales_with_power_and_bias() {
+    let e = action("AT_A01").events.iter().find(|e| e.1 == 35).unwrap();
+    assert_eq!(e.2, 7);
+    assert_eq!(super::player::hit_damage(e.2, 10.0, 0.0), 70);
+    assert_eq!(super::player::hit_damage(e.2, 10.0, -1.0), 35);
+    assert_eq!(super::player::hit_damage(e.2, 10.0, 1.0), 140);
+}

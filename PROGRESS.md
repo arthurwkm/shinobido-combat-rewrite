@@ -49,7 +49,7 @@ Targeted lookups in `SCES_539.31` (AGENTS.md method step 2); record each in form
 Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 - [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
 - [ ] What triggers each HI_* reaction. (BLOCKED, see Blockers)
-- [ ] Damage use of event type 35 (currently a hypothesis).
+- [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
 - [ ] Walk/run analog threshold.
 - [ ] Mask category names (event types 5/6).
 - [ ] Input buffering rules.
@@ -82,3 +82,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08: Owner approved Bevy for M7; lookups moved from Blockers into Milestone 6b.
 - 2026-10-08 Claude: turn-rate selection table documented (formats.md); 6b item 1 done.
 - 2026-10-08 Claude: HI_* trigger lookup blocked after 3 failed approaches; partial findings in formats.md.
+- 2026-10-08 Claude: event type 35 damage formula documented and wired (hit_damage); 6b damage item done.

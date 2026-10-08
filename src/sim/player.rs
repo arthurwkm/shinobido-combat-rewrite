@@ -220,3 +220,11 @@ impl Player {
         }
     }
 }
+
+/// Hit damage from a type-35 event (formats.md, "Damage use of event type 35"):
+/// `trunc(trunc(u16(arg0) * power) * mult)`; `power` is the attacker's float stat at `[+0x45c]+0x34`
+/// (value not found: caller supplies it, ESTIMATE) and `mult` is 0.5/1.0/2.0 from the sign of the float at `+0x5c`.
+pub fn hit_damage(arg0: u32, power: f32, bias: f32) -> i32 {
+    let mult = if bias < 0.0 { 0.5 } else if bias <= 0.0 { 1.0 } else { 2.0 };
+    (((arg0 & 0xffff) as f32 * power) as i32 as f32 * mult) as i32
+}
