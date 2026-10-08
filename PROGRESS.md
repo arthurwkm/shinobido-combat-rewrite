@@ -42,7 +42,7 @@ Each item is one feature, as found in the game's action data, with a test.
 - [x] (GU_A01 → (cancel window to) GU_B01 loops while held, release plays GU_Y01 (role of GU_Y01 is a hypothesis); `cargo test -q` → 8 passed) Guard.
 - [x] (FRONT01/BACK01/RIGHT01/LEFT01, 30 f, root motion +1.5/-1.6/-1.6 x/+1.6 x m; role is a hypothesis; `cargo test -q` → 9 passed) Evasion.
 - [x] (`Player::hit(name)` plays any HI_* clip then returns to idle, interrupting any state; which reaction the game picks per hit is ESTIMATE/unresolved; `cargo test -q` → 14 passed, compare.py 109/109) Hit reactions (HI_*).
-- [ ] Shinobido-specific actions discovered in Milestones 2–3 (list them here as they are found).
+- [x] (`Player::special(name)` plays SHEATH01/PICK01/THROW_A01/THROW_B01/DRINK01/NINJYUTU01/MAKIBISHI01 to the end then idle, no cancels (ESTIMATE); `cargo test -q` → 15 passed, compare.py 109/109. Not done, add as items if wanted: jump kicks KICK_J/THRO_J, SOCCER01, wall/climb KABE_*/CLIMB_B01, MAKURI*, UKEMI_A01) Shinobido-specific actions discovered in Milestones 2–3.
 
 ## Milestone 7 — Viewer
 - [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
@@ -70,3 +70,4 @@ Each item is one feature, as found in the game's action data, with a test.
 - 2026-10-07: setup with owner. Disc mapped, VOLUME.DAT readable, guidelines rewritten for a data-first approach.
 - 2026-10-08 Claude: backward/sideways walk done (walk_clip); M5 complete.
 - 2026-10-08 Claude: hit reactions done (Player::hit, HI_* clips play out to idle).
+- 2026-10-08 Claude: Shinobido-specific one-shot actions done (Player::special); M6 complete, M7 blocked on Bevy go-ahead.

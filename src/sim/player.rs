@@ -20,6 +20,8 @@ pub enum State {
     Land,
     /// A HI_*01 hit reaction (hypothesis: B/U/C letters are the hit side or height; which one the game picks is ESTIMATE).
     Hit,
+    /// One-shot ninja action (SHEATH01, PICK01, THROW_A01/B01, DRINK01, NINJYUTU01, MAKIBISHI01); role per name is a hypothesis.
+    Special,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -122,10 +124,10 @@ impl Player {
         if self.state == State::Dodge && self.world.done() {
             self.start(State::Idle, "STOP01");
         }
-        if self.state == State::Hit && self.world.done() {
+        if matches!(self.state, State::Hit | State::Special) && self.world.done() {
             self.start(State::Idle, "STOP01");
         }
-        if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit) {
+        if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit | State::Special) {
             return self.advance();
         }
         if self.state == State::Attack {
@@ -173,6 +175,13 @@ impl Player {
     pub fn hit(&mut self, reaction: &str) {
         self.vy = 0.0;
         self.start(State::Hit, reaction);
+    }
+
+    /// Start a one-shot ninja action from idle/run/walk/halt; it plays to its end, then returns to idle (ESTIMATE: no cancels).
+    pub fn special(&mut self, name: &str) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt) {
+            self.start(State::Special, name);
+        }
     }
 
     pub fn jump(&mut self) {

@@ -201,3 +201,20 @@ fn hit_reactions_play_out_then_return_to_idle() {
         assert_eq!(p.state, State::Idle, "{}", a.name);
     }
 }
+
+#[test]
+fn ninja_actions_play_out_then_return_to_idle() {
+    use super::{extracted::ACTIONS, player::{Player, State}};
+    for n in ["SHEATH01", "PICK01", "THROW_A01", "THROW_B01", "DRINK01", "NINJYUTU01", "MAKIBISHI01"] {
+        let a = ACTIONS.iter().find(|a| a.name == n).unwrap();
+        let mut p = Player::new();
+        p.special(n);
+        assert_eq!((p.state, p.world_action()), (State::Special, n));
+        for _ in 0..a.frames {
+            p.step(false, false);
+        }
+        assert_eq!(p.state, State::Special, "{n} still plays on its last frame");
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{n}");
+    }
+}
