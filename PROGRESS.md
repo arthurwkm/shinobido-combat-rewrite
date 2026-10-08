@@ -47,7 +47,7 @@ Each item is one feature, as found in the game's action data, with a test.
 ## Milestone 6b — Executable lookups
 Targeted lookups in `SCES_539.31` (AGENTS.md method step 2); record each in formats.md with addresses and wire it into the sim with a test.
 Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
-- [ ] Turn-rate constants for Turning (gravity found, see Log).
+- [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
 - [ ] What triggers each HI_* reaction.
 - [ ] Damage use of event type 35 (currently a hypothesis).
 - [ ] Walk/run analog threshold.
@@ -79,3 +79,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: hit reactions done (Player::hit, HI_* clips play out to idle).
 - 2026-10-08 Claude: Shinobido-specific one-shot actions done (Player::special); M6 complete, M7 blocked on Bevy go-ahead.
 - 2026-10-08: Owner approved Bevy for M7; lookups moved from Blockers into Milestone 6b.
+- 2026-10-08 Claude: turn-rate selection table documented (formats.md); 6b item 1 done.

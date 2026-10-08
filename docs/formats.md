@@ -230,3 +230,4 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   clamped to pi, scaled by actor `+0x420`; the step is `rate * dt` (`dt` = float at `[gp-0x6cec]+8`). `rate` is chosen by
   state flags (actor `+0x280/+0x284/+0x2e8`): 20.944 (flag 0x40 at +0x284), 10.472, 7.854 (2.5 pi, the fall-through
   default at `0x10c1f4`), 1.963, 5.24 etc. **Hypothesis:** 7.854 rad/s is the ordinary ground rate; flag-to-action mapping not decoded.
+- **Confirmed (disassembly, 0x10c0d4–0x10c240):** rate selection tests actor `+0x284` bits 0x20 (rate loaded from float at `+0x568`), 0x100, 0x40 (20.944 = 6.667 pi); `+0x280` bit 0x10000; `+0x2e8` bits 0x800, 0x1000 (with `+0x28C`==1: 2.5 pi-class values 7.854 or 3.927 scaled by `+0x364`/`+0x36c`), 0x4000 (1.963 = 0.625 pi); otherwise 7.854. Names of these flags are unknown (**hypothesis:** 0x4000 is a slow/guard-like state), so the sim keeps 7.854 for all locomotion.
