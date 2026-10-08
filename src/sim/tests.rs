@@ -19,8 +19,8 @@ fn run_footsteps_are_frames_8_and_23() {
 }
 
 #[test]
-fn all_114_player_actions_have_increasing_root_keys() {
-    assert_eq!(ACTIONS.len(), 114);
+fn all_117_player_actions_have_increasing_root_keys() {
+    assert_eq!(ACTIONS.len(), 117);
     // Four actions (THRO_J01, FLIP_B01, SUI_HI01, ITEM_HI01) have no key before frame 4, 4, 15, 50.
     assert!(ACTIONS.iter().all(|a| a.root.windows(2).all(|w| w[0].0 < w[1].0)));
 }
@@ -393,6 +393,22 @@ fn flips_and_jump_attacks_play_once_then_idle() {
     use super::player::{Player, State};
     // ESTIMATE: triggers are caller-chosen one-shots with no cancels (KICK_J/THRO_J are ground-based in the sim).
     for name in ["FLIP_B01", "KICK_J01", "KICK_JB01", "THRO_J01", "CLIMB_B01"] {
+        let mut p = Player::new();
+        p.special(name);
+        for _ in 0..action(name).frames {
+            p.step(false, false);
+            assert_eq!((p.state, p.world_action()), (State::Special, name));
+        }
+        p.step(false, false);
+        assert_eq!(p.state, State::Idle, "{name}");
+    }
+}
+
+#[test]
+fn remaining_attacks_play_once_then_idle() {
+    use super::player::{Player, State};
+    // ESTIMATE: triggers are caller-chosen one-shots with no cancels; AT_*_H hug variants belong to the wall item.
+    for name in ["AT_CA01", "AT_D01", "AT_DA01", "AT_E01", "SOCCER01", "BLADE01", "AT02", "KICK27", "FUTO27", "CLAW_YARAN01", "CLAW_YARA01", "CLAW_THROWN01"] {
         let mut p = Player::new();
         p.special(name);
         for _ in 0..action(name).frames {
