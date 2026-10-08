@@ -34,6 +34,10 @@ struct World(Terrain);
 #[derive(Resource, Default)]
 struct Pad(Input);
 
+/// Execute pressed since the last tick (E / Triangle).
+#[derive(Resource, Default)]
+struct Exec(bool);
+
 #[derive(Resource, Default)]
 struct Dbg(Debug);
 
@@ -129,6 +133,7 @@ fn main() {
         .insert_resource(GlobalAmbientLight { brightness: 350.0, ..default() })
         .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
+        .init_resource::<Exec>()
         .init_resource::<Dbg>()
         .init_resource::<Aware>()
         .insert_resource(load_anim())
@@ -202,7 +207,7 @@ fn shoot(mut commands: Commands, mut shot: ResMut<Shot>, mut exit: MessageWriter
 }
 
 /// Samples keyboard/mouse and gamepad every render frame: held state overwritten, edges OR-ed until a tick takes them.
-fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>) {
+fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>) {
     let k = |c| keys.pressed(c) as i32 as f32;
     let mut stick = Vec2::new(k(KeyCode::KeyD) - k(KeyCode::KeyA), k(KeyCode::KeyW) - k(KeyCode::KeyS)).clamp_length_max(1.0);
     if keys.pressed(KeyCode::AltLeft) {
@@ -214,6 +219,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.item |= keys.just_pressed(KeyCode::KeyQ);
     i.lock = mouse.pressed(MouseButton::Right);
     i.crouch = keys.pressed(KeyCode::ControlLeft);
+    exec.0 |= keys.just_pressed(KeyCode::KeyE);
     for g in &pads {
         let s = Vec2::new(g.get(GamepadAxis::LeftStickX).unwrap_or(0.0), g.get(GamepadAxis::LeftStickY).unwrap_or(0.0));
         if s.length() > stick.length() {
@@ -224,11 +230,15 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
         i.crouch |= g.pressed(GamepadButton::LeftTrigger);
+        exec.0 |= g.just_pressed(GamepadButton::North);
     }
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
+fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
+    if std::mem::take(&mut exec.0) {
+        sim.0.execute();
+    }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
     if sim.0.enemy.hp > 0 {
