@@ -48,22 +48,17 @@ Each item is one feature, as found in the game's action data, with a test.
 Targeted lookups in `SCES_539.31` (AGENTS.md method step 2); record each in formats.md with addresses and wire it into the sim with a test.
 Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): types 1/2 attack window open/close, 3/4 transition-to-motion permission (cancel window), 5/6 category mask on/off, 7 effects (sub 1 footstep), 29-35 control flags. Still unresolved: mask category names, input buffering, damage use of type 35 (hypothesis). Codex quota resets 2026-10-08 02:53.
 - [x] (rate table decoded at 0x10c0d4–0x10c240, formats.md; default 7.854 rad/s already in `TURN_RATE`; flag names unknown so other rates are not wired; `cargo test -q` green) Turn-rate constants for Turning.
-- [ ] What triggers each HI_* reaction. (BLOCKED, see Blockers)
+- [x] (SKIPPED per owner: enemy attacks are out of scope; `Player::hit(name)` stays caller-chosen) What triggers each HI_* reaction.
 - [x] (formats.md "Damage use of event type 35"; `player::hit_damage`; power stat value unknown, caller-supplied; `cargo test -q` green) Damage use of event type 35.
-- [ ] Walk/run analog threshold. (BLOCKED, see Blockers)
+- [ ] Walk/run analog threshold. (BLOCKED again, see Blockers)
 - [x] (formats.md "Transition-category bits"; `python tools/categories.py` → `ok`; names are hypotheses, masks 0x4/0x8 match no header so go via controller +0x180; not wired into sim) Mask category names (event types 5/6).
-- [ ] Input buffering rules. (BLOCKED, see Blockers)
+- [x] (SKIPPED per owner: controller has no buffer, not needed for the goal) Input buffering rules.
 
 ## Milestone 7 — Viewer
 - [x] (`src/bin/viewer.rs`: capsule at `Player.pos`/`heading`, 60 Hz fixed step, W run, Shift walk, A/D turn, Space attack, G guard; `cargo clippy -q --all-targets` clean, `cargo test -q` → 16 passed; window not run headless, the Bevy build takes ~27 min cold) Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
-- Input buffering lookup: controller has none (formats.md, "Input buffering"); player input struct at actor +0x450 is untraced. Continue by tracing the writers of +0x5e0/+0x614 (pad edge/timer fields), or skip? Owner: reply `skip` or `continue`.
-  - Owner: do your recommendation. if this is not needed to get the goal just skip, else continue
-- Walk/run analog threshold lookup failed 3 ways (formats.md, "Walk/run analog threshold"); continue by finding the actor state-setter helper and its run/walk callers, or skip? Owner: reply `skip` or `continue`.
-  - Owner: continue
-- HI_* trigger lookup failed 3 ways (formats.md, "HI_* reaction trigger"); continue by tracing writers of actor +0x2e4 states 0x23–0x2D from 0x1bfe40, or skip this item? Owner: reply `skip` or `continue`.
-  - Owner: do your recommendation. if this is not needed to get the goal just skip, else continue
+- Walk/run threshold: 3 more angles failed (formats.md "Walk/run analog threshold", 2nd attempt); the walk/run choice is in untraced code. Keep the `walk` flag ESTIMATE and skip, or give a hint? Owner: reply `skip` or `continue`.
 
 ## Log
 - 2026-10-08: Turning done: Player.heading/target_heading, rate from 0x10bf80. Next: backward/sideways walk.
@@ -92,3 +87,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08 Claude: mask category bits tabulated empirically (tools/categories.py); 6b mask item done.
 - 2026-10-08 Claude: input buffering lookup blocked; controller has no buffer, player input struct untraced.
 - 2026-10-08 Claude: M7 viewer binary (capsule rig) builds; sim untouched.
+- 2026-10-08 Claude: owner skipped HI_* and input buffering (items closed); walk/run lookup failed again, blocked.

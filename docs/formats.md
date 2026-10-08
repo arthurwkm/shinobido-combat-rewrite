@@ -275,3 +275,8 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
   callers (`0x15cdc4`, `0x15e02c`, `0x29a2a8`, `0x381e20`, …). Generic start helper `0x10c900(actor, slot, start)`.
 - **Unresolved:** any press-hold/timer buffering lives in the player input struct (`actor+0x450`,
   fields seen `+0x5e0`, `+0x614`, `+0x690`, `+0x734/+0x738`), not traced.
+
+### Walk/run analog threshold — second attempt (2026-10-08, no result)
+
+- **Confirmed (disassembly):** `0x10c900(actor, state, start)` is the state requester: maps `state` through the `actor+0x2f0` halfword table to a motion id, asks the controller (`0x1c0d90`), and on success stores `state` in actor `+0x2ec` (pending). `0x110f90` moves `+0x2ec` into `+0x2e4` (current) and loads `+0x2e8` flags from table `[[gp-0x6d38]+0x830]`. `0x10c9c0` is the variant taking an explicit motion id; constructor `0x10b500` starts in state 1.
+- **Tried (no hit):** (1) the ~200 callers of `0x10c900`: the cluster at `0x15cc50–0x15dc00` is a per-state request switch with no direct callers or data references (probably reached through an untraced table); (2) `0x15caf0` callers are a sort, not player code; (3) functions that read `+0x450`, call a state setter and compare floats: none.
