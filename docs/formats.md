@@ -56,3 +56,32 @@ Confirm by checking that the length matches the keyframe data's own duration acr
 - Player model files are `model\KAGETORA_*.rws` (also `GOH_*.rws`: another playable, Goh, to check). Names in `AGENTS.md`
   are right.
 - Unsuffixed `AT01/AT02/AT03.nmt` exist in `motion\` but have no suffix-form entry; role unknown.
+
+## .nmt layout — confirmed on 1350 of 1441 top-level files by `python tools/nmt.py`
+
+Little-endian. Replaces the earlier ".nmt hypothesis" above for everything listed here.
+
+- **Header, 0x28 bytes**: 5 × f32 (`[1]` = length in s, a multiple of 1/60; `[0]`,`[2]`,`[3]`,`[4]` are other
+  times: hypothesis, blend/ease), 2 × u32 flags (unknown), `u32 events_off` (0 or 0x28), `u32 a`, `u32 b`
+  with `a + b == file size` in 1426 files; meaning unknown (the "tail" `a` points into the last tracks, so it is
+  not a section start).
+- **Event list** at `events_off` (when non-zero): 16-byte records `f32 time_s, u32 type, u32 arg0, u32 arg1`,
+  ended by a record with `type == 0`. Times are multiples of 1/60 (confirmed on RUN01: footsteps at frames 8 and
+  23 of a 30-frame loop). Types seen: 3, 5, 7 (footstep, in every run/walk/step file), 1, 13, 31, 33, 34, 35 in
+  attacks. Meaning of each: hypothesis, next step.
+- **Common block** after the events (at `0x28` when there are none), 12 bytes of zero first: `u16 frames, u16 bones`
+  (bones is 21, tracks are bones + 3), `u16 0, u16 frames`, `u32 0x70`. `frames` equals length × 60 in 1226 files;
+  in the rest the last key time equals length × 60 and `frames` is longer (tail hold, hypothesis).
+- **Offset table**: u32 entries ended by a 0 word. Entry k + (table start − 0x10) is the start of track k + 1.
+  Not needed for reading: tracks follow one another.
+- **Tracks**: start 4 bytes after the table's 0 word; `len(entries) + 1` of them, ending exactly at EOF
+  (1350 files). Track = 8-byte header (`u16 0, u16 count, u32 0`) + `count` × 16-byte keys of 8 × s16.
+  - Track 0 (root motion) and track 2 (hips) are **positions**: A = (x, y, z, start frame), B = (dx, dy, dz, frames
+    to next key), values /4096 → metres (hips y ≈ 0.84; hypothesis: tangents for a Hermite curve). Confirmed:
+    keys tile from frame 0 with no gaps in 1340 files.
+  - Other tracks are **unit quaternions** A = (x, y, z, w)/4096 with B = (start frame, frames to next key, 0, 0);
+    tiling and unit length hold for tracks 3..20 in 1285 files.
+  - Root motion check: `RUN01` track 0 ends 1.69 m in +z after 30 frames (3.38 m/s), `STOP01` 0 m, `AT_A01` 0.60 m,
+    `FRONT01` +1.5 m, `BACK01` −1.6 m, `LEFT01` +1.6 m x, `RIGHT01` −1.6 m x (forward is +z).
+- 91 files do not end at EOF (e.g. `ALARM07`, `AT_A05`, `AT_A19`, mostly other characters) and 12 have no
+  tracks; the player's (suffix 01) files parsed so far are fine.
