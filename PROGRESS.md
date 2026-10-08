@@ -55,7 +55,7 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - [ ] Input buffering rules. (BLOCKED, see Blockers)
 
 ## Milestone 7 — Viewer
-- [ ] Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
+- [x] (`src/bin/viewer.rs`: capsule at `Player.pos`/`heading`, 60 Hz fixed step, W run, Shift walk, A/D turn, Space attack, G guard; `cargo clippy -q --all-targets` clean, `cargo test -q` → 16 passed; window not run headless, the Bevy build takes ~27 min cold) Bevy 0.19 binary (same profile settings as the reference) drawing the sim with a capsule rig; sim stays engine-free.
 
 ## Blockers
 - Input buffering lookup: controller has none (formats.md, "Input buffering"); player input struct at actor +0x450 is untraced. Continue by tracing the writers of +0x5e0/+0x614 (pad edge/timer fields), or skip? Owner: reply `skip` or `continue`.
@@ -88,3 +88,4 @@ Context: Event meanings found by Codex (formats.md, ".nmt event consumer"): type
 - 2026-10-08: walk/run analog threshold lookup failed 3 ways; blocked.
 - 2026-10-08 Claude: mask category bits tabulated empirically (tools/categories.py); 6b mask item done.
 - 2026-10-08 Claude: input buffering lookup blocked; controller has no buffer, player input struct untraced.
+- 2026-10-08 Claude: M7 viewer binary (capsule rig) builds; sim untouched.
