@@ -33,7 +33,28 @@ impl Fight {
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
         self.enemy.step(self.player.pos);
+        self.separate();
         self.resolve();
+    }
+
+    /// Push the two apart (half each) until their bodies no longer overlap; execution pairs stay put.
+    fn separate(&mut self) {
+        let (p, e) = (&mut self.player, &mut self.enemy);
+        if p.state == State::Special {
+            return;
+        }
+        let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
+        let d = dx.hypot(dz);
+        let min = 2.0 * data::BODY_RADIUS;
+        if d >= min {
+            return;
+        }
+        let (nx, nz) = if d > 1e-4 { (dx / d, dz / d) } else { (0.0, 1.0) };
+        let push = (min - d) / 2.0;
+        p.pos[0] -= nx * push;
+        p.pos[2] -= nz * push;
+        e.pos[0] += nx * push;
+        e.pos[2] += nz * push;
     }
 
     /// Start the execution that `execution::available` offers: align the pair, play both clips, the soldier dies.

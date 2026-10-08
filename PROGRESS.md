@@ -281,3 +281,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 M11 debug HUD: text/log/bars built engine-free in sim::hud (testable), viewer only draws; speed = per-tick horizontal delta, hit log from hp drops, lock-on line shows the guard/R1 hold until LockOn is wired.
 - 2026-10-08 M12 record: `--record/--script/--every/--ticks` runs one sim tick per rendered frame with scripted pad (format in viewer.rs doc), `tools/tile.py` stacks clip frames over recorded frames.
 - 2026-10-08 M12 pose: FK convention confirmed against rest matrices (no code change needed); poses match clip silhouettes, camera framing/limb thickness left to the visual-audit item.
+- 2026-10-08 Claude: character separation (Fight::separate, half push each, skipped during executions); seen in target/rec/hit/00180.png.

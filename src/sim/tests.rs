@@ -721,3 +721,12 @@ fn pose_parses_and_poses_a_two_bone_chain() {
     assert_eq!(j[0], [0.0, 1.0, 0.0]);
     assert!((j[7][1] - 0.0).abs() < 1e-5 && j[7][2].abs() < 1e-5, "{:?}", j[7]);
 }
+
+#[test]
+fn fight_pushes_overlapping_bodies_apart() {
+    use super::{data, combat::Fight, enemy::Enemy, player::Player};
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 0.1]));
+    f.step_enemy();
+    let (p, e) = (f.player.pos, f.enemy.pos);
+    assert!((e[0] - p[0]).hypot(e[2] - p[2]) >= 2.0 * data::BODY_RADIUS - 1e-3);
+}
