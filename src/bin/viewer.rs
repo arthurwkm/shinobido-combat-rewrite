@@ -11,7 +11,7 @@ use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
 use shinobido_combat_rewrite::sim::enemy::Enemy;
 use shinobido_combat_rewrite::sim::execution;
-use shinobido_combat_rewrite::sim::stealth::Stealth;
+use shinobido_combat_rewrite::sim::stealth::{Alert, Stealth};
 use shinobido_combat_rewrite::sim::player::Player;
 use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
@@ -76,6 +76,10 @@ struct Bone(usize, bool);
 /// A mannequin piece (capsule, sphere or box) on the same bone as `Bone(n, foe)`; the cuboids show with B.
 #[derive(Component)]
 struct Part(usize, bool);
+
+/// The katana of Kagetora (`false`) or the soldier (`true`): in the right hand when drawn, on the left hip when sheathed.
+#[derive(Component)]
+struct Katana(bool);
 
 /// Floating diamond over the soldier while an execution is available.
 #[derive(Component)]
@@ -250,6 +254,11 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
                     c.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(mat.clone()), Transform::from_translation(Vec3::Z * off).with_rotation(turn)));
                 });
             }
+        }
+        let steel = mats.add(Color::srgb(0.75, 0.77, 0.8));
+        let blade = meshes.add(Cuboid::new(0.025, 0.025, 0.9));
+        for foe in [false, true] {
+            commands.spawn((Katana(foe), Mesh3d(blade.clone()), MeshMaterial3d(steel.clone()), Transform::default()));
         }
     } else {
         commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(body), Transform::default()));
@@ -449,7 +458,7 @@ fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
 }
 
 /// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
-fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), Without<Part>>, mut parts: Query<(&Part, &mut Transform), Without<Bone>>) {
+fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>, pad: Res<Pad>, aware: Res<Aware>, mut drawn: Local<bool>) {
     if keys.just_pressed(KeyCode::KeyB) {
         *debug = !*debug;
     }
@@ -472,6 +481,19 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
         if let Some(joints) = &joints[*foe as usize] {
             *t = seg(joints, *n).0;
         }
+    }
+    // Drawn on alert, lock-on or a swing; sheathed again once calm. The soldier keeps his blade out.
+    *drawn = pad.0.lock || aware.0.level() == Alert::Alerted || p.world_action().starts_with("AT_") || (*drawn && aware.0.level() != Alert::Unaware);
+    for (Katana(foe), mut t) in &mut katanas {
+        let Some(joints) = &joints[*foe as usize] else { continue };
+        *t = if *foe || *drawn {
+            let (a, b) = (joints[14], joints[15]); // right forearm to hand
+            let dir = (b - a).normalize_or_zero();
+            Transform::from_translation(b + dir * 0.35).looking_to(dir, Vec3::Y)
+        } else {
+            let hip = joints[7];
+            Transform::from_translation(hip + Vec3::new(0.0, -0.1, 0.0) + (joints[8] - hip).normalize_or_zero() * 0.0).looking_to(Vec3::new(0.2, -0.3, 1.0), Vec3::Y)
+        };
     }
 }
 
