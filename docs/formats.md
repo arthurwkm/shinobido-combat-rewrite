@@ -95,3 +95,16 @@ Little-endian. Replaces the earlier ".nmt hypothesis" above for everything liste
 - `wpset.bin` (472 B) = `u32 count=25`, 25 u32 offsets, then per set u16 `a, b, 0, n`, `n` indices into the 55 wpdata
   records, one pad u16 when `n` is odd. All indices < 55 for all 25 sets. Which set is Kagetora's katana, and what
   `a`/`b` mean (a = b in most sets: left/right hand?) is unknown.
+
+## model\KAGETORA_BODY.rws — skeleton confirmed (`python tools/rws.py`)
+
+RenderWare 3.x stream, little-endian chunks `u32 type, u32 size, u32 libid`. Top level: `0x00` (36 B: strings
+`kagetora_body.rws` / `.jat`), `0x16` texture dictionary, `0x10` clump (frame list `0x0E`, geometry list `0x1A`, atomics),
+a few Acquire-specific chunks (`0x1b`, `0x1000060`, unread).
+- Frame list: 29 frames (56 B each: 3×3 matrix, position, parent s32, flags); frame 0 is the scene root.
+  Each frame's extension holds an HAnim chunk `0x11e`; frame 1 carries the hierarchy: 28 nodes
+  `(node id, node index, flags)`, ids 0..27 once each, ids 24..27 are tips (flag 1: both feet and both hands).
+- 28 nodes − 4 tips = 24 animated nodes = the 24 tracks of a `.nmt` (**hypothesis** for the mapping: track 0 root
+  position, 1 root rotation, 2 hips position, 3..23 the 21 `bones` rotations in hierarchy order; counts match, the
+  per-bone order is not verified yet).
+- Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale unknown.

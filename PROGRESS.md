@@ -16,7 +16,7 @@ Update this file before stopping every session. Check an item only with evidence
 - [x] (evidence: formats.md, 1221 unique names, parsed) `motion\mtnfile.bin`: confirm or reject "motion ID → name table". Note how IDs map to `.nmt` files.
 - [x] `.nmt` header + events: header length, event list (frame, type, args). Evidence: `python tools/nmt.py` → `1350 tracks end at EOF`, all 105 player (suffix 01) files parse; footsteps of RUN01 at frames 8/23. TODO inside: meaning of event types (3/4 and 5/6 look like start/end pairs by arg id; 1, 49, 50, 53 unknown) needs an executable lookup; header flags/`a`,`b` fields unknown.
 - [x] (evidence: nmt.py check, root motion RUN01 1.69 m/30 f) `.nmt` keyframes: bone tracks, frame rate, compression; which bone carries root motion.
-- [ ] `model\KAGETORA_BODY.rws`: RenderWare chunks, HAnim skeleton (bone IDs, hierarchy) matching the `.nmt` tracks. `tools/rws.py`.
+- [x] (evidence: `python tools/rws.py` → `ok: 29 frames, 28 HAnim nodes ... matches 24 .nmt tracks`; per-bone order unverified) `model\KAGETORA_BODY.rws`: RenderWare chunks, HAnim skeleton (bone IDs, hierarchy) matching the `.nmt` tracks. `tools/rws.py`.
 - [x] (layout only: `python tools/weapon.py` → `ok: 55 wpdata records, 25 wpset entries`; no damage/range fields found, see formats.md) `weapon\wpdata.bin` / `wpset.bin`: layout, which entries are the player's weapons, any damage or range fields.
 - [ ] List values the files don't hold (movement speeds not in root motion, gravity, cancel rules, input windows). For each: targeted executable lookup or `ESTIMATE`.
 
