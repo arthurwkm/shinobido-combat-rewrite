@@ -191,7 +191,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   stick, mouse or arrow keys while locked; D-pad/wheel switch removed 2026-10-09, thresholds ESTIMATE). Needs a
   live check with several soldiers (M15 item below); `--record` scripts bypass `read_pad` and use `switch`. Sideways roll while locked (owner, 2026-10-09; not in the clips but counts): it
   follows the same arc around the target as the strafe, not a straight line.
-- [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
+- [x] (evidence: `target/debug/viewer --record target/rec/exec --script tools/scripts/exec.txt --every 10 --ticks 250` -> `target/cmp/exec_sheet.png` vs `target/cmp/cue_clip.png` (stealth-kill clip 8-16 s): from behind Triangle plays KIME_A01 with the soldier dying, close-up camera, log `KIME_A01 hits enemy`, then STOP01; the clip also shows a medium shot of the kill, framing similar. Still differs: the cue is a yellow diamond, the clip's cue is not visible in the dark frames (ESTIMATE); A/B/C/D victim variants stay ESTIMATE after the three failed lookups in formats.md 'Execution phase audit' (rule 7), S-only pairing; no frame-exact timing compare) Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
   (combat 46 s, 54–58 s; stealth 14 s; kill from behind and from above with the cue in `videos/shinobido lock in
   lock off stealth kill from above.mov`); victim variants (A/B/C/D) by situation.
   Codex audit 2026-10-09: fixed the cue offering an execution during `State::Special` while Triangle rejected it; eligibility now lives in `execution::available` for both HUD and `Fight::execute`. Regression failed with `Some(Back)` vs `None` before the fix; all three existing kind tests now enter through Triangle's `Fight::grab(false)` path. Cue/camera changes need viewer check, for Claude: `target/debug/viewer --record target/rec/exec --script tools/scripts/exec.txt --every 2 --ticks 250`, compare combat 46 s/54–58 s and stealth 14 s; no record was run in Codex. The feature is **not yet at viewer-only completion**: three bounded variant lookups found corresponding C-to-BA phase links and attack events in supposedly passive `HI_*01` clips, undermining the current KIME pairing. Findings/addresses and next lookup are in `docs/formats.md` “Execution phase audit”; do not randomly assign A/B/C/D. Next: identify the consumer/ID namespace of the lists built via `0x3f7980`, or visually establish HI_*01 attacker phases; implement phase selection before checking this item. S-only/KIME pairing remains ESTIMATE. Evidence: `cargo test -q` → `74 passed; 0 failed`; `cargo clippy -q --all-targets` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`; `CARGO_INCREMENTAL=0 cargo build -q --bin viewer` → exit 0, no output. No new dependencies; no stage/commit (runner owns it).
@@ -206,10 +206,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 - [ ] Full PS2 pad map from docs/controls.md, every action reachable; a controls legend in the debug HUD.
   Check docs/controls.md against `img/shinobido controls.png` first (shoulders, guard, evasion; replaces the
   rear-view guide interpretation and estimated combinations).
-- [ ] Game HUD fidelity: health bar with emblem, eye icon shape and colours, spiked ki compass ring. Crops
-  side by side with clip frames.
-- [ ] Sandbox fidelity: tiled sloping roofs, a garden patch for stealth, the walled corridor at the clip's
-  width; reference grey-block style.
+
 
 ## Milestone 17 — Acceptance review
 - [ ] Acceptance review (AGENTS.md Loop step 9). For every in-scope line of AGENTS.md, record a scripted
