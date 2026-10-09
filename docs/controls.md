@@ -9,8 +9,9 @@ item, not the bindings currently implemented by the capsule viewer.
 ## Basic layout
 
 Face buttons and sticks below are confirmed by the guide's labels and leaders.
-Shoulder labels are confirmed; physical L/R interpretation uses the rear view of
-its controller drawing (hypothesis). Keyboard/mouse bindings are project choices,
+Shoulder labels are confirmed; physical L/R interpretation uses the front view of
+`img/shinobido controls.png`, confirmed in PCSX2 by the owner on 2026-10-09:
+R1 is Hide/Crouch (hold to crouch-walk), L1 is Lock-on. The earlier rear-view reading was wrong. Keyboard/mouse bindings are project choices,
 not extracted game data. Gamepad names use physical positions, avoiding the Xbox
 “X” versus PlayStation Cross ambiguity.
 
@@ -22,8 +23,8 @@ not extracted game data. Gamepad names use physical positions, avoiding the Xbox
 | Grab | Triangle | North face | E | Context action (also lifts a crate or a dead soldier; Triangle again puts it down, Square throws it) |
 | Dash | Circle | East face | Left Shift | Hold |
 | Jump | Cross | South face | Space | Press |
-| Lock-on | R1 | Right bumper | Right mouse | Hold |
-| Hide/Crouch | L1 | Left bumper | Left Ctrl | Hold |
+| Lock-on | L1 | Left bumper | Right mouse | Hold |
+| Hide/Crouch | R1 | Right bumper | Left Ctrl | Hold |
 | Use item | L2 or R2 (the guide's leader lines point at both) | Either trigger | Q | Press |
 | Equipment screen | Select | Select/Back | Tab | Documented only; menus out of scope |
 | Pause menu | Start | Start | Escape | Documented only; menus out of scope |
@@ -39,7 +40,7 @@ must be marked `ESTIMATE` in `src/sim/data.rs` when M11 implements them.
 
 Supplied by the owner from play; every row is shown in `videos/shinobido all attacks.mp4` (30 fps) and can be
 checked in PCSX2 with `tools/pcsx2.py`. The disc is SCES-53931 (PAL), so the "PAL only" rows apply. Which motion
-each row plays is still to be matched (motion names are not evidence of inputs). R1 is lock-on.
+each row plays is still to be matched (motion names are not evidence of inputs). The owner's R1 inputs below, including R1 + Square, need re-checking against the emulator now that L1 is confirmed as lock-on. Rows retain the owner's wording; existing lock-modified combos use L1 in the viewer.
 
 | Input | Move |
 |---|---|
@@ -81,7 +82,7 @@ animation names as evidence of button assignments.
 | Execution | Attack when execution cue is available | Shares attack; execution input not shown |
 | Item actions | Use item | Selected item chooses drink/throw/etc.; selection not shown |
 
-Additional viewer choices: the camera is the reference project's (owner, 2026-10-09): lock-on (R1 / right mouse)
+Additional viewer choices: the camera is the reference project's (owner, 2026-10-09): lock-on (L1 / right mouse)
 pressed with no target in range swings it behind Kagetora; left alone while moving it drifts round to follow
 sideways movement. D-pad right / Tab
 cycles sandbox items. Target switch does not exist in Shinobido; the viewer copies Elden
@@ -99,4 +100,4 @@ The existing viewer still uses W to run, Shift to walk, A/D to turn, Space to at
 and G to guard; this documentation item does not change runtime controls.
 
 Chain pairing (ESTIMATE, from the cancel graph, not frame-matched): inside AT_C01 (third slash) Forward + Square picks AT_DA01
-(jumping strike, then AT_CA01 power slash), R1 + Square picks FUTO27 (kick, falls back to KICK27); plain Square picks AT_D01.
+(jumping strike, then AT_CA01 power slash), Lock-on (L1) + Square picks FUTO27 (kick, falls back to KICK27); plain Square picks AT_D01.

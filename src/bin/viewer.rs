@@ -88,7 +88,7 @@ enum Game {
 }
 
 /// Pad map from docs/controls.md (PS2 button, keyboard/mouse).
-const CONTROLS_LEGEND: &str = "Square/LMB attack  Triangle/E grab\nCircle/Shift dash  Cross/Space jump\nR1/RMB lock-on  L1/Ctrl hide-crouch\nL2 R2/Q item  D-pad/Tab cycle\nStick/WASD move (Alt walk)\nR-stick/mouse camera";
+const CONTROLS_LEGEND: &str = "Square/LMB attack  Triangle/E grab\nCircle/Shift dash  Cross/Space jump\nL1/RMB lock-on  R1/Ctrl hide-crouch\nL2 R2/Q item  D-pad/Tab cycle\nStick/WASD move (Alt walk)\nR-stick/mouse camera";
 
 /// Debug HUD pieces (reference hud.rs layout): bars and log top-left, readout top-right, target bar bottom.
 #[derive(Component)]
@@ -392,13 +392,13 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.attack |= g.just_pressed(GamepadButton::West);
         i.jump |= g.just_pressed(GamepadButton::South);
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2) || g.just_pressed(GamepadButton::RightTrigger2);
-        i.lock |= g.pressed(GamepadButton::RightTrigger);
+        i.lock |= g.pressed(GamepadButton::LeftTrigger);
         i.item_next |= g.just_pressed(GamepadButton::DPadRight);
         let rx = g.get(GamepadAxis::RightStickX).unwrap_or(0.0);
         if rx.abs() > flick.abs() {
             flick = rx;
         }
-        i.crouch |= g.pressed(GamepadButton::LeftTrigger);
+        i.crouch |= g.pressed(GamepadButton::RightTrigger);
         i.dash |= g.pressed(GamepadButton::East);
         exec.0 |= g.just_pressed(GamepadButton::North);
     }
@@ -558,6 +558,7 @@ fn orbit(
     time: Res<Time>,
     mut eye: Single<&mut Transform, With<Camera3d>>,
     mut was_locking: Local<bool>,
+    mut was_hanging: Local<bool>,
     rec: Option<Res<Record>>,
 ) {
     // A record steps the sim one tick per rendered frame; the camera keeps to that clock.
@@ -574,12 +575,15 @@ fn orbit(
     if let Some(t) = pad.0.lock_target {
         cam.0.follow_lock(sim.0.player.pos, t, dt);
     } else {
-        if pad.0.lock && !*was_locking {
+        // Lock pressed with nothing to lock, or a ledge just caught (he may have turned round to face the wall).
+        let caught = sim.0.player.state == State::Hang && !*was_hanging;
+        if (pad.0.lock && !*was_locking) || caught {
             cam.0.recenter_on(sim.0.player.heading);
         }
         cam.0.look([-d.x, d.y], dt); // looking down +z, screen-right is -x
     }
     *was_locking = pad.0.lock;
+    *was_hanging = sim.0.player.state == State::Hang;
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), dt);
     let p = &sim.0.player;
     cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), dt);

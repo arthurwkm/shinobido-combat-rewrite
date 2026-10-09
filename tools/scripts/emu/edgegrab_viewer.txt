@@ -1,0 +1,11 @@
+# Viewer copy of edgegrab.txt: on the rooftop, crouch-walk off the z=6 edge, then shimmy right and left.
+0 at 10 7.5
+0 yaw 180
+30 crouch 1
+40 stick 0 1
+150 stick 0 0
+160 crouch 0
+200 stick 1 0
+290 stick 0 0
+320 stick -1 0
+410 stick 0 0

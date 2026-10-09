@@ -975,6 +975,46 @@ fn wall_run_reaching_the_top_kicks_off_with_kabe_e() {
 }
 
 #[test]
+fn crouched_roof_walk_off_catches_turns_and_shimmies() {
+    use crate::sim::{player::{Player, State}, terrain::Terrain};
+    for (crouch, height) in [(true, 3.5), (false, 3.5), (true, 2.0)] {
+        let mut t = Terrain::sandbox();
+        t.colliders.iter_mut().find(|b| b.min == [6.0, 0.0, 6.0]).unwrap().max[1] = height;
+        let mut p = Player::new();
+        p.pos = [10.0, height, 7.0];
+        p.heading = std::f32::consts::PI;
+        p.target_heading = p.heading;
+        p.crouch_held = crouch;
+        for _ in 0..240 {
+            p.step_on(&t, true, false);
+            if matches!(p.state, State::Hang | State::Fall) { break; }
+        }
+        if !crouch || height == 2.0 {
+            assert_eq!(p.state, State::Fall);
+            continue;
+        }
+        assert_eq!(p.state, State::Hang);
+        assert_eq!(p.world_action(), "TWO06");
+        assert!(p.heading.sin().abs() < 0.001 && p.heading.cos() > 0.999);
+        let rise = ACTIONS.iter().find(|a| a.name == "CLIMB06").unwrap().root.last().unwrap().1[1];
+        assert!((p.pos[1] + rise - 3.5).abs() < 0.001);
+        assert!(p.pos[2] < 6.0 && p.pos[1] > 0.0);
+        for _ in 0..120 { p.step_on(&t, false, false); }
+        assert_eq!(p.state, State::Hang, "holding crouch must keep the caught ledge");
+        p.target_heading = p.heading - std::f32::consts::FRAC_PI_2;
+        let x = p.pos[0];
+        for _ in 0..60 { p.step_on(&t, true, false); }
+        assert!(p.pos[0] < x);
+        assert_eq!(p.state, State::Hang);
+        p.crouch_held = false;
+        p.step_on(&t, false, false);
+        p.crouch_held = true;
+        p.step_on(&t, false, false);
+        assert_eq!(p.state, State::Fall, "a new crouch press drops");
+    }
+}
+
+#[test]
 fn jumping_at_a_ledge_hangs_shimmies_and_climbs_or_drops() {
     use crate::sim::{player::{Player, State}, terrain::Terrain};
     let t = Terrain::sandbox();

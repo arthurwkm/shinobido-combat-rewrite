@@ -106,7 +106,7 @@ pub struct Player {
     air_vel: [f32; 2],
     /// Top height of the ledge being hung from.
     hang_top: f32,
-    /// Set by dropping from a ledge, cleared on the ground: no instant re-catch.
+    /// Blocks re-catching after a drop; in Hang, latches walk-off crouch until release.
     grab_lock: bool,
     /// Height above the feet of the box top in front, when the body is grounded and close enough to vault it.
     vault_top: Option<f32>,
@@ -180,6 +180,18 @@ impl Player {
             self.air_vel = [-s * speed, -c * speed];
         }
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
+        if grounded && self.crouch_held && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch)
+            && terrain.ground_height(self.pos) < before[1] - super::data::SUPPORT_EPS {
+            let heading = self.heading + std::f32::consts::PI;
+            let (s, c) = heading.sin_cos();
+            let probe = [self.pos[0], before[1] - super::data::SUPPORT_EPS, self.pos[2]];
+            if terrain.ledge(probe, [s, c], super::data::LEDGE_GRAB_DIST)
+                .filter(|top| (top[1] - before[1]).abs() <= super::data::SUPPORT_EPS)
+                .is_some_and(|top| self.hang_at(terrain, top, heading)) {
+                self.grab_lock = true; // Keep hanging until the walk-off crouch is released and pressed again.
+                return;
+            }
+        }
         if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
             self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
             self.fall_from = before[1];
@@ -370,21 +382,29 @@ impl Player {
 
     /// Catch a ledge in reach while rising or falling (Jump after take-off, Fall): TWO06, body hung below the top.
     fn try_grab(&mut self, terrain: &super::terrain::Terrain) {
-        use super::data::{HANG_MIN, HANG_OFFSET, LEDGE_GRAB_DIST, LEDGE_REACH};
+        use super::data::{HANG_MIN, LEDGE_GRAB_DIST, LEDGE_REACH};
         let airborne = matches!(self.state, State::Fall | State::WallRun) || self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
         if !airborne || self.grab_lock || self.crouch_held { return; }
         let (s, c) = self.heading.sin_cos();
         let Some(top) = terrain.ledge(self.pos, [s, c], LEDGE_REACH) else { return };
         let dy = top[1] - self.pos[1];
         if dy < HANG_MIN || (top[0] - self.pos[0]).hypot(top[2] - self.pos[2]) > LEDGE_GRAB_DIST { return; }
+        self.hang_at(terrain, top, self.heading);
+    }
+
+    fn hang_at(&mut self, terrain: &super::terrain::Terrain, top: [f32; 3], heading: f32) -> bool {
+        use super::data::HANG_OFFSET;
+        let (s, c) = heading.sin_cos();
         let rise = ACTIONS.iter().find(|a| a.name == "CLIMB06").map_or(2.3, |a| a.root.last().map_or(2.3, |k| k.1[1]));
         let hung = [top[0] - s * HANG_OFFSET, top[1] - rise, top[2] - c * HANG_OFFSET];
-        if hung[1] < terrain.ground_height(hung) { return; } // too low to hang: CLIMB06 starts 2.3 m under the top
+        if hung[1] < terrain.ground_height(hung) { return false; } // too low to hang: CLIMB06 starts 2.3 m under the top
+        self.heading = heading;
         self.hang_top = top[1];
         self.pos = hung;
         self.vy = 0.0;
         self.air_vel = [0.0; 2];
         self.start(State::Hang, "TWO06");
+        true
     }
 
     /// Hanging and climbing own the body (no gravity or collision). Stick sideways shimmies while the ledge continues.
@@ -406,7 +426,8 @@ impl Player {
             }
             return;
         }
-        if self.crouch_held {
+        if !self.crouch_held { self.grab_lock = false; }
+        if self.crouch_held && !self.grab_lock {
             self.grab_lock = true;
             self.fall_from = self.pos[1];
             self.start(State::Fall, "FALL01");

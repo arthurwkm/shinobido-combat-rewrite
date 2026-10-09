@@ -246,6 +246,7 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   ledge in both (~0.4 s game, ~0.3 s viewer). Evidence: `target/pcsx2/wallrun.mov`, `target/cmp/wallrun_viewer.jpg`.
 - [x] Ledge climb-up A/B (`tools/scripts/emu/climb.txt`): Cross while hanging climbs, CLIMB06 timing within ~0.1–0.2 s
   (`target/cmp/climb25.jpg`). `pcsx2.py` now unpauses PCSX2 (Space) when two captures are identical (PauseOnFocusLoss).
+- [x] Crouch walk-off ledge grab + shimmy A/B: owner emulator evidence `tools/scripts/emu/edgegrab.txt`, `target/pcsx2/edgegrab.mov`; R1 crouch/L1 lock corrected in viewer and docs. Grounded crouch departure catches the same roof edge facing back, using shared CLIMB06 hang placement; existing shimmy retained. Headless regression covers roof height/facing, held-crouch shimmy, release/repress drop, ordinary fall and too-low fallback. Evidence: `cargo test -q` → 81 passed; `cargo clippy -q --all-targets` → exit 0/no output; `.venv/bin/python tools/compare.py` → 240/240 actions within tolerance. Next: record and compare against emulator; verdict pending in `docs/emucompare.md`. Viewer: `target/debug/viewer --record target/rec/edgegrab --script tools/scripts/emu/edgegrab_viewer.txt --solo --every 30 --ticks 450` (`target/cmp/edgegrab_viewer.jpg`): WALK_F05 crouch walk, TWO06 catch at 1.16 m facing the wall, HANG_R06/HANG_L06 shimmy; the camera now recentres behind him on a catch (it was left on the roof side, hiding him).
 - [ ] Falls A/B: drop from height (LAND_A/B thresholds).
 - [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
   4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
@@ -275,6 +276,8 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: crouch walk-off ledge grab + shimmy seen in viewer; camera recentres on a ledge catch; R1 crouch / L1 lock-on.
+- 2026-10-09 Codex: corrected front-view shoulders (R1 crouch, L1 lock); crouched roof departure turns into shared hang placement and existing shimmy, held R1 latched until release; 81 tests pass, clippy clean, compare 240/240. Viewer pending; owner attack-table R1 inputs need emulator re-check.
 - 2026-10-09 Claude: ledge climb A/B matches; pcsx2.py auto-unpauses after focus loss.
 - 2026-10-09 Claude: wall run to ledge hang A/B matches; no change.
 - 2026-10-09 Claude: backward somersault seen in the viewer beside the emulator; matches.

@@ -1,0 +1,10 @@
+# On the hut roof: hold R1 and walk toward the camera off the edge (should catch the ledge), then shimmy right, then left.
+30 down r1
+40 down ldown
+150 up ldown
+160 up r1
+200 down lright
+290 up lright
+320 down lleft
+410 up lleft
+470 shot

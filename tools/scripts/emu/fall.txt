@@ -1,0 +1,4 @@
+# From the hut roof: run toward the camera off the edge, let go after 1 s.
+30 down ldown
+90 up ldown
+240 shot
