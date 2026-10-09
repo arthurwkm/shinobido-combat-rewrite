@@ -6,8 +6,9 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::lockon::LockOn;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
+use shinobido_combat_rewrite::sim::DT;
 use shinobido_combat_rewrite::sim::data;
-use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED, SWITCH_FLICK, SWITCH_MOUSE_PX, SWITCH_REARM};
+use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_DEADZONE, CAM_STICK_SPEED, SWITCH_FLICK, SWITCH_MOUSE_PX, SWITCH_REARM};
 use shinobido_combat_rewrite::sim::hud::{self, Debug};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
@@ -556,23 +557,36 @@ fn orbit(
     pads: Query<&Gamepad>,
     time: Res<Time>,
     mut eye: Single<&mut Transform, With<Camera3d>>,
+    mut was_locking: Local<bool>,
+    rec: Option<Res<Record>>,
 ) {
-    let mut d = motion.delta * CAM_MOUSE_SENS;
+    // A record steps the sim one tick per rendered frame; the camera keeps to that clock.
+    let dt = if rec.is_some() { DT } else { time.delta_secs() };
+    let mut d = motion.delta * Vec2::from(CAM_MOUSE_SENS);
     for pad in &pads {
-        d += Vec2::new(pad.get(GamepadAxis::RightStickX).unwrap_or(0.0), -pad.get(GamepadAxis::RightStickY).unwrap_or(0.0))
-            * CAM_STICK_SPEED
-            * time.delta_secs();
+        let stick = Vec2::new(pad.get(GamepadAxis::RightStickX).unwrap_or(0.0), -pad.get(GamepadAxis::RightStickY).unwrap_or(0.0));
+        if stick.length() > CAM_STICK_DEADZONE {
+            d += stick * Vec2::from(CAM_STICK_SPEED) * dt;
+        }
     }
-    cam.0.orbit([-d.x, d.y]); // looking down +z, screen-right is -x
+    // Reference camera: locked, it sits behind the player on the line to the target; lock pressed with nothing to
+    // lock swings it round behind him; otherwise free orbit with idle drift.
     if let Some(t) = pad.0.lock_target {
-        cam.0.follow_lock(sim.0.player.pos, t);
+        cam.0.follow_lock(sim.0.player.pos, t, dt);
+    } else {
+        if pad.0.lock && !*was_locking {
+            cam.0.recenter_on(sim.0.player.heading);
+        }
+        cam.0.look([-d.x, d.y], dt); // looking down +z, screen-right is -x
     }
-    cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
+    *was_locking = pad.0.lock;
+    cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), dt);
     let p = &sim.0.player;
-    cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), time.delta_secs());
+    cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), dt);
     let a = p.world_action();
-    cam.0.follow_climb(matches!(a, "CLIMB06" | "STOP_A06" | "TWO06") || a.starts_with("HANG"), time.delta_secs());
-    let (e, f) = cam.0.eye(p.focus_pos());
+    cam.0.follow_climb(matches!(a, "CLIMB06" | "STOP_A06" | "TWO06") || a.starts_with("HANG"), dt);
+    let pivot = cam.0.track(p.focus_pos(), dt);
+    let (e, f) = cam.0.eye(pivot);
     let e = world.0.camera_clip(f, e);
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }

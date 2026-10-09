@@ -239,8 +239,12 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   launch 120.0 (exe 0x604a28) and 1 unit = 0.84/9.5 m (was 155 / 9.8/450 ESTIMATEs: 0.57 m apex). Evidence: `cargo test -q`
   77 passed (jump test pinned to the emulator), compare.py 240/240, `target/cmp/jump_ab.jpg` lands on the same tick 84.
 - [ ] Jumps A/B: running jump, high jump, flips, landing; horizontal reach; check ledges/roofs still match the new apex.
-- [ ] Camera A/B: distance, height, pitch, follow lag while running away/towards/sideways, recentre. Seen so far: game
-  camera low behind; does not swing behind when he runs towards it; rises with him in a jump (viewer stays level).
+- [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
+  4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
+  yaw and pitch, lock with no target recentres; hug/exec/climb framings kept on top. Evidence: `cargo test -q` 78 passed
+  (`reference_camera_follows_drifts_recentres_and_locks`), clippy clean; `target/debug/viewer --record target/rec/cam
+  --script tools/scripts/emu/loco_viewer.txt --solo --every 60 --ticks 720` beside `videos/eldenring viewer.mp4` 8 s
+  (`target/cmp/cam_ref.jpg`): same follow and vertical lag; differs: the reference frames its taller dummy fight closer.
 - Mannequin: owner decision 2026-10-09, the player model is fine as is.
 - [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
   unaware. A/B the first contact.
@@ -263,6 +267,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: camera replaced by the reference project's (owner: not Shinobido's); record mode steps it by DT.
 - 2026-10-09 Claude: emulator A/B standing jump: launch 120 + model-unit scale replace ESTIMATEs; apex 0.57 -> 1.49 m.
 - 2026-10-09 Claude: `--solo` truly alone (`--one` keeps one soldier); KI_RANGE hides needle and target bar; owner: keep 60 Hz, model fine.
 - 2026-10-09 Claude (owner present): emulator A/B harness (pcsx2.py video/esc, emucmp.py); first run/stop/jump A/B; M18 plan.

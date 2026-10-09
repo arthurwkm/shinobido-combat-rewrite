@@ -81,7 +81,9 @@ animation names as evidence of button assignments.
 | Execution | Attack when execution cue is available | Shares attack; execution input not shown |
 | Item actions | Use item | Selected item chooses drink/throw/etc.; selection not shown |
 
-Additional viewer choices: R3 / middle mouse recentres the camera; D-pad right / Tab
+Additional viewer choices: the camera is the reference project's (owner, 2026-10-09): lock-on (R1 / right mouse)
+pressed with no target in range swings it behind Kagetora; left alone while moving it drifts round to follow
+sideways movement. D-pad right / Tab
 cycles sandbox items. Target switch does not exist in Shinobido; the viewer copies Elden
 Ring's (owner, 2026-10-09): while locked, flick the right stick, the mouse or the left/right
 arrow keys sideways to move the lock to the next target that side.

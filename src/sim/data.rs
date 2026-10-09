@@ -71,10 +71,10 @@ pub const EXEC_FRONT_HP: f32 = 0.25;
 // (formats.md "Execution phase audit"). Distance (m) ahead; align player height to victim height, never lift the victim.
 pub const EXEC_CLIPS: [(&str, &str); 3] = [("KIME_A01", "KI_HIBS07"), ("KIME_B01", "KI_HIUS07"), ("KIME_B01", "KI_HICS07")];
 pub const EXEC_DIST: f32 = 0.8;
-// ESTIMATE: follow camera from the clips (docs/video_notes.md: ~3 m back, pitched down 25-30 deg); the camera
-// class in the executable was not read. Distance (m), default pitch (rad), pitch limits, focus height (m),
-// orbit speed for mouse (rad per pixel) and right stick (rad/s), lock-on yaw follow rate (1/s).
-pub const CAM_DIST: f32 = 3.8; // ESTIMATE: movement.mov 12 s: player 37% of frame height (46% at 3.0 m)
+// Follow camera copied from the reference project's camera.rs (owner decision 2026-10-09: Elden Ring's camera, not
+// Shinobido's). Distance (m), focus height (m), default/lock-on pitch (rad, + looks down), pitch limits, mouse (rad per
+// pixel) and stick (rad/s) speeds as [yaw, pitch], stick deadzone, ease rates (1/s), idle drift.
+pub const CAM_DIST: f32 = 4.3;
 pub const CAM_HUG_DIST: f32 = 4.2; // ESTIMATE: movement.mov 38 s: player ~10% of frame height, camera farther than the 3 m follow, looking along the wall
 // ESTIMATE: execution close-up (combat.mov 46 s, 54-58 s show the pair large and seen from the side): distance, pitch,
 // side angle off the player's heading, blend rate.
@@ -86,13 +86,24 @@ pub const CAM_HUG_RATE: f32 = 4.0;
 // ESTIMATE: side view 60 degrees from the outward wall normal; awaiting movement 38 s comparison.
 pub const CAM_HUG_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
 pub const CAM_CLIMB_PITCH: f32 = -0.35; // ESTIMATE: movement.mov 28-32 s camera looks up at the rooftop edge
-pub const CAM_PITCH: f32 = 0.3;
-pub const CAM_PITCH_MIN: f32 = -0.2;
+pub const CAM_PITCH: f32 = 0.25;
+pub const CAM_LOCK_PITCH: f32 = 0.24;
+pub const CAM_PITCH_MIN: f32 = -0.7;
 pub const CAM_PITCH_MAX: f32 = 1.2;
-pub const CAM_FOCUS_HEIGHT: f32 = 0.9; // ESTIMATE: clip centres the player at 54% of frame height
-pub const CAM_MOUSE_SENS: f32 = 0.004;
-pub const CAM_STICK_SPEED: f32 = 2.5;
-pub const CAM_LOCK_RATE: f32 = 6.0;
+pub const CAM_FOCUS_HEIGHT: f32 = 1.5;
+pub const CAM_MOUSE_SENS: [f32; 2] = [0.0028, 0.0022];
+pub const CAM_STICK_SPEED: [f32; 2] = [2.8, 1.8];
+pub const CAM_STICK_DEADZONE: f32 = 0.15;
+pub const CAM_LOCK_RATE: f32 = 8.0;
+pub const CAM_RECENTER_RATE: f32 = 12.0;
+/// Pivot follow: horizontal is tight, vertical lazier so jumps and stairs don't jolt the view; snap beyond CAM_SNAP m.
+pub const CAM_FOLLOW_RATE: f32 = 14.0;
+pub const CAM_LIFT_RATE: f32 = 6.0;
+pub const CAM_SNAP: f32 = 6.0;
+/// Left alone CAM_DRIFT_IDLE s while moving faster than CAM_DRIFT_SPEED m/s, the camera turns towards sideways movement.
+pub const CAM_DRIFT_IDLE: f32 = 1.0;
+pub const CAM_DRIFT_SPEED: f32 = 1.0;
+pub const CAM_DRIFT_RATE: f32 = 0.6;
 // ESTIMATE: target switch is not in Shinobido; copied from Elden Ring's flick (owner, 2026-10-09). A sideways
 // right stick past SWITCH_FLICK (or mouse moving SWITCH_MOUSE_PX in one frame) switches once; back under SWITCH_REARM re-arms.
 pub const SWITCH_FLICK: f32 = 0.8;

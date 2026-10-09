@@ -1,8 +1,8 @@
-//! Orbit follow camera (engine-free). `yaw` is the direction the camera looks along, like `Player::heading`
-//! (forward = (sin yaw, cos yaw)); parameters are ESTIMATE (data.rs).
+//! Orbit follow camera (engine-free), ported from the reference project's `camera.rs` (owner decision 2026-10-09).
+//! `yaw` is the direction the camera looks along, like `Player::heading` (forward = (sin yaw, cos yaw)); `pitch` > 0
+//! looks down. Wall hug, execution and climb framings are layered on top.
 
 use super::data::*;
-use super::DT;
 
 pub struct Camera {
     pub yaw: f32,
@@ -13,12 +13,24 @@ pub struct Camera {
     pub cut: f32,
     /// 0 = normal pitch, 1 = lowered to look up a climb (rooftop, movement 28-32 s).
     pub tilt: f32,
+    /// Smoothed feet position the camera orbits; `None` until the first `track`.
+    pub pivot: Option<[f32; 3]>,
+    /// Horizontal velocity of the pivot (m/s), for the idle drift.
+    pub vel: [f32; 2],
+    /// Seconds since the player last moved the camera.
+    pub idle: f32,
+    /// Yaw the camera is swinging round to (lock-on pressed with no target).
+    pub recenter: Option<f32>,
 }
 
 impl Default for Camera {
     fn default() -> Self {
-        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0, cut: 0.0, tilt: 0.0 }
+        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0, cut: 0.0, tilt: 0.0, pivot: None, vel: [0.0; 2], idle: 0.0, recenter: None }
     }
+}
+
+fn ease(rate: f32, dt: f32) -> f32 {
+    1.0 - (-rate * dt.max(0.0)).exp()
 }
 
 fn wrap(a: f32) -> f32 {
@@ -33,15 +45,64 @@ impl Camera {
         self.pitch = (self.pitch + d[1]).clamp(CAM_PITCH_MIN, CAM_PITCH_MAX);
     }
 
-    /// Lock-on: ease the view toward looking from the player at `target` (both x/z in world frame).
-    pub fn follow_lock(&mut self, player: [f32; 3], target: [f32; 3]) {
+    /// Free camera for one render frame: `d` is this frame's manual orbit (as `orbit`), zero when untouched.
+    /// Untouched, it finishes a recentre, else after CAM_DRIFT_IDLE s drifts round to follow sideways movement
+    /// (running straight at or away from it leaves it be).
+    pub fn look(&mut self, d: [f32; 2], dt: f32) {
+        if d != [0.0; 2] {
+            self.idle = 0.0;
+            self.recenter = None;
+            self.orbit(d);
+            return;
+        }
+        self.idle += dt;
+        if let Some(goal) = self.recenter {
+            let k = ease(CAM_RECENTER_RATE, dt);
+            self.yaw = wrap(self.yaw + wrap(goal - self.yaw) * k);
+            self.pitch += (CAM_PITCH - self.pitch) * k;
+            if wrap(goal - self.yaw).abs() < 0.01 {
+                self.recenter = None;
+            }
+        } else if self.idle > CAM_DRIFT_IDLE && self.vel[0].hypot(self.vel[1]) > CAM_DRIFT_SPEED {
+            let off = wrap(self.vel[0].atan2(self.vel[1]) - self.yaw);
+            self.yaw = wrap(self.yaw + off.sin() * CAM_DRIFT_RATE * dt);
+        }
+    }
+
+    /// Swing round to look along `yaw` (behind a player facing it).
+    pub fn recenter_on(&mut self, yaw: f32) {
+        self.recenter = Some(yaw);
+    }
+
+    /// Lock-on: ease the view toward looking from the player at `target` (both x/z in world frame), and the pitch to
+    /// CAM_LOCK_PITCH. `dt` is elapsed render time.
+    pub fn follow_lock(&mut self, player: [f32; 3], target: [f32; 3], dt: f32) {
+        self.recenter = None;
+        let k = ease(CAM_LOCK_RATE, dt);
         let want = (target[0] - player[0]).atan2(target[2] - player[2]);
-        self.yaw = wrap(self.yaw + wrap(want - self.yaw) * (CAM_LOCK_RATE * DT).min(1.0));
+        self.yaw = wrap(self.yaw + wrap(want - self.yaw) * k);
+        self.pitch += (CAM_LOCK_PITCH - self.pitch) * k;
+    }
+
+    /// Follow the player's feet at `pos`: tight horizontally, lazier vertically, snapping when far behind.
+    /// Returns the smoothed position to pass to `eye`.
+    pub fn track(&mut self, pos: [f32; 3], dt: f32) -> [f32; 3] {
+        let mut p = self.pivot.unwrap_or(pos);
+        if (0..3).map(|i| (pos[i] - p[i]).powi(2)).sum::<f32>().sqrt() > CAM_SNAP {
+            p = pos;
+        }
+        let (flat, lift) = (ease(CAM_FOLLOW_RATE, dt), ease(CAM_LIFT_RATE, dt));
+        let next = [p[0] + (pos[0] - p[0]) * flat, p[1] + (pos[1] - p[1]) * lift, p[2] + (pos[2] - p[2]) * flat];
+        if dt > 0.0 {
+            self.vel = [(next[0] - p[0]) / dt, (next[2] - p[2]) / dt];
+        }
+        self.pivot = Some(next);
+        next
     }
 
     /// Pull in beside the wall; heading points away from it. `dt` is elapsed render time.
     pub fn follow_hug(&mut self, heading: Option<f32>, dt: f32) {
-        let blend = 1.0 - (-CAM_HUG_RATE * dt.max(0.0)).exp();
+        let blend = ease(CAM_HUG_RATE, dt);
         let want = if heading.is_some() { 1.0 } else { 0.0 };
         self.pull += (want - self.pull) * blend;
         if let Some(heading) = heading {
@@ -55,7 +116,7 @@ impl Camera {
 
     /// Execution close-up: swing to the player's side (heading given) and come in; `None` eases back (yaw is kept).
     pub fn follow_exec(&mut self, heading: Option<f32>, dt: f32) {
-        let blend = 1.0 - (-CAM_EXEC_RATE * dt.max(0.0)).exp();
+        let blend = ease(CAM_EXEC_RATE, dt);
         self.cut += (if heading.is_some() { 1.0 } else { 0.0 } - self.cut) * blend;
         if let Some(h) = heading {
             self.yaw = wrap(self.yaw + wrap(h + CAM_EXEC_ANGLE - self.yaw) * blend);
@@ -64,7 +125,7 @@ impl Camera {
 
     /// Ease the climb tilt in or out; `dt` is elapsed render time.
     pub fn follow_climb(&mut self, climbing: bool, dt: f32) {
-        let blend = 1.0 - (-CAM_HUG_RATE * dt.max(0.0)).exp();
+        let blend = ease(CAM_HUG_RATE, dt);
         self.tilt += (if climbing { 1.0 } else { 0.0 } - self.tilt) * blend;
     }
 
@@ -83,6 +144,7 @@ impl Camera {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::DT;
 
     #[test]
     fn hug_camera_uses_elapsed_time_and_sits_outside_wall() {
@@ -156,8 +218,46 @@ mod tests {
         assert!((((e[0] - f[0]).powi(2) + (e[1] - f[1]).powi(2) + (e[2] - f[2]).powi(2)).sqrt() - CAM_HUG_DIST).abs() < 1e-2, "pulls in");
         let mut c = Camera::default();
         for _ in 0..120 {
-            c.follow_lock([0.0; 3], [5.0, 0.0, 0.0]);
+            c.follow_lock([0.0; 3], [5.0, 0.0, 0.0], DT);
         }
         assert!((c.yaw - std::f32::consts::FRAC_PI_2).abs() < 1e-2, "looks along +x at the target");
+    }
+
+    #[test]
+    fn reference_camera_follows_drifts_recentres_and_locks() {
+        let mut c = Camera::default();
+        assert_eq!(c.track([0.0; 3], DT), [0.0; 3]);
+        let p = c.track([0.1, 0.1, 0.0], DT);
+        assert!(p[0] / 0.1 > p[1] / 0.1, "horizontal follow is tighter than vertical");
+        assert!(c.track([20.0, 0.0, 0.0], DT)[0] > 19.0, "snaps when far behind");
+        // Running sideways (+x) with the camera looking along +z: after the idle second it turns towards +x.
+        let mut c = Camera::default();
+        let mut x = 0.0;
+        for _ in 0..180 {
+            x += 5.0 * DT;
+            c.track([x, 0.0, 0.0], DT);
+            c.look([0.0; 2], DT);
+        }
+        assert!(c.yaw > 0.1, "drifted toward the movement: {}", c.yaw);
+        // Running straight away leaves it be.
+        let mut c = Camera::default();
+        let mut z = 0.0;
+        for _ in 0..180 {
+            z += 5.0 * DT;
+            c.track([0.0, 0.0, z], DT);
+            c.look([0.0; 2], DT);
+        }
+        assert!(c.yaw.abs() < 1e-3);
+        // Standing still from here. Manual input cancels a recentre; untouched, it swings round and resets the pitch.
+        c.vel = [0.0; 2];
+        c.recenter_on(2.0);
+        c.look([0.0, 0.5], DT);
+        for _ in 0..60 { c.look([0.0; 2], DT); }
+        assert!(c.yaw.abs() < 0.1, "cancelled");
+        c.recenter_on(2.0);
+        for _ in 0..120 { c.look([0.0; 2], DT); }
+        assert!((c.yaw - 2.0).abs() < 0.02 && (c.pitch - CAM_PITCH).abs() < 0.02);
+        for _ in 0..120 { c.follow_lock([0.0; 3], [0.0, 0.0, 5.0], DT); }
+        assert!((c.pitch - CAM_LOCK_PITCH).abs() < 1e-3 && c.yaw.abs() < 1e-3);
     }
 }
