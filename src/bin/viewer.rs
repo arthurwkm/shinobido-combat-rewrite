@@ -164,7 +164,8 @@ fn parse_record() -> Option<Record> {
     })
 }
 
-fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut cam: ResMut<Cam>, mut sim: ResMut<Sim>, mut commands: Commands, mut exit: MessageWriter<AppExit>) {
+#[allow(clippy::too_many_arguments)]
+fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut cam: ResMut<Cam>, mut sim: ResMut<Sim>, mut commands: Commands, mut exit: MessageWriter<AppExit>) {
     let t = rec.tick;
     for (_, cmd) in rec.script.iter().filter(|s| s.0 == t) {
         let mut w = cmd.split_whitespace();
@@ -175,7 +176,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("lock"), [b]) => i.lock = *b != 0.0,
             (Some("crouch"), [b]) => i.crouch = *b != 0.0,
             (Some("dash"), [b]) => i.dash = *b != 0.0,
-            (Some("at"), [x, z]) => { sim.0.player.pos[0] = *x; sim.0.player.pos[2] = *z; }
+            (Some("at"), [x, z]) => { sim.0.player.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; }
             (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.hit("HI_BS07", 99_999); }
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,

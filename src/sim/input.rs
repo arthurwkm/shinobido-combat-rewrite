@@ -120,3 +120,19 @@ mod lock_tests {
         assert!(p.pos[0] < -0.5, "x {}", p.pos[0]); // WALK_R02 root runs -x at heading 0
     }
 }
+
+#[cfg(test)]
+mod lock_slope_tests {
+    use super::*;
+
+    #[test]
+    fn strafe_moves_on_the_sandbox_slope() {
+        let (mut p, t) = (Player::new(), Terrain::sandbox());
+        p.pos = [0.0, t.ground_height([0.0, 5.0, -6.0]), -6.0];
+        let mut i = Input { lock: true, lock_target: Some([0.0, 0.0, 0.0]), stick: [1.0, 0.0], ..Default::default() };
+        for _ in 0..60 {
+            i.apply(&mut p, &t, 0.0);
+        }
+        assert!(p.pos[0] < -0.5, "x {} y {}", p.pos[0], p.pos[1]);
+    }
+}
