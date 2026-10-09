@@ -351,6 +351,9 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
     if sim.0.enemy.state == shinobido_combat_rewrite::sim::enemy::State::Held && std::mem::take(&mut pad.0.attack) {
         sim.0.mash();
     }
+    if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.roll() {
+        pad.0.jump = false;
+    }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
     if sim.0.enemy.hp > 0 {

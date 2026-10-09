@@ -1,0 +1,6 @@
+# R1 + Forward + Cross rolls through the soldier
+0 stick 0 0
+2 at 0 3.5
+4 lock 1
+6 stick 0 1
+8 jump

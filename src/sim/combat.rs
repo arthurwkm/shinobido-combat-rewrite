@@ -9,6 +9,8 @@ pub struct Fight {
     /// One hit per swing: set when the current swing has landed, cleared when it ends.
     player_landed: bool,
     enemy_landed: bool,
+    /// Roll into the enemy: extra metres per frame along the roll heading on top of FRONT01's root motion.
+    roll: Option<[f32; 2]>,
 }
 
 /// True when `to` lies inside the frontal cone of something at `from` facing `heading`, within reach.
@@ -19,9 +21,15 @@ fn in_front(from: [f32; 3], heading: f32, to: [f32; 3]) -> bool {
     d.abs() <= data::FRONT_CONE
 }
 
+/// True when the offset (dx, dz) lies within `cone` radians of `heading`.
+fn in_cone(heading: f32, dx: f32, dz: f32, cone: f32) -> bool {
+    let d = (dx.atan2(dz) - heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+    d.abs() <= cone
+}
+
 impl Fight {
     pub fn new(player: Player, enemy: Enemy) -> Self {
-        Fight { player, enemy, player_hp: data::PLAYER_HP, player_landed: false, enemy_landed: false }
+        Fight { player, enemy, player_hp: data::PLAYER_HP, player_landed: false, enemy_landed: false, roll: None }
     }
 
     /// Advance both one frame, then resolve hits.
@@ -34,6 +42,7 @@ impl Fight {
     pub fn step_enemy(&mut self) {
         self.enemy.step(self.player.pos);
         self.hold();
+        self.rolling();
         self.separate();
         self.resolve();
     }
@@ -41,7 +50,7 @@ impl Fight {
     /// Push the two apart (half each) until their bodies no longer overlap; execution pairs stay put.
     fn separate(&mut self) {
         let (p, e) = (&mut self.player, &mut self.enemy);
-        if p.state == State::Special {
+        if p.state == State::Special || self.roll.is_some() {
             return;
         }
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
@@ -56,6 +65,35 @@ impl Fight {
         p.pos[2] -= nz * push;
         e.pos[0] += nx * push;
         e.pos[2] += nz * push;
+    }
+
+    /// R1 + Forward + Cross: roll (FRONT01) through the soldier ahead and come up behind him, facing his back.
+    pub fn roll(&mut self) -> bool {
+        let (p, e) = (&mut self.player, &self.enemy);
+        let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
+        let dist = dx.hypot(dz);
+        if e.state == EnemyState::Dead || dist > data::ROLL_REACH || dist < 1e-3 || !in_cone(p.heading, dx, dz, data::ROLL_CONE)
+            || !p.start_dodge("FRONT01") {
+            return false;
+        }
+        // FRONT01 carries 1.5 m forward; the rest is spread over its frames to land ROLL_BEHIND past him.
+        let extra = (dist + data::ROLL_BEHIND - 1.5) / p.world_len() as f32;
+        p.heading = dx.atan2(dz);
+        self.roll = Some([dx / dist * extra, dz / dist * extra]);
+        true
+    }
+
+    fn rolling(&mut self) {
+        let Some(step) = self.roll else { return };
+        let p = &mut self.player;
+        if p.state != State::Dodge {
+            self.roll = None;
+            p.heading += std::f32::consts::PI; // turn round to his back
+            p.target_heading = p.heading;
+            return;
+        }
+        p.pos[0] += step[0];
+        p.pos[2] += step[1];
     }
 
     /// Start the execution that `execution::available` offers: align the pair, play both clips, the soldier dies.

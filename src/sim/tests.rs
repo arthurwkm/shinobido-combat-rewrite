@@ -1174,3 +1174,35 @@ fn throw_works_from_the_guard_stance() {
     assert!(f.grab(true));
     assert_eq!(f.player.world_action(), "THROW_BACK01");
 }
+
+#[test]
+fn roll_passes_the_soldier_and_ends_facing_his_back() {
+    use super::{combat::Fight, enemy::Enemy, player::{Player, State as PS}};
+    let mut p = Player::new();
+    p.pos = [0.0, 0.0, 0.0];
+    let mut f = Fight::new(p, Enemy::new([0.0, 0.0, 3.0]));
+    f.enemy.heading = 0.0;
+    assert!(f.roll());
+    assert_eq!(f.player.world_action(), "FRONT01");
+    for _ in 0..40 {
+        f.step_enemy();
+        f.player.step(false, false);
+    }
+    assert_eq!(f.player.state, PS::Idle);
+    assert!(f.player.pos[2] > f.enemy.pos[2], "came out behind him: {:?} vs {:?}", f.player.pos, f.enemy.pos);
+    assert!((f.player.heading.cos() + 1.0).abs() < 0.2, "facing -z, back toward him");
+
+    let mut g = Player::new();
+    g.guard_held = true;
+    let mut guard = Fight::new(g, Enemy::new([0.0, 0.0, 3.0]));
+    for _ in 0..20 {
+        guard.step(false, false);
+    }
+    assert_eq!(guard.player.state, PS::Guard);
+    assert!(guard.roll(), "R1 is held when the roll is pressed");
+
+    let mut far = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 9.0]));
+    assert!(!far.roll());
+    let mut behind = Fight::new(Player::new(), Enemy::new([0.0, 0.0, -3.0]));
+    assert!(!behind.roll());
+}

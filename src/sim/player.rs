@@ -491,6 +491,15 @@ impl Player {
         self.start(State::Special, name);
     }
 
+    /// Start a dodge now from the guard stance too (the roll into the enemy is R1 + Forward + Cross, R1 is the guard).
+    pub fn start_dodge(&mut self, name: &str) -> bool {
+        if matches!(self.state, State::Guard | State::GuardEnd) {
+            self.start(State::Dodge, name);
+            return true;
+        }
+        self.request(State::Dodge, name)
+    }
+
     /// The stick points away from the heading the jump or fall started with (the quick back flick).
     fn air_back(&self) -> bool {
         let d = (self.target_heading - self.air_heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
