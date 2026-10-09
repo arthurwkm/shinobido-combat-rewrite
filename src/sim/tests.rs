@@ -1095,3 +1095,16 @@ fn square_in_a_wall_hug_plays_the_h_attack() {
     for _ in 0..200 { p.step_on(&t, false, false); }
     assert_ne!(p.state, State::Attack);
 }
+
+#[test]
+fn second_square_with_r1_follows_the_uppercut_with_the_downward_strike() {
+    use super::player::{Player, State, AttackMod};
+    let mut p = Player::new();
+    p.attack_mod = AttackMod::Lock;
+    p.step(false, true);
+    p.step(false, true);
+    assert_eq!(p.world_action(), "AT_E01");
+    for _ in 0..20 { p.step(false, false); }
+    p.step(false, true);
+    assert_eq!((p.state, p.world_action()), (State::Attack, "KICK_J01"));
+}

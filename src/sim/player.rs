@@ -577,6 +577,12 @@ impl Player {
         if self.state == State::Guard && self.attack_mod == AttackMod::Lock {
             return self.start(State::Attack, "AT_E01");
         }
+        // ESTIMATE: "R1 + Square x2" (PAL) follows the uppercut with the downward strike; AT_E01 has no cancel list, so
+        // the second press after its hit window (frame 19) plays KICK_J01 directly.
+        if self.state == State::Attack && self.attack_mod == AttackMod::Lock
+            && self.world.action.name == "AT_E01" && self.world.frame >= 19 {
+            return self.start(State::Attack, "KICK_J01");
+        }
         let f = self.world.frame;
         // ESTIMATE: pairing of rows to motions by cancel graph and clip names (AT_CA = forward power slash, SOCCER =
         // kick, AT_E = uppercut, AT_DASH05 = dash leap); not frame-matched against the attack video.
