@@ -650,6 +650,9 @@ fn execution_cue_needs_the_right_position_and_enemy_state() {
     let mut e = Enemy::new([0.0; 3]); // faces +z, Idle
     p.pos = [0.0, 0.0, -1.0];
     assert_eq!(available(&p, &e), Some(Kind::Back));
+    p.special("DRINK01");
+    assert_eq!(available(&p, &e), None); // Triangle cannot interrupt a special.
+    p = Player::new();
     p.pos = [0.0, 0.0, 1.0]; // in front of an unaware soldier: no kill
     assert_eq!(available(&p, &e), None);
     p.pos = [0.0, 2.5, 0.5];
@@ -679,7 +682,7 @@ fn every_execution_plays_paired_and_kills() {
             }
         }
         let mut f = Fight::new(p, e);
-        assert!(f.execute(), "{kind:?}");
+        assert!(f.grab(false), "Triangle must choose {kind:?} before a grab");
         let (pc, ec) = kind.clips();
         assert_eq!((f.player.world_action(), f.enemy.action()), (pc, ec));
         assert_eq!((f.enemy.state, f.enemy.hp), (State::Dead, 0));

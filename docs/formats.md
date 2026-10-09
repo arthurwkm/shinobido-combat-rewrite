@@ -371,7 +371,38 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
   257–294, listed in `docs/executions.md`); `dir` B/U/C follows the `HI_B*/HI_U*/HI_C*` hit naming (back / above /
   front, matching the owner's stealth-kill-from-behind/above request). Type 3 events inside `KI_HI*C07` chain the
   `S/A/B/C/D` variants (e.g. KI_HIBC07 → 261, 263). The player side is the normal attack motion (`AT_*`) with the
-  victim switched to the matching `KI_HI*`; this is an ESTIMATE until a stealth-kill clip is supplied (PROGRESS Requests).
+  victim switched to the matching `KI_HI*`; this is an ESTIMATE, weakened by the phase evidence below.
+
+### Execution phase audit (2026-10-09)
+
+- **Confirmed from parsed events:** `HI_BA01` opens an attack window at frame 20 (type 1, arg 9)
+  and closes it at 29. Thus the inventory's blanket description of `HI_*01` as passive hit reactions
+  is not reliable. `HI_BC01` permits itself at frame 18 and `HI_BBA01` at 30;
+  `KI_HIBC07` permits itself at 16 and `KI_HIBBA07` at 30. The U families also have C-to-BA
+  links, with different times. **Hypothesis:** these are corresponding execution phases; this does
+  not yet establish which actor plays them or the input/condition for advancing a phase.
+- **Confirmed timing distinction:** `tools/harakiri.py` reports header duration (`frames_hdr`),
+  whereas simulation extraction uses common-block `frames`. These differ: `KI_HIBB07` is
+  150/170, `HI_BS01` 40/160, `HI_BA01` 89/100 (header/common). Do not infer pairing or
+  synchronized playback from the existing duration column alone.
+- Three bounded selection lookups did not establish A/B/C/D conditions:
+  (1) motion events and matching suffixes: phase links above, but matching header durations for only
+  3 of 16 exact `HI_*01`/`KI_HI*07` suffix pairs (15 of 18 for `HI_*05`);
+  (2) executable strings/immediates: no `KI_HI`/`KIME_` strings; 126 immediate-load candidates
+  for the 19 victim IDs, including registration at `0x3ac410` through `0x1736c0` / `0x35f3b0`
+  and selector `0x3f07e0`;
+  (3) targeted selector callers `0x3f66e0`, `0x3f6840`, `0x3f69a0` pass second arguments
+  0/1/2 and store results at list-entry +0xc through `0x3f7980`. A neighboring selector
+  (`0x3f0540`) returns IDs with stride 75 which do not name corresponding motions when treated
+  as mtnfile indices. **Unresolved:** this list's ID namespace and consumer; these selectors
+  are not evidence for spatial execution conditions.
+- **ESTIMATE retained:** existing S-only victim selection and KIME player pairing are placeholders,
+  not confirmed executions. Do not cycle A/B/C/D arbitrarily. Next lookup: trace the list consumer
+  and its ID-to-motion conversion; next visual check: compare `HI_*01` phases with combat 46 s,
+  54–58 s and stealth 14 s before replacing KIME. All variants remain an implementation gap.
+- Reproduce the motion evidence with `tools.nmt.parse` on the named files in
+  `extracted/volume/motion/`, inspecting `frames_hdr`, `frames` and event types 1/2/3;
+  resolve type-3 arg0 through `tools.extract.player_ids` (zero-based).
 
 ## Enemy AI: `AI\battle\*.bin`, `AI\ActionSet\*.ass` — `tools/ai.py` (2026-10-08)
 All little-endian i32.

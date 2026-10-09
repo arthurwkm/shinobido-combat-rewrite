@@ -23,7 +23,7 @@ impl Kind {
 
 /// The execution the player could start now, if any. Shows as the cue.
 pub fn available(p: &Player, e: &Enemy) -> Option<Kind> {
-    if e.state == State::Dead {
+    if e.state == State::Dead || p.state == super::player::State::Special {
         return None;
     }
     let (dx, dz) = (p.pos[0] - e.pos[0], p.pos[2] - e.pos[2]);

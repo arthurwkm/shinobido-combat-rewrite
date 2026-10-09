@@ -110,9 +110,6 @@ impl Fight {
     /// Start the execution that `execution::available` offers: align the pair, play both clips, the soldier dies.
     pub fn execute(&mut self) -> bool {
         let Some(kind) = super::execution::available(&self.player, &self.enemy) else { return false };
-        if self.player.state == State::Special {
-            return false;
-        }
         self.kill(kind);
         true
     }
