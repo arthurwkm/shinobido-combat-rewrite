@@ -42,6 +42,8 @@ pub const MELEE_REACH: f32 = 2.0;
 pub const FRONT_CONE: f32 = std::f32::consts::FRAC_PI_2;
 // ESTIMATE: lock-on pick range (m) and half-angle (rad) around the facing; the camera/target-select code was not read.
 pub const LOCK_RANGE: f32 = 12.0;
+// ESTIMATE: the ki compass and the target bar only show soldiers within this distance (none in the clips' empty areas).
+pub const KI_RANGE: f32 = 40.0;
 pub const LOCK_CONE: f32 = std::f32::consts::FRAC_PI_2;
 // ESTIMATE: stealth numbers; sight/hearing ranges are not in the AI files (formats.md "Enemy AI"), none read from the executable.
 // Sight range (m) and half-angle (rad); meter fill per second when seen at point-blank (scaled down with distance);

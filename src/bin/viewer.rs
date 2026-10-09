@@ -32,10 +32,14 @@ impl Default for Sim {
             enemy.heading = std::f32::consts::FRAC_PI_2;
             enemy.patrol();
         }
-        let mut fight = Fight::new(Player::default(), enemy);
-        // More soldiers of the same type, watching from the sides (positions ESTIMATE); `--solo` or `--patrol` keeps one.
         let args: Vec<String> = std::env::args().collect();
-        if !args.iter().any(|a| a == "--solo" || a == "--patrol") {
+        // `--solo`: Kagetora alone, for movement tests. The sim always holds one soldier, so he idles out of sight and hearing.
+        if args.iter().any(|a| a == "--solo") {
+            enemy = Enemy::new([0.0, 0.0, -1000.0]);
+        }
+        let mut fight = Fight::new(Player::default(), enemy);
+        // More soldiers of the same type, watching from the sides (positions ESTIMATE); `--one`, `--solo` or `--patrol` keeps one.
+        if !args.iter().any(|a| a == "--one" || a == "--solo" || a == "--patrol") {
             for (x, z) in [(5.0, 8.0), (-5.0, 9.0)] {
                 let mut e = Enemy::new([x, 0.0, z]);
                 e.heading = (-x).atan2(-z); // facing the player's start
@@ -68,6 +72,10 @@ struct Dbg(Debug);
 
 #[derive(Resource, Default)]
 struct Aware(Stealth);
+
+/// The target name and health bar, hidden while no soldier is near (`--solo`).
+#[derive(Component)]
+struct TargetHud;
 
 /// Game HUD pieces (Shinobido clips): health top-left, eye icon and stealth meter top-centre, ki compass top-right, execution cue.
 #[derive(Component)]
@@ -458,6 +466,7 @@ fn setup_hud(mut commands: Commands) {
     let bar = |commands: &mut Commands, node: Node, kind: Hud, colour: Color| {
         let outer = commands.spawn((node, BackgroundColor(back))).id();
         commands.spawn((Node { width: percent(100), height: percent(100), ..default() }, BackgroundColor(colour), kind, ChildOf(outer)));
+        outer
     };
     let abs = |left: Option<Val>, right: Option<Val>, top: Option<Val>, bottom: Option<Val>| Node {
         position_type: PositionType::Absolute,
@@ -469,8 +478,9 @@ fn setup_hud(mut commands: Commands) {
     commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(98)), None)));
     commands.spawn((Text::new(""), font(15.0), Hud::Readout, abs(None, Some(px(20)), Some(px(20)), None)));
     commands.spawn((Text::new(CONTROLS_LEGEND), font(13.0), TextColor(Color::srgb(0.7, 0.7, 0.7)), abs(Some(px(28)), None, None, Some(px(12)))));
-    commands.spawn((Text::new("Soldier"), font(18.0), Hud::Target, abs(Some(percent(25)), None, None, Some(px(66)))));
-    bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
+    commands.spawn((Text::new("Soldier"), font(18.0), Hud::Target, TargetHud, abs(Some(percent(25)), None, None, Some(px(66)))));
+    let enemy_bar = bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
+    commands.entity(enemy_bar).insert(TargetHud);
 }
 
 fn setup_game_hud(mut commands: Commands) {
@@ -518,7 +528,11 @@ fn update_game_hud(
     }
 }
 
-fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, Option<&mut Text>, Option<&mut Node>)>) {
+fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, Option<&mut Text>, Option<&mut Node>)>, mut target: Query<&mut Visibility, With<TargetHud>>) {
+    let shown = if hud::target_shown(&sim.0) { Visibility::Inherited } else { Visibility::Hidden };
+    for mut v in &mut target {
+        v.set_if_neq(shown);
+    }
     for (kind, text, node) in &mut q {
         match (kind, text, node) {
             (Hud::PlayerBar, _, Some(mut n)) => n.width = percent(100.0 * hud::player_bar(&sim.0)),

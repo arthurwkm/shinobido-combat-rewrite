@@ -75,7 +75,12 @@ pub fn compass(f: &Fight, cam_yaw: f32) -> Option<f32> {
     use std::f32::consts::{PI, TAU};
     let e = f.enemies().nth(f.nearest()).filter(|e| e.hp > 0)?;
     let (dx, dz) = (e.pos[0] - f.player.pos[0], e.pos[2] - f.player.pos[2]);
-    Some((dx.atan2(dz) - cam_yaw + PI).rem_euclid(TAU) - PI)
+    (dx.hypot(dz) <= data::KI_RANGE).then(|| (dx.atan2(dz) - cam_yaw + PI).rem_euclid(TAU) - PI)
+}
+
+/// The focused soldier is near enough to show his name and health bar (same range as the ki compass).
+pub fn target_shown(f: &Fight) -> bool {
+    f.enemies().nth(f.focus).is_some_and(|e| (e.pos[0] - f.player.pos[0]).hypot(e.pos[2] - f.player.pos[2]) <= data::KI_RANGE)
 }
 
 #[cfg(test)]
@@ -103,6 +108,10 @@ mod tests {
         f.enemy.hp = 0;
         assert!(compass(&f, 0.0).is_none());
         f.enemy.hp = 95;
+        assert!(target_shown(&f));
+        f.enemy.pos = [0.0, 0.0, data::KI_RANGE + 1.0];
+        assert!(compass(&f, 0.0).is_none() && !target_shown(&f), "out of ki range: no needle, no target bar");
+        f.enemy.pos = [0.0, 0.0, 1.0];
         assert!((player_bar(&f) - 0.8).abs() < 1e-5 && (enemy_bar(&f) - 0.95).abs() < 1e-5);
     }
 }
