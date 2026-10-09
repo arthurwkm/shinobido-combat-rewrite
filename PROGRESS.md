@@ -184,7 +184,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   AIattle tables, give up and return. Compare with combat 0–44 s.
 - [x] (evidence: `cargo test -q` 72 passed incl. `walls_block_sight_but_not_sound`, clippy clean; `Terrain::sight_clear` samples the eye-height line, `Stealth::step` takes the terrain; crouch noise/sight factors and meter rise/decay already existed; `target/debug/viewer --record target/rec/patrol2 --script tools/scripts/patrol.txt --patrol --every 100 --ticks 1200` frame 600 still shows red eye, chase and `AT_A19 hits you` log; occlusion itself is unit-tested only, no sandbox patrol path crosses a wall; eye colours stay ESTIMATE, not re-sampled from clip frames) Perception: sight blocked by walls (terrain raycast), noise by crouch, walk or run, meter rise and decay.
   The alert states drive the eye colours, sampled from stealth-clip frames.
-- [ ] Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
+- [x] (evidence: `cargo test -q` 73 passed incl. `locked_stick_strafes_around_the_target`, clippy clean; `target/debug/viewer --record target/rec/lock --script tools/scripts/lock.txt --every 50 --ticks 330` -> `target/cmp/lock.png`: R1 shows `lock-on locked`, GU_B01 guard when still, WALK_R02/WALK_B02 strafing facing the soldier, lock-on off and SHEATH01 after release; R1 select/release, wheel or D-pad (while R1 held) switch, lock camera via `follow_lock`; not compared with a combat.mov frame, and the debug speed read 0.00 m/s during the strafe frames although the unit test shows -x travel, unexplained; switch needs a second soldier, next item) Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
 - [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
   (combat 46 s, 54–58 s; stealth 14 s); victim variants (A/B/C/D) by situation.
 - [ ] Death and body: the corpse stays, and it can be picked up and carried (with M14 carry).
@@ -328,3 +328,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-09: Stairs: sim keeps the ramp (no stepping in clips, decision), viewer now draws the sandbox stairs as steps. M14 done.
 
 - 2026-10-09 Claude: enemy AI states Investigate/Search/Return, patrol legs, give-up and block cycle (ESTIMATE, data.rs); viewer `--patrol` flag; Guard release now returns to Chase (test updated).
+- 2026-10-09 Lock-on wired into the viewer (R1 select/strafe/lock camera, switch input; guard only when standing still).

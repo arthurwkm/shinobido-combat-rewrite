@@ -20,6 +20,10 @@ pub struct Input {
     pub crouch: bool,
     /// Held: dash (Circle); runs with RUN_D05 (set 05 `_D`, ~5.5 m/s against RUN01 3.4).
     pub dash: bool,
+    /// Edge: move the lock to the next target (-1 left, 1 right); taken by the viewer's tick.
+    pub switch: i8,
+    /// Set by the viewer each tick while locked on: face this point and strafe the stick around it.
+    pub lock_target: Option<[f32; 3]>,
 }
 
 impl Input {
@@ -29,12 +33,21 @@ impl Input {
         let mag = x.hypot(y);
         let moving = mag >= STICK_DEAD;
         let (s, c) = cam_yaw.sin_cos();
-        if moving {
+        let mut strafe = false;
+        if let (Some(t), false) = (self.lock_target, self.dash) {
+            // the lock camera looks at the target, so the stick is relative to the bearing
+            let b = (t[0] - p.pos[0]).atan2(t[2] - p.pos[2]);
+            p.target_heading = b;
+            if moving {
+                p.walk_clip = if y.abs() >= x.abs() { if y > 0.0 { "WALK_F02" } else { "WALK_B02" } } else if x > 0.0 { "WALK_R02" } else { "WALK_L02" };
+                strafe = true;
+            }
+        } else if moving {
             // right of a camera looking along +z is -x
             p.target_heading = (s * y - c * x).atan2(c * y + s * x);
         }
-        p.walk = mag < STICK_WALK;
-        p.guard_held = self.lock;
+        p.walk = strafe || mag < STICK_WALK;
+        p.guard_held = self.lock && !strafe; // strafing is the lock-on walk; standing still guards
         p.crouch_held = self.crouch;
         p.run_clip = if self.dash { "RUN_D05" } else { "RUN01" };
         // ESTIMATE: Forward/Back are the stick within 60 degrees of / opposite to the current heading.
@@ -51,6 +64,9 @@ impl Input {
             p.dodge(dir);
         } else if self.jump {
             p.jump();
+        }
+        if strafe {
+            p.attack_mod = AttackMod::Lock;
         }
         p.step_on(terrain, moving, self.attack);
         self.attack = false;
@@ -85,5 +101,22 @@ mod tests {
         let mut d = Player::new();
         Input { jump: true, crouch: true, stick: [0.0, -1.0], ..Default::default() }.apply(&mut d, &t, 0.0);
         assert_eq!(d.world_action(), "BACK01");
+    }
+}
+
+#[cfg(test)]
+mod lock_tests {
+    use super::*;
+
+    #[test]
+    fn locked_stick_strafes_around_the_target() {
+        let (mut p, t) = (Player::new(), Terrain::default());
+        let mut i = Input { lock: true, lock_target: Some([0.0, 0.0, 5.0]), stick: [1.0, 0.0], ..Default::default() };
+        for _ in 0..30 {
+            i.apply(&mut p, &t, 0.0);
+        }
+        assert_eq!(p.world_action(), "WALK_R02");
+        assert!(p.heading.abs() < 0.3, "keeps facing the target");
+        assert!(p.pos[0] < -0.5, "x {}", p.pos[0]); // WALK_R02 root runs -x at heading 0
     }
 }

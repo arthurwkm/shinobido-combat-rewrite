@@ -3,13 +3,14 @@
 
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
-use bevy::input::mouse::AccumulatedMouseMotion;
+use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
+use shinobido_combat_rewrite::sim::lockon::LockOn;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
 use shinobido_combat_rewrite::sim::hud::{self, Debug};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
-use shinobido_combat_rewrite::sim::enemy::Enemy;
+use shinobido_combat_rewrite::sim::enemy::{Enemy, State as EnemyState};
 use shinobido_combat_rewrite::sim::execution;
 use shinobido_combat_rewrite::sim::stealth::{Alert, Stealth};
 use shinobido_combat_rewrite::sim::player::{Player, State};
@@ -43,6 +44,9 @@ struct CrateMesh(usize);
 
 #[derive(Resource, Default)]
 struct Pad(Input);
+
+#[derive(Resource, Default)]
+struct Lock(LockOn);
 
 /// Execute pressed since the last tick (E / Triangle).
 #[derive(Resource, Default)]
@@ -126,7 +130,7 @@ fn parse_shot() -> Option<Shot> {
 }
 
 /// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
-/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | itemnext | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
+/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | itemnext | switch <-1|1> | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
 /// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
 #[derive(Resource)]
 struct Record {
@@ -175,6 +179,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.hit("HI_BS07", 99_999); }
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,
+            (Some("switch"), [d]) => i.switch = *d as i8,
             (Some("jump"), _) => i.jump = true,
             (Some("item"), _) => i.item = true,
             (Some("itemnext"), _) => i.item_next = true,
@@ -224,6 +229,7 @@ fn main() {
         .insert_resource(World(Terrain::sandbox()))
         .init_resource::<Pad>()
         .init_resource::<Exec>()
+        .init_resource::<Lock>()
         .init_resource::<Dbg>()
         .init_resource::<Aware>()
         .insert_resource(load_anim())
@@ -329,7 +335,7 @@ fn shoot(mut commands: Commands, mut shot: ResMut<Shot>, mut exit: MessageWriter
 }
 
 /// Samples keyboard/mouse and gamepad every render frame: held state overwritten, edges OR-ed until a tick takes them.
-fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>) {
+fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, wheel: Res<AccumulatedMouseScroll>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>) {
     let k = |c| keys.pressed(c) as i32 as f32;
     let mut stick = Vec2::new(k(KeyCode::KeyD) - k(KeyCode::KeyA), k(KeyCode::KeyW) - k(KeyCode::KeyS)).clamp_length_max(1.0);
     if keys.pressed(KeyCode::AltLeft) {
@@ -341,6 +347,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.item |= keys.just_pressed(KeyCode::KeyQ);
     i.item_next |= keys.just_pressed(KeyCode::Tab);
     i.lock = mouse.pressed(MouseButton::Right);
+    i.switch = i.switch.saturating_add(wheel.delta.y.signum() as i8 * (wheel.delta.y != 0.0) as i8);
     i.crouch = keys.pressed(KeyCode::ControlLeft);
     i.dash = keys.pressed(KeyCode::ShiftLeft);
     exec.0 |= keys.just_pressed(KeyCode::KeyE);
@@ -352,8 +359,12 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.attack |= g.just_pressed(GamepadButton::West);
         i.jump |= g.just_pressed(GamepadButton::South);
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
-        i.item_next |= g.just_pressed(GamepadButton::DPadRight);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
+        if i.lock {
+            i.switch += g.just_pressed(GamepadButton::DPadRight) as i8 - g.just_pressed(GamepadButton::DPadLeft) as i8;
+        } else {
+            i.item_next |= g.just_pressed(GamepadButton::DPadRight);
+        }
         i.crouch |= g.pressed(GamepadButton::LeftTrigger);
         i.dash |= g.pressed(GamepadButton::East);
         exec.0 |= g.just_pressed(GamepadButton::North);
@@ -361,7 +372,8 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
+#[allow(clippy::too_many_arguments)]
+fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
     // Triangle: put down what is carried, else grab/execute, else lift a crate or body; Square throws the load.
     if std::mem::take(&mut exec.0) && !sim.0.release_load(pad.0.lock) && !sim.0.grab(pad.0.lock) {
         sim.0.pick(&mut world.0);
@@ -380,6 +392,21 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
     }
     if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.roll() {
         pad.0.jump = false;
+    }
+    // R1 held: lock the soldier ahead (none when out of range or dead); released or gone drops it.
+    let targets: Vec<[f32; 3]> = (sim.0.enemy.state != EnemyState::Dead).then_some(sim.0.enemy.pos).into_iter().collect();
+    if !pad.0.lock {
+        lock.0.release();
+    } else if lock.0.target.is_none() {
+        lock.0.select(sim.0.player.pos, sim.0.player.heading, &targets);
+    }
+    let sw = std::mem::take(&mut pad.0.switch);
+    if sw != 0 {
+        lock.0.switch(sim.0.player.pos, &targets, sw > 0);
+    }
+    pad.0.lock_target = lock.0.target.and_then(|i| targets.get(i)).copied();
+    if pad.0.lock_target.is_none() {
+        lock.0.release();
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
@@ -473,6 +500,7 @@ fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, O
 
 /// Mouse motion and right stick orbit the camera around the player.
 fn orbit(
+    pad: Res<Pad>,
     mut cam: ResMut<Cam>,
     sim: Res<Sim>,
     motion: Res<AccumulatedMouseMotion>,
@@ -487,6 +515,9 @@ fn orbit(
             * time.delta_secs();
     }
     cam.0.orbit([-d.x, d.y]); // looking down +z, screen-right is -x
+    if let Some(t) = pad.0.lock_target {
+        cam.0.follow_lock(sim.0.player.pos, t);
+    }
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
     let (e, f) = cam.0.eye(sim.0.player.focus_pos());
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);

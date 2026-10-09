@@ -1,0 +1,9 @@
+# R1 held near the soldier, strafe right, then back off and release
+0 at 0 -6
+0 yaw 0
+10 lock 1
+60 stick 1 0
+200 stick 0 0
+210 stick 0 -1
+300 stick 0 0
+310 lock 0
