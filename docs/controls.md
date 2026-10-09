@@ -35,6 +35,33 @@ image names actions but does not specify these rules. For keyboard walking, use
 Alt + W/A/S/D; normal movement runs and Shift requests dash. Numeric thresholds
 must be marked `ESTIMATE` in `src/sim/data.rs` when M11 implements them.
 
+## Attack and move list (owner, 2026-10-08)
+
+Supplied by the owner from play; every row is shown in `videos/shinobido all attacks.mp4` (30 fps) and can be
+checked in PCSX2 with `tools/pcsx2.py`. The disc is SCES-53931 (PAL), so the "PAL only" rows apply. Which motion
+each row plays is still to be matched (motion names are not evidence of inputs). R1 is lock-on.
+
+| Input | Move |
+|---|---|
+| Square | Slash |
+| Square, Forward + Square | Slash to Power Slash |
+| Square ×2 | Double Slash |
+| Square ×3, wait 1 s, R1 + Triangle | Double Slash to Kick to Power Slash |
+| Square ×2, Forward + Square, R1 + Triangle | Double Slash to Jumping Strike to Power Slash |
+| Square ×2, Forward + Square ×2 | Double Slash, Jumping Strike to Power Slash (PAL only) |
+| Square ×2, Forward + Square, Square ×2 | Double Slash, Jumping Strike, Slash to Kick (PAL only) |
+| Back + Square | Kick |
+| Square in the air | Downward Strike |
+| Square while dashing (Circle held) | Leap forward and slash |
+| Square near a downed enemy | Low Kick |
+| R1 + Back + Square | Low Kick |
+| R1 + Square | Rising Uppercut |
+| R1 + Square ×2 | Rising Uppercut to Downward Strike (PAL only) |
+| R1 + Triangle | Throws the enemy overhead, leaving him downed |
+| R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind |
+| Triangle | Grab the enemy; mash Square / Triangle for a chance at a forced stealth kill (easiest from behind or on a low-HP enemy) |
+| Cross, then a quick back flick of the left stick | Backward somersault |
+
 ## Context actions for the sandbox — ESTIMATE
 
 The basic guide does not explain these combinations. Use this provisional mapping

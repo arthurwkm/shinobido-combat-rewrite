@@ -157,8 +157,16 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 - [ ] High jump onto rooftops: UP_FR/UP_BA01 (and CLIMB_B01) reach the sandbox roof from the ground or
   crates, landing on the roof. Movement 20–32 s.
 - [ ] Air actions: KICK_J/KICK_JB/THRO_J01/FLIP_B01 only in the air, from attack and jump inputs; landing rules.
+  Square in the air is the downward strike; Cross then a quick back flick of the left stick is the backward
+  somersault (owner, docs/controls.md "Attack and move list").
 - [ ] Attack set in context: AT_CA/AT_D/AT_DA/AT_E chains through the cancel windows, a running attack, the
   kicks (KICK27/FUTO27/SOCCER01), the `_H` attacks from wall hug, CLAW_*/BLADE01 under the right condition.
+  Inputs per the owner's table (docs/controls.md "Attack and move list": Forward/Back + Square, R1 + Square,
+  dash + Square, low kick on a downed enemy, the PAL chains); match each row to its motion with
+  `videos/shinobido all attacks.mp4` and `tools/pcsx2.py play`, and record the pairing in docs/controls.md.
+- [ ] Grab and throw from the pad: Triangle grabs the enemy and mashing Square/Triangle may force a stealth kill
+  (easier from behind or at low HP); R1 + Triangle throws him overhead, downed; R1 + Forward + Cross rolls into
+  him and flips over to his back. Motions matched as above (docs/controls.md).
 - [ ] Pick up, carry and throw crates and bodies: crates become movable sim objects. PICK01 near a crate or a
   dead enemy; carry locomotion (`_K`); PUT01; THROW_A/B/BACK01 throws with gravity and can hit the enemy.
   Movement 36–44 s.
@@ -200,6 +208,8 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   finds no gap.
 
 ## Requests
+- PCSX2 for unattended sessions: AGENTS.md method step 3 still says emulator only with the owner present, and
+  `night-settings.json` has no sandbox exclusion for `tools/pcsx2.py`; the owner applies both (agents may not).
 Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
 - Lock-on in use (target switch, strafing) and guard against an attack: not in the current clips.
 - A stealth kill from behind and one from above, showing the cue before the input.
@@ -298,3 +308,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-08 Codex: M14 hug source correction: replaced misclassified overhead set-06 clips and guessed speed with set-05 lateral roots and pose-matched peek transitions; source checks and 51 tests green, existing visual mismatch inspected, new viewer check assigned to Claude.
 - 2026-10-08 Codex: continued from hug viewer handoff into wall-run data lookup; event 9 confirmed as launch impulse, 120.0 initializers found but wall binding unresolved. Kept production launch unchanged rather than labeling a candidate value as extracted wall speed.
 - 2026-10-08 Claude: owner playtest fixes. Katana moved to the right arm chain 19→20 (arm 16 sits on -x, the right side per WALK_R02/RIGHT01 root motion); untracked nodes 21-22 no longer drawn (they stuck forward out of the hips); BLADE07 found to be a death-like clip (2 m slide, DIE_A07 event 26), soldier swings AT_A01 instead (`ENEMY_ATTACK_CLIP` ESTIMATE until set 19 is exported: 26 tracks); player reaction HI_BC01 instead of the 160-frame paired HI_BS01 (`PLAYER_HIT_CLIP`); jumps and falls keep momentum and steer with the stick (`AIR_SPEED` ESTIMATE), test `jump_carries_run_momentum_and_the_stick_steers_in_the_air`. `cargo test -q` 52 passed, clippy clean, compare.py 231/231; seen in `target/rec/fix_check` and `target/rec/enemy_check`.
+- 2026-10-08 Claude: `tools/pcsx2.py` drives the owner's PCSX2 (key events on the owner's bindings via Quartz, F8 screenshots moved to `target/pcsx2/`); tested interactively: `shot test0` and `play target/scripts/pcsx2_slash.txt` played a Square slash and saved 4 frames. Owner's attack/move list added to docs/controls.md, M14 items extended, grab/throw item added.
