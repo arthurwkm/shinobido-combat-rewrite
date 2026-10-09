@@ -82,6 +82,8 @@ pub struct Player {
     pub run_clip: &'static str,
     /// STOP01, STOP02 or TIRED01; selection policy is ESTIMATE (data.rs).
     pub idle_clip: &'static str,
+    /// Katana out: idle uses STOP02 (the drawn set, video_notes 56 s), sheathing back plays SHEATH01. Set 01 = sheathed is an ESTIMATE.
+    pub drawn: bool,
     /// Metres since creation, in the character's frame (+z forward).
     pub pos: [f32; 3],
     /// Yaw in radians; forward is (sin h, cos h) in x/z. `pos` is in the world frame.
@@ -134,7 +136,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -501,6 +503,19 @@ impl Player {
     /// Start a one-shot ninja action from idle/run/walk/halt; it plays to its end, then returns to idle (ESTIMATE: no cancels).
     pub fn special(&mut self, name: &str) {
         self.request(State::Special, name);
+    }
+
+    /// Follow whether the blade should be out: drawing is instant (the swing itself draws it), sheathing waits for
+    /// standing idle and plays SHEATH01.
+    pub fn update_drawn(&mut self, want: bool) {
+        if want {
+            self.drawn = true;
+        } else if self.drawn && self.state == State::Idle && self.request(State::Special, "SHEATH01") {
+            self.drawn = false;
+        }
+        if self.state == State::Idle || self.state == State::Special {
+            self.idle_clip = if self.drawn { "STOP02" } else { "STOP01" };
+        }
     }
 
     /// Play a paired clip now, whatever the player is doing (grab kills, executions).

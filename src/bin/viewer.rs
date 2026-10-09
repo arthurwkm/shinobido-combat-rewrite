@@ -382,6 +382,9 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
         let (pos, action) = (sim.0.player.pos, sim.0.player.world_action());
         aware.0.step(&mut sim.0.enemy, pos, action);
     }
+    let level = aware.0.level();
+    let want = pad.0.lock || level == Alert::Alerted || sim.0.player.world_action().starts_with("AT_") || (sim.0.player.drawn && level != Alert::Unaware);
+    sim.0.player.update_drawn(want);
     dbg.0.observe(&sim.0);
 }
 
@@ -500,7 +503,7 @@ fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
 
 /// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>, pad: Res<Pad>, aware: Res<Aware>, mut drawn: Local<bool>) {
+fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>) {
     if keys.just_pressed(KeyCode::KeyB) {
         *debug = !*debug;
     }
@@ -524,11 +527,10 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
             *t = seg(joints, *n).0;
         }
     }
-    // Drawn on alert, lock-on or a swing; sheathed again once calm. The soldier keeps his blade out.
-    *drawn = pad.0.lock || aware.0.level() == Alert::Alerted || p.world_action().starts_with("AT_") || (*drawn && aware.0.level() != Alert::Unaware);
+    let drawn = p.drawn;
     for (Katana(foe), mut t) in &mut katanas {
         let Some(joints) = &joints[*foe as usize] else { continue };
-        *t = if *foe || *drawn {
+        *t = if *foe || drawn {
             let (a, b) = (joints[19], joints[20]); // right forearm to hand: arm 16 sits on -x, the right side facing +z
             let dir = (b - a).normalize_or_zero();
             Transform::from_translation(b + dir * 0.35).looking_to(dir, Vec3::Y)

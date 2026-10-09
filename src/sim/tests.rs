@@ -1307,3 +1307,17 @@ fn reaction_follows_side_and_weight_and_heavy_hits_knock_down() {
     }
     assert_eq!(&seen[..3], ["HI_F07", "UP_BA07", "RUN07"]);
 }
+
+#[test]
+fn blade_is_sheathed_with_sheath01_and_idles_in_the_drawn_set() {
+    let mut p = super::player::Player::new();
+    p.update_drawn(true);
+    for _ in 0..3 { p.step(false, false); p.update_drawn(true); }
+    assert!(p.drawn);
+    assert_eq!(p.world_action(), "STOP02");
+    p.update_drawn(false);
+    assert!(!p.drawn);
+    assert_eq!(p.world_action(), "SHEATH01");
+    for _ in 0..45 { p.step(false, false); p.update_drawn(false); }
+    assert_eq!(p.world_action(), "STOP01");
+}

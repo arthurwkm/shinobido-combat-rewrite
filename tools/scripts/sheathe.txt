@@ -1,0 +1,4 @@
+# Lock-on draws the blade (STOP02), release sheathes it with SHEATH01
+0 at 0 -8
+10 lock 1
+60 lock 0
