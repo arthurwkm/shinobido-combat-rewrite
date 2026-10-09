@@ -518,3 +518,5 @@ counting with root motion). 66-track clips (set-05 modes) are exported too: trac
   velocity; impulse Y initializers read 120.0; wall action-slot mapping and metres scale
   unresolved`. Scratch check/listings stay in ignored target/. Production wall ascent
   is not implemented; next step is binding action slots to the identified motions.
+
+- **ESTIMATE closed (2026-10-09):** RUN_RE01/LE01 trigger not found after three tries (executable ID immediates, category 0x200 grouping, clip survey); left on the `special` path.
