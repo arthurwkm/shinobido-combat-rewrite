@@ -18,7 +18,7 @@ Evidence = record dir under `target/rec/` (script in `tools/scripts/`) and the c
 | Soldier skeleton, motions, AI | patrol, flee, enemy_check | matches (AI ranges ESTIMATE) |
 | Soldier hit reactions, death | react, hit | differs: heavy knock-back and behind-hit never seen in the viewer |
 | Lock-on, strafe, camera | lock4 vs strafe clip | matches |
-| Executions and cue | exec vs stealth-kill clip | differs: front/above/B/C/D variants and cue look not seen from the pad |
+| Executions and cue | exec vs stealth-kill clip | differs: back, front and above seen (execfront, execabove records); no dive-down approach, B/C/D clip choice ESTIMATE |
 | Stealth meter, eye icon, compass | multi, patrol, acc_multi | matches |
 | Viewer layout, HUD both parts, controls | acc_multi, legend shot | matches |
 | Mannequin proportions | acc_multi | matches |
