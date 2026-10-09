@@ -172,7 +172,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   Movement 36–44 s.
 - [ ] Items: an item slot and use from the item button (DRINK heals, MAKIBISHI caltrops slow the enemy,
   NINJYUTU, MAKI), each with a simple sim effect; ESTIMATE where the files are silent.
-- [ ] Hit reaction choice: pick HI_* by hit side and height (B/U/C letters), DEKA_* for heavy hits,
+- [ ] Hit reaction choice: (also: low kick on a downed enemy, moved from the attack-set item) pick HI_* by hit side and height (B/U/C letters), DEKA_* for heavy hits,
   knock-down then UKEMI_A01 or a get-up (UP_FR01/UP_BA01 are the get-ups from lying, hips 0.12 m at frame 0); other reactions (NORI, BURA, SUI...) only where their context exists.
 - [ ] Draw and sheathe: sheathed while exploring, drawn on alert or attack (SHEATH01/SHEATH06/SHEATH_BU05);
   idle and run use the right set for each.
