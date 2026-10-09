@@ -99,3 +99,8 @@ pub const LEDGE_REACH: f32 = 2.4;
 pub const HANG_MIN: f32 = 1.5;
 pub const LEDGE_GRAB_DIST: f32 = 0.5;
 pub const HANG_OFFSET: f32 = 0.15;
+// ESTIMATE: ground vault (CLIMB_B01, hips rise ~1.8 m in the clip; movement 24-26 s, 40 s). A box top VAULT_MIN..VAULT_MAX
+// above the feet, within VAULT_DIST of the face, is vaulted by Jump; lower tops are jumped, higher ones are wall-run.
+pub const VAULT_MIN: f32 = 1.2;
+pub const VAULT_MAX: f32 = 2.3;
+pub const VAULT_DIST: f32 = 0.8;

@@ -451,7 +451,7 @@ fn orbit(
     }
     cam.0.orbit([-d.x, d.y]); // looking down +z, screen-right is -x
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
-    let (e, f) = cam.0.eye(sim.0.player.pos);
+    let (e, f) = cam.0.eye(sim.0.player.focus_pos());
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }
 

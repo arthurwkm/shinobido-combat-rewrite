@@ -980,3 +980,23 @@ fn jumping_at_a_ledge_hangs_shimmies_and_climbs_or_drops() {
     for _ in 0..200 { q.step_on(&t, false, false); }
     assert!(q.pos[1] < 0.01 && q.state != State::Hang, "dropped: {:?}", q.state);
 }
+
+#[test]
+fn jumping_at_a_crate_stack_vaults_over_it_with_climb_b() {
+    use crate::sim::{player::{Player, State}, terrain::Terrain};
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [3.1, 0.0, 2.4]; // faces the 2 m crate stack (z 3), 0.6 m away
+    p.step_on(&t, false, false);
+    p.jump();
+    assert_eq!(p.world_action(), "CLIMB_B01");
+    for _ in 0..140 { p.step_on(&t, false, false); if p.state == State::Idle { break; } }
+    assert_eq!(p.state, State::Idle);
+    assert!(p.pos[2] > 4.0 && p.pos[1] < 0.01, "landed beyond: {:?}", p.pos);
+    // a 1 m crate is jumped, not vaulted
+    let mut q = Player::new();
+    q.pos = [2.5, 0.0, 2.4];
+    q.step_on(&t, false, false);
+    q.jump();
+    assert_eq!(q.world_action(), "JUMP01");
+}

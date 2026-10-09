@@ -1,0 +1,5 @@
+# Face the 2 m crate stack at x 3.1 (z 3): Jump vaults over it with CLIMB_B01.
+0 at 3.1 2.4
+0 yaw 0
+0 stick 0 0
+10 jump

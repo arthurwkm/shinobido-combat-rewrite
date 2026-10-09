@@ -36,6 +36,8 @@ pub enum State {
     Hang,
     /// CLIMB06 onto the ledge top.
     Climb,
+    /// CLIMB_B01: from the ground over a crate-high box (VAULT_MIN..VAULT_MAX), landing beyond it or on its top.
+    Vault,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -93,6 +95,10 @@ pub struct Player {
     hang_top: f32,
     /// Set by dropping from a ledge, cleared on the ground: no instant re-catch.
     grab_lock: bool,
+    /// Height above the feet of the box top in front, when the body is grounded and close enough to vault it.
+    vault_top: Option<f32>,
+    vault_base: f32,
+    vault_h: f32,
 }
 
 impl Default for Player {
@@ -103,7 +109,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -121,7 +127,11 @@ impl Player {
         };
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
         if grounded { self.grab_lock = false; }
-        if matches!(self.state, State::Hang | State::Climb) {
+        self.vault_top = terrain.ledge(before, [sh, ch], super::data::VAULT_MAX)
+            .filter(|t| grounded && (t[0] - before[0]).hypot(t[2] - before[2]) <= super::data::VAULT_DIST)
+            .map(|t| t[1] - before[1])
+            .filter(|&dy| dy >= super::data::VAULT_MIN);
+        if matches!(self.state, State::Hang | State::Climb | State::Vault) {
             return self.step_ledge(terrain, forward);
         }
         self.try_grab(terrain);
@@ -316,6 +326,15 @@ impl Player {
 
     /// Hanging and climbing own the body (no gravity or collision). Stick sideways shimmies while the ledge continues.
     fn step_ledge(&mut self, terrain: &super::terrain::Terrain, forward: bool) {
+        if self.state == State::Vault {
+            self.advance();
+            // The clip's hips carry the rise (1.8 m, then down to the far side), so the body only follows the ground.
+            if self.world.done() {
+                self.pos[1] = terrain.ground_height([self.pos[0], self.vault_base + self.vault_h, self.pos[2]]);
+                self.start(State::Idle, self.idle_clip);
+            }
+            return;
+        }
         if self.state == State::Climb {
             self.advance();
             if self.world.done() {
@@ -386,6 +405,16 @@ impl Player {
     }
 
     /// True while the current attack clip's hit window is open (event types 1/2).
+    /// Where the camera looks: the body, lifted with the hips while vaulting (CLIMB_B01 hips rise ~1.8 m over frames 25-60 and fall over 72-100: ESTIMATE from the pose export).
+    pub fn focus_pos(&self) -> [f32; 3] {
+        let mut p = self.pos;
+        if self.state == State::Vault {
+            let ramp = |a: f32, b: f32| ((self.world.frame as f32 - a) / (b - a)).clamp(0.0, 1.0);
+            p[1] += 1.8 * (ramp(25.0, 60.0) - ramp(72.0, 100.0));
+        }
+        p
+    }
+
     pub fn attack_active(&self) -> bool {
         self.state == State::Attack && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
     }
@@ -433,6 +462,11 @@ impl Player {
         }
         if self.state == State::WallRun {
             return self.wall_kick("TRI_J01");
+        }
+        if let Some(dy) = self.vault_top.filter(|_| matches!(self.state, State::Idle | State::Walk | State::Run | State::Crouch)) {
+            self.vault_base = self.pos[1];
+            self.vault_h = dy;
+            return self.start(State::Vault, "CLIMB_B01");
         }
         let facing = self.wall_normal.is_some_and(|n| -(self.heading.sin() * n[0] + self.heading.cos() * n[2]) > 0.7);
         if self.state == State::Run && self.wall_tall && facing {
