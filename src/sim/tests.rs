@@ -541,7 +541,9 @@ fn enemy_guard_blocks_damage_and_patrol_loops() {
     assert_eq!(e.hp, super::data::ENEMY_HP);
     e.guard_held = false;
     e.step([0.0, 0.0, 9.0]);
-    assert_eq!(e.state, State::Idle);
+    assert_eq!(e.state, State::Chase);
+    e.release();
+    e.state = State::Idle;
     e.patrol();
     for _ in 0..200 { e.step([0.0, 0.0, 9.0]); }
     assert_eq!((e.state, e.action()), (State::Patrol, "WALK_A07"));
@@ -1320,4 +1322,38 @@ fn blade_is_sheathed_with_sheath01_and_idles_in_the_drawn_set() {
     assert_eq!(p.world_action(), "SHEATH01");
     for _ in 0..45 { p.step(false, false); p.update_drawn(false); }
     assert_eq!(p.world_action(), "STOP01");
+}
+
+#[test]
+fn soldier_investigates_gives_up_and_returns() {
+    use super::{enemy::{Enemy, State}, stealth::Stealth};
+    // a walking player behind his back is only heard: suspicious, he walks over and searches
+    let mut e = Enemy::new([0.0, 0.0, 0.0]);
+    e.patrol();
+    let mut s = Stealth::default();
+    let mut seen = vec![];
+    for _ in 0..2400 {
+        s.step(&mut e, [0.0, 0.0, -2.5], "WALK_A01");
+        e.step([0.0, 0.0, -2.5]);
+        if seen.last() != Some(&e.state) { seen.push(e.state); }
+        if s.meter >= 1.0 { break; }
+    }
+    assert!(seen.contains(&State::Investigate), "{seen:?}");
+    // alerted, then the player is far away: he chases, gives up, searches and walks home
+    let mut e = Enemy::new([0.0, 0.0, 0.0]);
+    e.patrol();
+    e.alert();
+    let mut s = Stealth { meter: 1.0, seen: false };
+    e.slow = 0.0; // pinned in place (caltrops) so the player stays out of range
+    let mut seen = vec![];
+    let mut p = [0.0, 0.0, 16.0];
+    for _ in 0..4000 {
+        s.step(&mut e, p, "STOP01");
+        e.step(p);
+        if seen.last() != Some(&e.state) { seen.push(e.state); }
+        if e.state == State::Investigate { e.slow = 1.0; p = [0.0, 0.0, -60.0]; }
+    }
+    for st in [State::Chase, State::Investigate, State::Search, State::Return] {
+        assert!(seen.contains(&st), "{st:?} missing in {seen:?}");
+    }
 }

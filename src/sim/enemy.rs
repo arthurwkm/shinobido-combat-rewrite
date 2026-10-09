@@ -27,6 +27,12 @@ pub enum State {
     Down,
     /// UP_FR07 once, then Chase.
     GetUp,
+    /// WALK_A07 toward `lead` (a noise or a glimpse), then Search.
+    Investigate,
+    /// SEARCH07 once at the spot, then Return.
+    Search,
+    /// WALK_A07 back to the post, then Patrol or Idle.
+    Return,
 }
 
 pub struct Enemy {
@@ -43,12 +49,22 @@ pub struct Enemy {
     pub mashes: u32,
     /// Root-motion speed factor (1 normally, less in caltrops).
     pub slow: f32,
+    /// Where the soldier is heading when investigating (last place the player was noticed).
+    pub lead: [f32; 3],
+    /// Patrol legs; `route[0]` is the post he returns to. `patrols` is set by `patrol()`.
+    route: [[f32; 3]; 2],
+    leg: usize,
+    patrols: bool,
+    /// Frames the target has been out of `LOSE_RANGE` while chasing.
+    lost: u32,
+    /// Frames of guard left to hold before dropping the block on his own.
+    guard_left: u32,
     swings: usize,
 }
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, swings: 0 }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0 }
     }
 
     pub fn action(&self) -> &'static str {
@@ -64,15 +80,28 @@ impl Enemy {
         self.state == State::Attack && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
     }
 
+    /// Walk to and fro between the post and a point `PATROL_LEN` ahead.
     pub fn patrol(&mut self) {
         if self.state == State::Idle {
+            let (s, c) = self.heading.sin_cos();
+            self.route = [self.pos, [self.pos[0] + s * data::PATROL_LEN, self.pos[1], self.pos[2] + c * data::PATROL_LEN]];
+            self.leg = 1;
+            self.patrols = true;
             self.start(State::Patrol, "WALK_A07");
+        }
+    }
+
+    /// Something suspicious at `at` (stealth meter rising): walk over and look.
+    pub fn suspect(&mut self, at: [f32; 3]) {
+        if matches!(self.state, State::Idle | State::Patrol) {
+            self.lead = at;
+            self.start(State::Investigate, "WALK_A07");
         }
     }
 
     /// The soldier notices the player (stealth will drive this).
     pub fn alert(&mut self) {
-        if matches!(self.state, State::Idle | State::Patrol) {
+        if matches!(self.state, State::Idle | State::Patrol | State::Investigate | State::Search | State::Return) {
             self.start(State::Alert, "SURP07");
         }
     }
@@ -125,12 +154,38 @@ impl Enemy {
     pub fn step(&mut self, target: [f32; 3]) {
         let (dx, dz) = (target[0] - self.pos[0], target[2] - self.pos[2]);
         let dist = dx.hypot(dz);
-        if matches!(self.state, State::Chase | State::Alert) {
-            let d = (dx.atan2(dz) - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        let goal = match self.state {
+            State::Chase | State::Alert => Some(target),
+            State::Investigate => Some(self.lead),
+            State::Return => Some(self.route[0]),
+            State::Patrol => Some(self.route[self.leg]),
+            _ => None,
+        };
+        if let Some(g) = goal {
+            let (gx, gz) = (g[0] - self.pos[0], g[2] - self.pos[2]);
+            let d = (gx.atan2(gz) - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
             let max = super::player::TURN_RATE * DT;
             self.heading += d.clamp(-max, max);
+            if gx.hypot(gz) < data::ARRIVE {
+                match self.state {
+                    State::Investigate => self.start(State::Search, "SEARCH07"),
+                    State::Return if self.patrols => self.start(State::Patrol, "WALK_A07"),
+                    State::Return => self.start(State::Idle, "STOP07"),
+                    State::Patrol => self.leg ^= 1,
+                    _ => {}
+                }
+            }
+        }
+        if self.state == State::Chase {
+            self.lost = if dist > data::LOSE_RANGE { self.lost + 1 } else { 0 };
+            if self.lost > data::GIVE_UP {
+                self.lost = 0;
+                self.lead = target;
+                self.start(State::Investigate, "WALK_A07");
+            }
         }
         let done = self.world.done();
+        self.guard_left = self.guard_left.saturating_sub(1);
         if self.state == State::Held {
             self.held_for += 1;
         }
@@ -141,13 +196,19 @@ impl Enemy {
             State::GetUp if done => self.start(State::Chase, "RUN07"),
             State::Hit if done && self.world.action.name == "HI_F07" => self.start(State::GetUp, "UP_BA07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
+            State::Search if done => self.start(State::Return, "WALK_A07"),
+            State::Chase if dist <= data::ENEMY_ATTACK_RANGE && self.swings % data::GUARD_EVERY == data::GUARD_EVERY - 1 => {
+                self.swings += 1;
+                self.guard_left = data::GUARD_HOLD;
+                self.start(State::Guard, "GU_A07");
+            }
             State::Chase if dist <= data::ENEMY_ATTACK_RANGE => {
                 self.swings += 1;
                 self.start(State::Attack, data::ENEMY_ATTACK_CLIPS[self.swings % data::ENEMY_ATTACK_CLIPS.len()]);
             }
-            State::Idle | State::Patrol | State::Chase if done => self.world = World::new(self.world.action.name),
+            State::Idle | State::Patrol | State::Chase | State::Investigate | State::Return if done => self.world = World::new(self.world.action.name),
             State::Idle | State::Chase if self.guard_held => self.start(State::Guard, "GU_A07"),
-            State::Guard if !self.guard_held => self.start(State::Idle, "STOP07"),
+            State::Guard if !self.guard_held && self.guard_left == 0 => self.start(State::Chase, "RUN07"),
             State::Guard if done => self.start(State::Guard, "GU_B07"),
             _ => {}
         }

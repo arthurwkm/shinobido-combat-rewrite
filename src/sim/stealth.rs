@@ -1,7 +1,7 @@
 //! Enemy awareness: sight cone and footstep noise fill a 0..1 meter (the HUD's stealth bar); at 1 the soldier is alerted.
 //! All numbers ESTIMATE (data.rs). ponytail: no wall occlusion for sight, add when the viewer terrain feeds line tests.
 
-use super::{data, enemy::Enemy, DT};
+use super::{data, enemy::{Enemy, State}, DT};
 use std::f32::consts::{PI, TAU};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -54,11 +54,17 @@ impl Stealth {
         } else {
             -data::STEALTH_DECAY
         };
+        // He gave up the chase: the meter falls back to Suspicious so he does not re-alert at once.
+        if self.level() == Alert::Alerted && matches!(e.state, State::Investigate | State::Search | State::Return) {
+            self.meter = data::SUSPICIOUS_AT;
+        }
         if self.level() != Alert::Alerted {
             self.meter = (self.meter + rate * DT).clamp(0.0, 1.0);
         }
         if self.level() == Alert::Alerted {
             e.alert();
+        } else if self.level() == Alert::Suspicious && rate > 0.0 {
+            e.suspect(player);
         }
     }
 }

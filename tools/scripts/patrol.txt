@@ -1,0 +1,2 @@
+# stand still while a patrolling soldier passes and notices
+0 stick 0 0

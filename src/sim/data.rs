@@ -152,3 +152,13 @@ pub const CALTROP_RADIUS: f32 = 1.2;
 pub const CALTROP_SLOW: f32 = 0.4;
 pub const NINJYUTU_RANGE: f32 = 4.0;
 pub const NINJYUTU_CONE: f32 = 0.8;
+
+// ESTIMATE: AI\battle tables are not decoded to behaviour; patrol leg length (m), arrival radius (m).
+pub const PATROL_LEN: f32 = 5.0;
+pub const ARRIVE: f32 = 0.5;
+// ESTIMATE: chase is abandoned after GIVE_UP frames (5 s) with the player beyond LOSE_RANGE (m).
+pub const LOSE_RANGE: f32 = 15.0;
+pub const GIVE_UP: u32 = 300;
+// ESTIMATE: every GUARD_EVERY-th time he is in range he blocks for GUARD_HOLD frames instead of swinging.
+pub const GUARD_EVERY: usize = 3;
+pub const GUARD_HOLD: u32 = 90;

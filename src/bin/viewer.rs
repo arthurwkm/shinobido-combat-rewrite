@@ -24,6 +24,12 @@ impl Default for Sim {
         // Soldier 6 m ahead, facing the player (position ESTIMATE).
         let mut enemy = Enemy::new([0.0, 0.0, 6.0]);
         enemy.heading = std::f32::consts::PI;
+        // `--patrol`: an unaware soldier pacing along x off to the side, to watch the stealth AI.
+        if std::env::args().any(|a| a == "--patrol") {
+            enemy = Enemy::new([-6.0, 0.0, 8.0]);
+            enemy.heading = std::f32::consts::FRAC_PI_2;
+            enemy.patrol();
+        }
         Sim(Fight::new(Player::default(), enemy))
     }
 }
