@@ -1408,3 +1408,14 @@ fn several_soldiers_each_fight_stay_aware_and_take_hits() {
     assert_ne!(f.others[0].state, ES::Idle);
     assert_eq!(f.enemy.state, ES::Idle);
 }
+
+#[test]
+fn running_jump_lands_straight_back_into_the_run() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    for _ in 0..40 { p.step(true, false); }
+    p.jump();
+    while p.state != State::Land { p.step(true, false); }
+    for _ in 0..4 { p.step(true, false); }
+    assert_eq!(p.state, State::Run, "emulator: running again ~2 game frames after touchdown");
+}

@@ -56,6 +56,8 @@ const JUMP_V0: f32 = 120.0;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
 const UNIT_M: f32 = 0.84 / 9.5;
+/// LAND01's first event frame (type 5, mask 0x4100); a held stick leaves the landing from here.
+const LAND_RUN_FRAME: u32 = 2;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
 /// ESTIMATE: frames after pressing Jump in which a back flick of the stick starts FLIP_B01.
@@ -270,7 +272,9 @@ impl Player {
             return;
         }
         if self.state == State::Land {
-            if self.world.done() {
+            // A held stick runs on out of the landing from LAND01's type-5 event (frame 2), as in the emulator
+            // (tools/scripts/emu/loco.txt: running again ~2 game frames after touchdown).
+            if self.world.done() || (forward && self.world.frame >= LAND_RUN_FRAME) {
                 self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
