@@ -13,7 +13,7 @@ pub enum State {
     Alert,
     /// RUN07 loop toward the target.
     Chase,
-    /// BLADE07 once, then Chase.
+    /// `ENEMY_ATTACK_CLIP` once, then Chase.
     Attack,
     /// GU_A07 then GU_B07 while held.
     Guard,
@@ -47,10 +47,9 @@ impl Enemy {
         self.world.frame
     }
 
-    /// True while the BLADE07 swing can hurt (window is ESTIMATE, data.rs).
+    /// True while the swing clip's hit window is open (event types 1/2).
     pub fn attack_active(&self) -> bool {
-        let (a, b) = data::ENEMY_ATTACK_HIT;
-        self.state == State::Attack && (a..b).contains(&self.world.frame)
+        self.state == State::Attack && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
     }
 
     pub fn patrol(&mut self) {
@@ -107,7 +106,7 @@ impl Enemy {
         match self.state {
             State::Alert if done => self.start(State::Chase, "RUN07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
-            State::Chase if dist <= data::ENEMY_ATTACK_RANGE => self.start(State::Attack, "BLADE07"),
+            State::Chase if dist <= data::ENEMY_ATTACK_RANGE => self.start(State::Attack, data::ENEMY_ATTACK_CLIP),
             State::Idle | State::Patrol | State::Chase if done => self.world = World::new(self.world.action.name),
             State::Idle | State::Chase if self.guard_held => self.start(State::Guard, "GU_A07"),
             State::Guard if !self.guard_held => self.start(State::Idle, "STOP07"),

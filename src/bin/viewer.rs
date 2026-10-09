@@ -234,7 +234,8 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
         let unit = meshes.add(Cuboid::new(0.08, 0.08, 1.0));
         let foe_mat = mats.add(Color::srgb(0.6, 0.15, 0.12)); // A_BUSHI1 is the red soldier
         let foe = foe_mat.clone();
-        for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23)) {
+        // Nodes 21-22 have no tracks (formats.md): drawn they stick straight forward out of the hips.
+        for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23) && !matches!(n, 21 | 22)) {
             commands.spawn((Bone(n, false), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default(), Visibility::Hidden));
             commands.spawn((Bone(n, true), Mesh3d(unit.clone()), MeshMaterial3d(foe.clone()), Transform::default(), Visibility::Hidden));
             // Mannequin part: bone length is fixed by the rest offset, so the mesh is built at that length.
@@ -493,7 +494,7 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
     for (Katana(foe), mut t) in &mut katanas {
         let Some(joints) = &joints[*foe as usize] else { continue };
         *t = if *foe || *drawn {
-            let (a, b) = (joints[14], joints[15]); // right forearm to hand
+            let (a, b) = (joints[19], joints[20]); // right forearm to hand: arm 16 sits on -x, the right side facing +z
             let dir = (b - a).normalize_or_zero();
             Transform::from_translation(b + dir * 0.35).looking_to(dir, Vec3::Y)
         } else {

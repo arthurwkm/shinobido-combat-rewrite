@@ -97,7 +97,7 @@ impl Fight {
                 let guarding = matches!(p.state, State::Guard) && in_front(p.pos, p.heading, e.pos);
                 if !guarding && self.player_hp > 0 {
                     self.player_hp = (self.player_hp - data::ENEMY_DAMAGE).max(0);
-                    p.hit("HI_BS01");
+                    p.hit(data::PLAYER_HIT_CLIP);
                 }
             }
         } else {

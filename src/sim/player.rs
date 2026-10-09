@@ -112,7 +112,13 @@ impl Player {
             self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
             self.fall_from = before[1];
             self.start(State::Fall, "FALL01");
-        } else if self.state == State::Fall {
+        } else if matches!(self.state, State::Jump | State::Fall) {
+            // Momentum from the last grounded tick; a held stick steers along the heading (ESTIMATE, data.rs).
+            if forward {
+                let speed = self.air_vel[0].hypot(self.air_vel[1]).max(super::data::AIR_SPEED);
+                let (s, c) = self.heading.sin_cos();
+                self.air_vel = [s * speed, c * speed];
+            }
             self.pos[0] += self.air_vel[0];
             self.pos[2] += self.air_vel[1];
         }
@@ -123,6 +129,9 @@ impl Player {
             self.pos[1] += self.vy * super::DT * UNIT_M;
         }
         let (pos, wall, ceiling) = terrain.move_body(before, self.pos, grounded && !jumping);
+        if !matches!(self.state, State::Jump | State::Fall) {
+            self.air_vel = [pos[0] - before[0], pos[2] - before[2]];
+        }
         self.pos = pos;
         self.wall_normal = wall;
         if ceiling { self.vy = 0.0; }
@@ -143,7 +152,7 @@ impl Player {
         if attack {
             self.press_attack();
         }
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch | State::Jump | State::Fall) {
             let d = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let max = TURN_RATE * super::DT;

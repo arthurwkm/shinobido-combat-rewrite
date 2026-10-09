@@ -153,6 +153,22 @@ fn jump_leaves_the_ground_at_frame_5_and_lands_about_51_frames_later() {
 }
 
 #[test]
+fn jump_carries_run_momentum_and_the_stick_steers_in_the_air() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    for _ in 0..40 { p.step(true, false); }
+    let z0 = p.pos[2];
+    p.jump();
+    while p.state == State::Jump { p.step(false, false); }
+    assert!(p.pos[2] - z0 > 1.5, "momentum carried: {}", p.pos[2] - z0);
+    let mut q = Player::new();
+    q.jump();
+    q.target_heading = std::f32::consts::FRAC_PI_2;
+    while q.state == State::Jump { q.step(true, false); }
+    assert!(q.pos[0] > 1.0 && q.heading > 1.0, "steered from a standing jump: {:?} {}", q.pos, q.heading);
+}
+
+#[test]
 fn turning_around_takes_pi_over_turn_rate_then_run_goes_backwards() {
     let mut p = super::player::Player::new();
     p.target_heading = std::f32::consts::PI;
