@@ -1,0 +1,11 @@
+# R1+Triangle throws the unaware soldier, he gets up and attacks; Triangle grabs him, Square mashing kills
+0 stick 0 0
+2 at 0 5.2
+4 lock 1
+6 exec
+8 lock 0
+200 exec
+230 attack
+236 attack
+242 attack
+248 attack

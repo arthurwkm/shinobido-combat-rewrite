@@ -485,6 +485,12 @@ impl Player {
         self.request(State::Special, name);
     }
 
+    /// Play a paired clip now, whatever the player is doing (grab kills, executions).
+    pub fn start_special(&mut self, name: &str) {
+        self.vy = 0.0;
+        self.start(State::Special, name);
+    }
+
     /// The stick points away from the heading the jump or fall started with (the quick back flick).
     fn air_back(&self) -> bool {
         let d = (self.target_heading - self.air_heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;

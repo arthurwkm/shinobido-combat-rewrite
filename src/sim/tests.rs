@@ -1108,3 +1108,69 @@ fn second_square_with_r1_follows_the_uppercut_with_the_downward_strike() {
     p.step(false, true);
     assert_eq!((p.state, p.world_action()), (State::Attack, "KICK_J01"));
 }
+
+#[test]
+fn grab_holds_mashing_forces_the_kill_and_throw_downs_him() {
+    use super::{combat::Fight, enemy::{Enemy, State}, player::{Player, State as PS}};
+    // an alerted soldier in front of the player (faces +z at the origin, player at z=1 facing -z)
+    let setup = || {
+        let mut p = Player::new();
+        p.pos = [0.0, 0.0, 1.0];
+        p.heading = std::f32::consts::PI;
+        let mut e = Enemy::new([0.0; 3]);
+        e.alert();
+        Fight::new(p, e)
+    };
+    let mut f = setup();
+    assert!(f.grab(false));
+    assert_eq!((f.player.world_action(), f.enemy.state), ("PICK01", State::Held));
+    for _ in 0..60 {
+        f.step(false, false);
+    }
+    assert_eq!(f.enemy.state, State::Held, "stays held and glued in front");
+    assert!((f.enemy.pos[2] - f.player.pos[2]).abs() - super::data::EXEC_DIST < 1e-3);
+    for _ in 0..super::data::GRAB_MASH {
+        f.grab(false);
+    }
+    assert_eq!((f.enemy.state, f.enemy.hp), (State::Dead, 0), "mashing forces the kill");
+
+    let mut f = setup();
+    f.grab(false);
+    for _ in 0..super::data::GRAB_HOLD + 2 {
+        f.step(false, false);
+    }
+    assert_ne!(f.enemy.state, State::Held, "breaks free after GRAB_HOLD");
+
+    let mut f = setup();
+    assert!(f.grab(true), "R1+Triangle throws without a grab");
+    assert_eq!((f.player.world_action(), f.enemy.action(), f.enemy.state), ("THROW_BACK01", "DROP07", State::Down));
+    assert_eq!(f.enemy.hp, super::data::ENEMY_HP - super::data::THROW_DAMAGE);
+    for _ in 0..42 {
+        f.step(false, false);
+    }
+    assert_eq!((f.enemy.state, f.enemy.action()), (State::GetUp, "UP_FR07"));
+    for _ in 0..60 {
+        f.step(false, false);
+    }
+    assert!(matches!(f.enemy.state, State::Chase | State::Attack), "back on his feet");
+    assert_eq!(f.player.state, PS::Idle);
+
+    let mut far = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 9.0]));
+    assert!(!far.grab(false) && !far.grab(true));
+}
+
+#[test]
+fn throw_works_from_the_guard_stance() {
+    use super::{combat::Fight, enemy::Enemy, player::{Player, State as PS}};
+    let mut p = Player::new();
+    p.pos = [0.0, 0.0, 1.0];
+    p.heading = std::f32::consts::PI;
+    p.guard_held = true;
+    let mut f = Fight::new(p, Enemy::new([0.0; 3]));
+    for _ in 0..20 {
+        f.step(false, false);
+    }
+    assert_eq!(f.player.state, PS::Guard);
+    assert!(f.grab(true));
+    assert_eq!(f.player.world_action(), "THROW_BACK01");
+}

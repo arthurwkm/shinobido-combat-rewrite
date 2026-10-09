@@ -164,9 +164,9 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   Inputs per the owner's table (docs/controls.md "Attack and move list": Forward/Back + Square, R1 + Square,
   dash + Square, low kick on a downed enemy, the PAL chains); match each row to its motion with
   `videos/shinobido all attacks.mp4` and `tools/pcsx2.py play`, and record the pairing in docs/controls.md.
-- [ ] Grab and throw from the pad: Triangle grabs the enemy and mashing Square/Triangle may force a stealth kill
-  (easier from behind or at low HP); R1 + Triangle throws him overhead, downed; R1 + Forward + Cross rolls into
-  him and flips over to his back. Motions matched as above (docs/controls.md).
+- [x] (evidence: Triangle in `Fight::grab`: an available execution first, else mash while holding, else grab the soldier in front (PICK01, he struggles in GU_B07, glued in front, breaks free after `GRAB_HOLD` 180 f); Square/Triangle presses count, `GRAB_MASH` 4 (2 at low hp) force the from-behind kill (KIME_A01 / KI_HIBS07); R1+Triangle throws (THROW_BACK01 + enemy DROP07 fall then UP_FR07 get-up, 30 damage), also from the guard stance; no paired grab/throw clips exist in the files (set 07 NAGE_A07 is the soldier throwing, checked by hip height), so the pairing is ESTIMATE in data.rs; tests `grab_holds_mashing_forces_the_kill_and_throw_downs_him`, `throw_works_from_the_guard_stance`, `cargo test -q` 64 passed, clippy clean, compare.py 237/237; `target/debug/viewer --record target/rec/grab --script tools/scripts/grab.txt --every 6 --ticks 120` -> `target/cmp/grab.png`: PICK01 reach with the soldier held, KIME_A01 kill after 4 Square presses, throw flips him over onto his back and he stands up; no clip frame compared (no grab in the clips); still differs: held soldier is not carried by a hand-attached pose) Grab and throw from the pad: Triangle grabs the enemy and mashing Square/Triangle may force a stealth kill
+  (easier from behind or at low HP); R1 + Triangle throws him overhead, downed. Motions matched as above (docs/controls.md).
+- [ ] Roll into the enemy: R1 + Forward + Cross rolls forward into him and flips over to his back (attack or grab from behind).
 - [ ] Pick up, carry and throw crates and bodies: crates become movable sim objects. PICK01 near a crate or a
   dead enemy; carry locomotion (`_K`); PUT01; THROW_A/B/BACK01 throws with gravity and can hit the enemy.
   Movement 36–44 s.
@@ -319,3 +319,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-09 Claude: `_H` attacks from wall hug (AT_E01_H/AT_CA01_H/KICK27_H extracted, 181 actions, pairing ESTIMATE); attack item stays open for PAL chains, CLAW/BLADE01, low kick.
 - 2026-10-09: R1+Square x2 chains uppercut into KICK_J01 (ESTIMATE); attack-set remainder still open (low kick, CLAW/BLADE01, PAL kick chain)
 - 2026-10-09 Claude: attack set closed after viewer check of R1+Square x2 (uppercut -> KICK_J01); low kick moved to Hit reaction item, CLAW/BLADE01/KICK27 triggers stay ESTIMATE gaps.
+- 2026-10-09 Claude: grab/hold/mash-kill/throw from Triangle and R1+Triangle (PICK01, DROP07+UP_FR07 for the thrown soldier, ESTIMATE pairing), seen in viewer; roll-over split into its own item.

@@ -21,6 +21,12 @@ pub enum State {
     Hit,
     /// DIE_A07, stays on its last frame.
     Dead,
+    /// Grabbed by the player: GU_B07 struggle; `Fight` keeps him in front of the player and counts the mashing.
+    Held,
+    /// Thrown: DROP07 once, then GetUp.
+    Down,
+    /// UP_FR07 once, then Chase.
+    GetUp,
 }
 
 pub struct Enemy {
@@ -32,11 +38,14 @@ pub struct Enemy {
     pub pos: [f32; 3],
     /// Yaw in radians; forward is (sin h, cos h) in x/z.
     pub heading: f32,
+    /// Frames spent in `Held` and presses made meanwhile.
+    pub held_for: u32,
+    pub mashes: u32,
 }
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0 }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0 }
     }
 
     pub fn action(&self) -> &'static str {
@@ -70,7 +79,7 @@ impl Enemy {
         if matches!(self.state, State::Dead) {
             return;
         }
-        if self.state == State::Guard {
+        if matches!(self.state, State::Guard | State::Held | State::Down | State::GetUp) {
             return;
         }
         self.hp -= damage;
@@ -88,6 +97,22 @@ impl Enemy {
         self.start(State::Dead, reaction);
     }
 
+    pub fn grab(&mut self) {
+        self.held_for = 0;
+        self.mashes = 0;
+        self.start(State::Held, "GU_B07");
+    }
+
+    /// Thrown down by the player: `damage`, DROP07, then the get-up.
+    pub fn throw(&mut self, damage: i32) {
+        self.hp = (self.hp - damage).max(1);
+        self.start(State::Down, "DROP07");
+    }
+
+    pub fn release(&mut self) {
+        self.start(State::Chase, "RUN07");
+    }
+
     fn start(&mut self, state: State, clip: &str) {
         self.state = state;
         self.world = World::new(clip);
@@ -103,8 +128,14 @@ impl Enemy {
             self.heading += d.clamp(-max, max);
         }
         let done = self.world.done();
+        if self.state == State::Held {
+            self.held_for += 1;
+        }
         match self.state {
             State::Alert if done => self.start(State::Chase, "RUN07"),
+            State::Held if done => self.world = World::new("GU_B07"),
+            State::Down if done => self.start(State::GetUp, "UP_FR07"),
+            State::GetUp if done => self.start(State::Chase, "RUN07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
             State::Chase if dist <= data::ENEMY_ATTACK_RANGE => self.start(State::Attack, data::ENEMY_ATTACK_CLIP),
             State::Idle | State::Patrol | State::Chase if done => self.world = World::new(self.world.action.name),

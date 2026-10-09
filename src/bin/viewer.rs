@@ -346,7 +346,10 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
 
 fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
     if std::mem::take(&mut exec.0) {
-        sim.0.execute();
+        sim.0.grab(pad.0.lock);
+    }
+    if sim.0.enemy.state == shinobido_combat_rewrite::sim::enemy::State::Held && std::mem::take(&mut pad.0.attack) {
+        sim.0.mash();
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();

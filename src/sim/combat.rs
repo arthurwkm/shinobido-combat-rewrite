@@ -1,6 +1,6 @@
 //! Hits both ways between the player and one enemy. Reach, cone and damage values are ESTIMATE (data.rs).
 
-use super::{data, enemy::Enemy, player::{hit_damage, Player, State}};
+use super::{data, enemy::{Enemy, State as EnemyState}, player::{hit_damage, Player, State}};
 
 pub struct Fight {
     pub player: Player,
@@ -33,6 +33,7 @@ impl Fight {
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
         self.enemy.step(self.player.pos);
+        self.hold();
         self.separate();
         self.resolve();
     }
@@ -60,11 +61,16 @@ impl Fight {
     /// Start the execution that `execution::available` offers: align the pair, play both clips, the soldier dies.
     pub fn execute(&mut self) -> bool {
         let Some(kind) = super::execution::available(&self.player, &self.enemy) else { return false };
-        let (pc, ec) = kind.clips();
-        let (p, e) = (&mut self.player, &mut self.enemy);
-        if p.state == State::Special {
+        if self.player.state == State::Special {
             return false;
         }
+        self.kill(kind);
+        true
+    }
+
+    fn kill(&mut self, kind: super::execution::Kind) {
+        let (pc, ec) = kind.clips();
+        let (p, e) = (&mut self.player, &mut self.enemy);
         // Face the victim; the victim is put EXEC_DIST ahead of the player (above kills keep their height).
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
         p.heading = dx.atan2(dz);
@@ -75,9 +81,76 @@ impl Fight {
         } else if kind == super::execution::Kind::Back {
             e.heading = p.heading; // victim's back to the player
         }
-        p.special(pc);
+        p.start_special(pc);
         e.execute(ec);
+    }
+
+    /// Triangle: an available execution first, else mash while holding him, else grab the soldier in front.
+    /// `throw` (R1+Triangle) throws him instead, held or not.
+    pub fn grab(&mut self, throw: bool) -> bool {
+        if throw {
+            return self.throw();
+        }
+        if self.execute() {
+            return true;
+        }
+        if self.enemy.state == EnemyState::Held {
+            self.mash();
+            return true;
+        }
+        let (p, e) = (&mut self.player, &mut self.enemy);
+        let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
+        let near = dx.hypot(dz) <= data::GRAB_REACH && in_front(p.pos, p.heading, e.pos);
+        if !near || !matches!(e.state, EnemyState::Idle | EnemyState::Patrol | EnemyState::Alert | EnemyState::Chase | EnemyState::Hit | EnemyState::Attack | EnemyState::Guard)
+            || !p.request(State::Special, data::GRAB_CLIP) {
+            return false;
+        }
+        e.grab();
         true
+    }
+
+    fn throw(&mut self) -> bool {
+        let (p, e) = (&mut self.player, &mut self.enemy);
+        let held = e.state == EnemyState::Held;
+        if !(held || e.state != EnemyState::Dead && in_front(p.pos, p.heading, e.pos) && !matches!(e.state, EnemyState::Down | EnemyState::GetUp))
+            || !(matches!(p.state, State::Guard | State::GuardEnd) && { p.start_special(data::THROW_CLIP); true } || p.request(State::Special, data::THROW_CLIP)) {
+            return false;
+        }
+        let (s, c) = p.heading.sin_cos();
+        e.pos = [p.pos[0] + s * data::EXEC_DIST, e.pos[1], p.pos[2] + c * data::EXEC_DIST];
+        e.heading = p.heading + std::f32::consts::PI;
+        e.throw(data::THROW_DAMAGE);
+        true
+    }
+
+    /// A Square or Triangle press while he is held: enough of them force the from-behind kill.
+    pub fn mash(&mut self) {
+        let e = &mut self.enemy;
+        if e.state != EnemyState::Held {
+            return;
+        }
+        e.mashes += 1;
+        let easy = e.hp as f32 <= data::EXEC_FRONT_HP * data::ENEMY_HP as f32;
+        if e.mashes >= if easy { data::GRAB_MASH / 2 } else { data::GRAB_MASH } {
+            self.kill(super::execution::Kind::Back);
+        }
+    }
+
+    /// Keep a held soldier in front of the player, and let him break free after `GRAB_HOLD` frames or when the
+    /// player walks off.
+    fn hold(&mut self) {
+        let (p, e) = (&self.player, &mut self.enemy);
+        if e.state != EnemyState::Held {
+            return;
+        }
+        let far = (e.pos[0] - p.pos[0]).hypot(e.pos[2] - p.pos[2]) > 2.0 * data::GRAB_REACH;
+        if e.held_for > data::GRAB_HOLD || far || p.state == State::Hit {
+            e.release();
+            return;
+        }
+        let (s, c) = p.heading.sin_cos();
+        e.pos = [p.pos[0] + s * data::EXEC_DIST, p.pos[1], p.pos[2] + c * data::EXEC_DIST];
+        e.heading = p.heading + std::f32::consts::PI;
     }
 
     fn resolve(&mut self) {

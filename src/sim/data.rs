@@ -106,3 +106,14 @@ pub const HANG_OFFSET: f32 = 0.15;
 pub const VAULT_MIN: f32 = 1.2;
 pub const VAULT_MAX: f32 = 2.3;
 pub const VAULT_DIST: f32 = 0.8;
+
+// ESTIMATE: grab and throw (docs/controls.md: Triangle grabs, mash Square/Triangle for a stealth kill, R1+Triangle throws
+// him downed). No paired grab clips exist in the files (formats.md "Execution packs"): the player reaches with PICK01,
+// the held soldier struggles in GU_B07, the throw is THROW_BACK01 with DROP07 (40 f fall: no thrown-victim clip exists in set 07, NAGE_A07 is the soldier throwing; hips 1.45 to 0.33) then UP_FR07 get-up.
+// Reach (m), frames before he breaks free, presses to force the kill (halved from behind or at low hp), throw damage.
+pub const GRAB_CLIP: &str = "PICK01";
+pub const THROW_CLIP: &str = "THROW_BACK01";
+pub const GRAB_REACH: f32 = 1.2;
+pub const GRAB_HOLD: u32 = 180;
+pub const GRAB_MASH: u32 = 4;
+pub const THROW_DAMAGE: i32 = 30;
