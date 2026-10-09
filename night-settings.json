@@ -7,7 +7,8 @@
       "node *codex-companion.mjs* task *",
       "target/debug/viewer",
       "target/debug/viewer *",
-      "./target/debug/viewer *"
+      "./target/debug/viewer *",
+      ".venv/bin/python tools/pcsx2.py *"
     ],
     "network": {
       "strictAllowlist": true,
