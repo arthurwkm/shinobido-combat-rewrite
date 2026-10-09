@@ -37,12 +37,12 @@ MODES05 = (r"(STOP|DRINK|THROW|PUT)_S05|(STOP|RUN|LAND|DROP|THROW|NAGE|DRINK|PUT
            r"|(LOOK|BACK|NAGE|SPRI)_[RL]H05|WALK_[FBRL]05|KUGURI_[AB]05|KABE_D05|DROP_A05")
 
 
-ENEMY = r"(STOP|WALK_A|PATROL|RUN|HALT|LOOK|SEARCH|SURP|ALARM|GU_[ABY]|HI_[A-Z]+|DIE_[AB]|BLADE|DROP|UP_FR|UP_BA|KI_HI[A-Z]+)07"
+ENEMY = r"(STOP|WALK_A|PATROL|RUN|HALT|LOOK|SEARCH|SURP|ALARM|GU_[ABY]|HI_[A-Z]+|DIE_[AB]|BLADE|DROP|UP_FR|UP_BA|KI_HI[A-Z]+)07|AT_(A|B|CA)19"
 
 
 def enemy_names():
     """Soldier (I_BUSHI, docs/enemy.md) motions of set 07; some are not in mtnfile.bin, so they have no motion ID."""
-    return sorted(p.stem for p in MOTION.glob("*07.nmt") if re.fullmatch(ENEMY, p.stem))
+    return sorted(p.stem for p in MOTION.glob("*.nmt") if re.fullmatch(ENEMY, p.stem))
 
 
 def windows(events, open_t, close_t, key):
@@ -65,7 +65,7 @@ def main():
     for name in player_names() + enemy_names():
         m = parse((MOTION / f"{name}.nmt").read_bytes())
         assert m["tracks"], name
-        root = ", ".join(f"({k[3]}, [{k[0] / 4096}, {k[1] / 4096}, {k[2] / 4096}])" for k in m["tracks"][1 if len(m["tracks"]) == 66 else 0])
+        root = ", ".join(f"({k[3]}, [{k[0] / 4096}, {k[1] / 4096}, {k[2] / 4096}])" for k in m["tracks"][1 if len(m["tracks"]) in (26, 66) else 0])
         evs = ", ".join(f"({round(t * 60)}, {ty}, {a}, {b})" for t, ty, a, b in m["events"])
         hit = ", ".join(f"({a}, {'u32::MAX' if e is None else e})" for _, a, e in windows(m["events"], 1, 2, lambda a, b: 0))
         can = ", ".join(f"({k}, {a}, {'u32::MAX' if e is None else e})" for k, a, e in windows(m["events"], 3, 4, lambda a, b: a))

@@ -520,3 +520,7 @@ counting with root motion). 66-track clips (set-05 modes) are exported too: trac
   is not implemented; next step is binding action slots to the identified motions.
 
 - **ESTIMATE closed (2026-10-09):** RUN_RE01/LE01 trigger not found after three tries (executable ID immediates, category 0x200 grouping, clip survey); left on the `special` path.
+
+## Soldier swings: set 19 and 26-track clips (2026-10-09)
+- **Confirmed** (viewer record vs combat clip): set 07 has no attack; `AT_A19/AT_B19/AT_CA19/AT_CB19/AT_CC19/AT_C19` carry hit events (type 1/2). They have 26 tracks: empty, root T, root Q, hips T, 21 Q (nodes 0..20), 1 extra 2-key track (weapon, unused). Poses with the 24-track layout shifted by one read as a sword cut.
+- **Hypothesis:** set 19 is the Bushi's katana set (has DRAW19, GUARD_*19, DASH19, HIKI19). `chara\chdata.bin` = 380 records of 252 bytes (hp-like word 16, floats from word 19) with no name column; `chara\act2mtn.bin` (104636 bytes) not decoded.

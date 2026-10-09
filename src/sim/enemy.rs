@@ -13,7 +13,7 @@ pub enum State {
     Alert,
     /// RUN07 loop toward the target.
     Chase,
-    /// `ENEMY_ATTACK_CLIP` once, then Chase.
+    /// One of `ENEMY_ATTACK_CLIPS` once, then Chase.
     Attack,
     /// GU_A07 then GU_B07 while held.
     Guard,
@@ -43,11 +43,12 @@ pub struct Enemy {
     pub mashes: u32,
     /// Root-motion speed factor (1 normally, less in caltrops).
     pub slow: f32,
+    swings: usize,
 }
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0 }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, swings: 0 }
     }
 
     pub fn action(&self) -> &'static str {
@@ -140,7 +141,10 @@ impl Enemy {
             State::GetUp if done => self.start(State::Chase, "RUN07"),
             State::Hit if done && self.world.action.name == "HI_F07" => self.start(State::GetUp, "UP_BA07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
-            State::Chase if dist <= data::ENEMY_ATTACK_RANGE => self.start(State::Attack, data::ENEMY_ATTACK_CLIP),
+            State::Chase if dist <= data::ENEMY_ATTACK_RANGE => {
+                self.swings += 1;
+                self.start(State::Attack, data::ENEMY_ATTACK_CLIPS[self.swings % data::ENEMY_ATTACK_CLIPS.len()]);
+            }
             State::Idle | State::Patrol | State::Chase if done => self.world = World::new(self.world.action.name),
             State::Idle | State::Chase if self.guard_held => self.start(State::Guard, "GU_A07"),
             State::Guard if !self.guard_held => self.start(State::Idle, "STOP07"),

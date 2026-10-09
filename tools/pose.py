@@ -56,15 +56,17 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "skeleton.bin").write_bytes(skeleton())
     # 24-track clips: root T, root Q, hips T, 21 Q. 66-track clips (set 05 modes): root T, root Q, then a (T, Q) pair per
-    # bone, node k = bone k+1. Other counts (SHEATH_BU05 68, LOOK07 22) are skipped.
-    names = [n for n in player_names() + enemy_names() if len(parse((MOTION / f"{n}.nmt").read_bytes())["tracks"]) in (24, 66)]
+    # bone, node k = bone k+1. 26-track clips (soldier swings, set 19): empty, root T, root Q, hips T, 21 Q, 1 extra. Other counts (SHEATH_BU05 68, LOOK07 22) are skipped.
+    names = [n for n in player_names() + enemy_names() if len(parse((MOTION / f"{n}.nmt").read_bytes())["tracks"]) in (24, 26, 66)]
     body = b""
     for name in names:
         m = parse((MOTION / f"{name}.nmt").read_bytes())
         tr = m["tracks"]
         body += name.encode().ljust(24, b"\0") + struct.pack("<I", m["frames"])
         for f in range(m["frames"]):
-            if len(tr) == 66:
+            if len(tr) == 26:  # set 19: a leading empty track and one trailing extra (weapon) track around the 24 layout
+                row = sample(tr[3], f, "T") + [x for i in range(21) for x in sample(tr[4 + i], f, "Q")]
+            elif len(tr) == 66:
                 row = sample(tr[3], f, "T") + [x for i in range(21) for x in sample(tr[4 + 2 * i], f, "Q")]
             else:
                 row = sample(tr[2], f, "T") + [x for i in range(21) for x in sample(tr[3 + i], f, "Q")]
