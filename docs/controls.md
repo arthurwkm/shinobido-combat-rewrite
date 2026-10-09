@@ -60,7 +60,7 @@ each row plays is still to be matched (motion names are not evidence of inputs).
 | R1 + Triangle | Throws the enemy overhead, leaving him downed |
 | R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind |
 | Triangle | Grab the enemy; mash Square / Triangle for a chance at a forced stealth kill (easiest from behind or on a low-HP enemy) |
-| Cross, then a quick back flick of the left stick | Backward somersault |
+| Cross with the stick pulled back (pressed together; a flick after Cross is a plain jump) | Backward somersault |
 
 ## Context actions for the sandbox — ESTIMATE
 

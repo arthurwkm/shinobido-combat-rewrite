@@ -23,7 +23,7 @@ pub const ENEMY_ATTACK_CLIPS: &[&str] = &["AT_A19", "AT_B19"];
 // paired reaction whose hips start 1.3 m away). Picking by hit side/height is an open M14 item.
 pub const PLAYER_HIT_CLIP: &str = "HI_BC01";
 // ESTIMATE: horizontal air speed (m/tick) while the stick is held in a jump or fall: RUN01's 1.69 m / 30 f.
-/// ESTIMATE: stick turned this far (rad) from the take-off heading counts as the back flick (about 130 degrees).
+/// Back = stick opposite facing at the Cross press (emulator 2026-10-09); angle threshold ESTIMATE (~130 degrees).
 pub const AIR_BACK_ANGLE: f32 = 2.3;
 pub const AIR_SPEED: f32 = 1.69 / 30.0;
 // ESTIMATE: attack-object damage (event arg0 x power) from which the soldier is thrown back instead of flinching.

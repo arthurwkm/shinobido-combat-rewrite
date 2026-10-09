@@ -1031,7 +1031,7 @@ fn jumping_at_a_crate_stack_vaults_over_it_with_climb_b() {
 }
 
 #[test]
-fn air_attack_kicks_back_flick_flips_and_both_land() {
+fn air_attack_kicks_and_back_flick_keeps_normal_jump() {
     use crate::sim::{player::{Player, State}, terrain::Terrain};
     let t = Terrain::default();
     let air = |setup: &dyn Fn(&mut Player)| {
@@ -1045,12 +1045,46 @@ fn air_attack_kicks_back_flick_flips_and_both_land() {
     assert_eq!((p.state, p.world_action()), (State::AirAct, "KICK_J01"));
     for _ in 0..200 { p.step_on(&t, false, false); if p.state == State::Idle { break; } }
     assert_eq!(p.state, State::Idle, "lands after the kick");
-    let mut b = air(&|p| p.target_heading = std::f32::consts::PI);
-    b.step_on(&t, true, false);
-    assert_eq!(b.world_action(), "FLIP_B01");
+    for delay in [2, 6, 12] {
+        let mut b = Player::new();
+        b.jump();
+        for _ in 0..delay { b.step(false, false); }
+        b.target_heading = std::f32::consts::PI;
+        b.step(true, false);
+        assert_eq!(b.world_action(), "JUMP01");
+    }
     let mut g = Player::new();
     g.step_on(&t, false, true);
     assert_eq!(g.state, State::Attack, "on the ground Square is still a slash");
+}
+
+#[test]
+fn ground_backflip_on_cross_with_stick_back() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.target_heading = std::f32::consts::PI;
+    p.jump();
+    assert_eq!(p.world_action(), "FLIP_B01");
+    let takeoff = super::extracted::ACTIONS.iter().find(|a| a.name == "FLIP_B01").unwrap().events.iter().find(|e| e.1 == 9).unwrap().0;
+    for _ in 1..takeoff {
+        p.step(true, false);
+        assert_eq!(p.pos[1], 0.0);
+        assert_eq!(p.world_action(), "FLIP_B01");
+    }
+    p.step(true, false);
+    assert!(p.pos[1] > 0.0);
+    let mut airborne = 1;
+    for _ in 0..120 {
+        p.step(false, false);
+        if p.pos[1] > 0.0 { airborne += 1; }
+        if p.state == State::AirAct { assert_eq!(p.heading, 0.0); }
+        if p.state == State::Idle { break; }
+    }
+    assert_eq!(p.state, State::Idle);
+    assert!((1.3..2.3).contains(&-p.pos[2]), "landing position: {:?}", p.pos);
+    let seconds = airborne as f32 * super::DT;
+    eprintln!("flip: airborne {seconds:.3} s, backward {:.3} m", -p.pos[2]);
+    assert!((0.45..0.65).contains(&seconds), "airborne {seconds} s");
 }
 
 #[test]

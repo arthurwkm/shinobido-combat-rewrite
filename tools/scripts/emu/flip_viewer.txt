@@ -1,0 +1,6 @@
+# flip.txt middle case: face right, then left stick + Cross together (3-tick tap).
+200 stick 1 0
+230 stick 0 0
+270 stick -1 0
+270 jump
+273 stick 0 0

@@ -53,6 +53,9 @@ fn gravity(vy: f32) -> f32 {
 /// Emulator A/B 2026-10-09 (`tools/scripts/emu/jump.txt`): a standing jump is airborne 18 frames at 25 fps (0.72 s)
 /// with a ~0.3 s hang at the top; this and `gravity` give 0.76 s and the same hang.
 const JUMP_V0: f32 = 120.0;
+/// ESTIMATE calibrated to flip.txt: airborne ~13 frames at 25 fps. Type-9 arg 1.0 cannot scale
+/// the 120 impulse to this value; the flip's own impulse initializer was not found.
+const FLIP_V0: f32 = 67.0;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
 const UNIT_M: f32 = 0.84 / 9.5;
@@ -60,8 +63,6 @@ const UNIT_M: f32 = 0.84 / 9.5;
 const LAND_RUN_FRAME: u32 = 2;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
-/// ESTIMATE: frames after pressing Jump in which a back flick of the stick starts FLIP_B01.
-const FLIP_WINDOW: u32 = 20;
 /// KABE_U01 length in frames (extracted.rs).
 const ACTIONS_KABE_U_FRAMES: f32 = 36.0;
 
@@ -168,6 +169,16 @@ impl Player {
         self.try_grab(terrain);
         if self.state == State::Hang { return; }
         self.step_action(forward, attack);
+        let flip_event = (self.state == State::AirAct && self.world.action.name == "FLIP_B01")
+            .then(|| self.world.action.events.iter().find(|e| e.1 == 9).map(|e| e.0 as u32)).flatten();
+        let flip_wait = flip_event.is_some_and(|f| self.world.frame < f);
+        let flip_launch = flip_event == Some(self.world.frame);
+        if flip_launch {
+            self.vy = FLIP_V0;
+            let (s, c) = self.air_heading.sin_cos();
+            let speed = 40.0 * UNIT_M * super::DT;
+            self.air_vel = [-s * speed, -c * speed];
+        }
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
         if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
             self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
@@ -185,13 +196,14 @@ impl Player {
             self.pos[2] += self.air_vel[1];
         }
         // Special clips (climbs) own the height through root motion.
-        let rooted = matches!(self.state, State::Special | State::WallRun);
-        if !jumping && !grounded && !rooted {
+        let rooted = flip_wait || matches!(self.state, State::Special | State::WallRun);
+        if !jumping && (!grounded || flip_launch) && !rooted {
             self.vy += gravity(self.vy) * super::DT;
             self.pos[1] += self.vy * super::DT * UNIT_M;
         }
         let (pos, wall, ceiling) = terrain.move_body(before, self.pos, grounded && !jumping);
-        if !matches!(self.state, State::Jump | State::Fall) {
+        // Air actions add root motion too; feeding it back into momentum accelerates every tick.
+        if !matches!(self.state, State::Jump | State::Fall | State::AirAct) {
             self.air_vel = [pos[0] - before[0], pos[2] - before[2]];
         }
         self.pos = pos;
@@ -236,10 +248,6 @@ impl Player {
             }
             (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, self.idle_clip),
             _ => {}
-        }
-        if self.state == State::Jump && self.world.frame < FLIP_WINDOW && self.air_back() {
-            self.start(State::AirAct, "FLIP_B01");
-            self.fall_from = self.pos[1];
         }
         if self.state == State::AirAct {
             if self.world.done() { self.start(State::Fall, "FALL01"); } else { self.advance(); }
@@ -563,7 +571,7 @@ impl Player {
         self.request(State::Dodge, name)
     }
 
-    /// The stick points away from the heading the jump or fall started with (the quick back flick).
+    /// The stick points away from the heading the jump or fall started with (backward air kick).
     fn air_back(&self) -> bool {
         let d = (self.target_heading - self.air_heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         d.abs() > super::data::AIR_BACK_ANGLE
@@ -576,6 +584,17 @@ impl Player {
         }
         if self.state == State::WallRun {
             return self.wall_kick("TRI_J01");
+        }
+        let back = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch)
+            && back.abs() > super::data::AIR_BACK_ANGLE {
+            if self.request(State::AirAct, "FLIP_B01") {
+                self.air_heading = self.heading;
+                self.fall_from = self.pos[1];
+                self.vy = 0.0;
+                self.air_vel = [0.0; 2];
+            }
+            return;
         }
         if let Some(dy) = self.vault_top.filter(|_| matches!(self.state, State::Idle | State::Walk | State::Run | State::Crouch)) {
             self.vault_base = self.pos[1];

@@ -541,6 +541,17 @@ counting with root motion). 66-track clips (set-05 modes) are exported too: trac
 
 ### Wall ascent and impulse — bounded lookup (2026-10-08)
 
+- **Confirmed (owner emulator measurements, 2026-10-09):** FLIP_B01's type-9 event at frame 8
+  is its take-off impulse. Cross and opposite stick together start the ground somersault;
+  flicks 2/6/12 frames after Cross or 4 frames before give a normal jump.
+- **ESTIMATE (emulator calibration):** `FLIP_V0 = 67.0` game units/s matches flip.txt's
+  ~13 airborne frames at 25 fps (~0.52 s). Event arg0=1.0 does not scale the known 120
+  impulse to 67; the flip's own impulse initializer was not found. Horizontal launch
+  remains backward 40 game units/s. Correcting AirAct's root-motion-to-momentum feedback
+  gives 0.500 s airborne and 1.827 m backward by Idle in the headless regression.
+  This matches the requested timing/distance ranges; visual comparison remains pending.
+  No new executable lookup was performed for this correction.
+
 - **Confirmed from parsed motions:** KABE_U01 and TRI_A01 have zero root translation;
   TRI_J01 has +0.226807 m Z and no Y; KABE_E01 has −0.652344 m Z and no Y.
   KABE_U01 has 36 track frames versus 22 header frames. These cannot supply an ascent

@@ -1,0 +1,12 @@
+# Backward somersault timing probe, facing right each time: back flick 4 f before Cross; together; Cross then flick +2 f.
+30 down lright
+60 up lright
+100 tap lleft
+104 tap cross
+200 down lright
+230 up lright
+270 tap lleft cross
+370 down lright
+400 up lright
+440 tap cross
+442 tap lleft
