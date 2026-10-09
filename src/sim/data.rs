@@ -23,6 +23,8 @@ pub const ENEMY_ATTACK_CLIP: &str = "AT_A01";
 // paired reaction whose hips start 1.3 m away). Picking by hit side/height is an open M14 item.
 pub const PLAYER_HIT_CLIP: &str = "HI_BC01";
 // ESTIMATE: horizontal air speed (m/tick) while the stick is held in a jump or fall: RUN01's 1.69 m / 30 f.
+/// ESTIMATE: stick turned this far (rad) from the take-off heading counts as the back flick (about 130 degrees).
+pub const AIR_BACK_ANGLE: f32 = 2.3;
 pub const AIR_SPEED: f32 = 1.69 / 30.0;
 // ESTIMATE: distance (m) at which a chasing soldier starts its swing.
 pub const ENEMY_ATTACK_RANGE: f32 = 1.5;

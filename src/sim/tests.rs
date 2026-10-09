@@ -1000,3 +1000,26 @@ fn jumping_at_a_crate_stack_vaults_over_it_with_climb_b() {
     q.jump();
     assert_eq!(q.world_action(), "JUMP01");
 }
+
+#[test]
+fn air_attack_kicks_back_flick_flips_and_both_land() {
+    use crate::sim::{player::{Player, State}, terrain::Terrain};
+    let t = Terrain::default();
+    let air = |setup: &dyn Fn(&mut Player)| {
+        let mut p = Player::new();
+        p.jump();
+        for _ in 0..12 { p.step_on(&t, false, false); }
+        setup(&mut p);
+        p
+    };
+    let mut p = air(&|p| p.step_on(&t, false, true));
+    assert_eq!((p.state, p.world_action()), (State::AirAct, "KICK_J01"));
+    for _ in 0..200 { p.step_on(&t, false, false); if p.state == State::Idle { break; } }
+    assert_eq!(p.state, State::Idle, "lands after the kick");
+    let mut b = air(&|p| p.target_heading = std::f32::consts::PI);
+    b.step_on(&t, true, false);
+    assert_eq!(b.world_action(), "FLIP_B01");
+    let mut g = Player::new();
+    g.step_on(&t, false, true);
+    assert_eq!(g.state, State::Attack, "on the ground Square is still a slash");
+}

@@ -38,6 +38,8 @@ pub enum State {
     Climb,
     /// CLIMB_B01: from the ground over a crate-high box (VAULT_MIN..VAULT_MAX), landing beyond it or on its top.
     Vault,
+    /// KICK_J01 / KICK_JB01 / FLIP_B01 played in the air: gravity and momentum go on, FALL01 follows.
+    AirAct,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -52,6 +54,8 @@ const JUMP_V0: f32 = 155.0;
 const UNIT_M: f32 = 9.8 / 450.0;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
+/// ESTIMATE: frames after pressing Jump in which a back flick of the stick starts FLIP_B01.
+const FLIP_WINDOW: u32 = 20;
 /// KABE_U01 length in frames (extracted.rs).
 const ACTIONS_KABE_U_FRAMES: f32 = 36.0;
 
@@ -99,6 +103,8 @@ pub struct Player {
     vault_top: Option<f32>,
     vault_base: f32,
     vault_h: f32,
+    /// Heading at take-off / fall start: a stick turned away from it in the air is the back flick.
+    air_heading: f32,
 }
 
 impl Default for Player {
@@ -109,7 +115,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -141,10 +147,11 @@ impl Player {
         if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
             self.air_vel = [self.pos[0] - before[0], self.pos[2] - before[2]];
             self.fall_from = before[1];
+            self.air_heading = self.heading;
             self.start(State::Fall, "FALL01");
-        } else if matches!(self.state, State::Jump | State::Fall) {
+        } else if matches!(self.state, State::Jump | State::Fall | State::AirAct) {
             // Momentum from the last grounded tick; a held stick steers along the heading (ESTIMATE, data.rs).
-            if forward {
+            if forward && self.state != State::AirAct {
                 let speed = self.air_vel[0].hypot(self.air_vel[1]).max(super::data::AIR_SPEED);
                 let (s, c) = self.heading.sin_cos();
                 self.air_vel = [s * speed, c * speed];
@@ -168,7 +175,7 @@ impl Player {
         if !rooted && self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
             self.vy = 0.0;
             if jumping || !grounded {
-                let drop = if self.state == State::Fall { self.fall_from - pos[1] } else { 0.0 };
+                let drop = if matches!(self.state, State::Fall | State::AirAct) { self.fall_from - pos[1] } else { 0.0 };
                 let clip = if drop >= super::data::LAND_A_DROP { "LAND_A01" } else if drop >= super::data::LAND_B_DROP { "LAND_B01" } else { "LAND01" };
                 self.start(State::Land, clip);
             }
@@ -204,6 +211,14 @@ impl Player {
             }
             (State::GuardEnd, _) if self.world.done() => self.start(State::Idle, self.idle_clip),
             _ => {}
+        }
+        if self.state == State::Jump && self.world.frame < FLIP_WINDOW && self.air_back() {
+            self.start(State::AirAct, "FLIP_B01");
+            self.fall_from = self.pos[1];
+        }
+        if self.state == State::AirAct {
+            if self.world.done() { self.start(State::Fall, "FALL01"); } else { self.advance(); }
+            return;
         }
         if self.state == State::Jump {
             self.advance();
@@ -455,6 +470,12 @@ impl Player {
         self.request(State::Special, name);
     }
 
+    /// The stick points away from the heading the jump or fall started with (the quick back flick).
+    fn air_back(&self) -> bool {
+        let d = (self.target_heading - self.air_heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        d.abs() > super::data::AIR_BACK_ANGLE
+    }
+
     /// Jump. Running into a tall wall (wall_tall, facing it) starts the wall run instead; a second press kicks off.
     pub fn jump(&mut self) {
         if self.state == State::Hang {
@@ -472,7 +493,9 @@ impl Player {
         if self.state == State::Run && self.wall_tall && facing {
             self.start(State::WallRun, "KABE_U01");
         } else {
-            self.request(State::Jump, "JUMP01");
+            if self.request(State::Jump, "JUMP01") {
+                self.air_heading = self.heading;
+            }
         }
     }
 
@@ -520,6 +543,11 @@ impl Player {
     /// ESTIMATE: the first attack is AT_A01; while an attack's cancel window is open, a press goes to the first
     /// permitted target (the choice between targets in the real game depends on input direction/state, not decoded).
     fn press_attack(&mut self) {
+        if self.state == State::Fall || self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME {
+            let clip = if self.air_back() { "KICK_JB01" } else { "KICK_J01" };
+            self.fall_from = if self.state == State::Fall { self.fall_from } else { self.pos[1] };
+            return self.start(State::AirAct, clip);
+        }
         let f = self.world.frame;
         let target = if self.state == State::Attack {
             let a = self.world.action;
