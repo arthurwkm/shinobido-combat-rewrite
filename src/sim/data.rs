@@ -89,6 +89,11 @@ pub const CAM_FOCUS_HEIGHT: f32 = 1.3;
 pub const CAM_MOUSE_SENS: f32 = 0.004;
 pub const CAM_STICK_SPEED: f32 = 2.5;
 pub const CAM_LOCK_RATE: f32 = 6.0;
+// ESTIMATE: target switch is not in Shinobido; copied from Elden Ring's flick (owner, 2026-10-09). A sideways
+// right stick past SWITCH_FLICK (or mouse moving SWITCH_MOUSE_PX in one frame) switches once; back under SWITCH_REARM re-arms.
+pub const SWITCH_FLICK: f32 = 0.8;
+pub const SWITCH_REARM: f32 = 0.3;
+pub const SWITCH_MOUSE_PX: f32 = 40.0;
 // ESTIMATE: stick deflection (0..1) below which input is ignored, and below which forward input walks instead of running
 // (the game's analog threshold is not decoded, PROGRESS M6b).
 pub const STICK_DEAD: f32 = 0.2;

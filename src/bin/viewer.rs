@@ -3,10 +3,10 @@
 
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
-use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll};
+use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::lockon::LockOn;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
-use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED};
+use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED, SWITCH_FLICK, SWITCH_MOUSE_PX, SWITCH_REARM};
 use shinobido_combat_rewrite::sim::hud::{self, Debug};
 use shinobido_combat_rewrite::sim::input::Input;
 use shinobido_combat_rewrite::sim::combat::Fight;
@@ -335,7 +335,10 @@ fn shoot(mut commands: Commands, mut shot: ResMut<Shot>, mut exit: MessageWriter
 }
 
 /// Samples keyboard/mouse and gamepad every render frame: held state overwritten, edges OR-ed until a tick takes them.
-fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, wheel: Res<AccumulatedMouseScroll>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>) {
+/// Target switch is the Elden Ring flick (the original has none): while locked, a sideways right stick, mouse or
+/// arrow-key flick moves the lock once; it re-arms when the input comes back near centre.
+#[allow(clippy::too_many_arguments)]
+fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>>, motion: Res<AccumulatedMouseMotion>, pads: Query<&Gamepad>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, mut armed: Local<bool>) {
     let k = |c| keys.pressed(c) as i32 as f32;
     let mut stick = Vec2::new(k(KeyCode::KeyD) - k(KeyCode::KeyA), k(KeyCode::KeyW) - k(KeyCode::KeyS)).clamp_length_max(1.0);
     if keys.pressed(KeyCode::AltLeft) {
@@ -347,7 +350,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.item |= keys.just_pressed(KeyCode::KeyQ);
     i.item_next |= keys.just_pressed(KeyCode::Tab);
     i.lock = mouse.pressed(MouseButton::Right);
-    i.switch = i.switch.saturating_add(wheel.delta.y.signum() as i8 * (wheel.delta.y != 0.0) as i8);
+    let mut flick = (motion.delta.x / SWITCH_MOUSE_PX).clamp(-1.0, 1.0) + k(KeyCode::ArrowRight) - k(KeyCode::ArrowLeft);
     i.crouch = keys.pressed(KeyCode::ControlLeft);
     i.dash = keys.pressed(KeyCode::ShiftLeft);
     exec.0 |= keys.just_pressed(KeyCode::KeyE);
@@ -360,14 +363,20 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.jump |= g.just_pressed(GamepadButton::South);
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
-        if i.lock {
-            i.switch += g.just_pressed(GamepadButton::DPadRight) as i8 - g.just_pressed(GamepadButton::DPadLeft) as i8;
-        } else {
-            i.item_next |= g.just_pressed(GamepadButton::DPadRight);
+        i.item_next |= g.just_pressed(GamepadButton::DPadRight);
+        let rx = g.get(GamepadAxis::RightStickX).unwrap_or(0.0);
+        if rx.abs() > flick.abs() {
+            flick = rx;
         }
         i.crouch |= g.pressed(GamepadButton::LeftTrigger);
         i.dash |= g.pressed(GamepadButton::East);
         exec.0 |= g.just_pressed(GamepadButton::North);
+    }
+    if !i.lock || flick.abs() < SWITCH_REARM {
+        *armed = true;
+    } else if *armed && flick.abs() >= SWITCH_FLICK {
+        i.switch = i.switch.saturating_add(flick.signum() as i8);
+        *armed = false;
     }
     i.stick = [stick.x, stick.y];
 }

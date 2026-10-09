@@ -186,8 +186,10 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   The alert states drive the eye colours, sampled from stealth-clip frames.
 - [x] (evidence: `cargo test -q` 73 passed incl. `locked_stick_strafes_around_the_target`, clippy clean; `target/debug/viewer --record target/rec/lock --script tools/scripts/lock.txt --every 50 --ticks 330` -> `target/cmp/lock.png`: R1 shows `lock-on locked`, GU_B01 guard when still, WALK_R02/WALK_B02 strafing facing the soldier, lock-on off and SHEATH01 after release; R1 select/release, wheel or D-pad (while R1 held) switch, lock camera via `follow_lock`; not compared with a combat.mov frame, and the debug speed read 0.00 m/s during the strafe frames although the unit test shows -x travel, unexplained; switch needs a second soldier, next item) Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
 - [ ] Lock-on from the new clips (`videos/shinobido lock in strafe fight.mov`, `videos/shinobido lock in lock off
-  stealth kill from above.mov`): target switch, strafing and guard against an attack; match timings, motions and
-  camera, fix what differs. Sideways roll while locked (owner, 2026-10-09; not in the clips but counts): it
+  stealth kill from above.mov`): strafing and guard against an attack; match timings, motions and camera, fix
+  what differs. Target switch is not in the game; per the owner it copies Elden Ring's sideways flick (right
+  stick, mouse or arrow keys while locked; D-pad/wheel switch removed 2026-10-09, thresholds ESTIMATE). Needs a
+  live check with several soldiers (M15 item below); `--record` scripts bypass `read_pad` and use `switch`. Sideways roll while locked (owner, 2026-10-09; not in the clips but counts): it
   follows the same arc around the target as the strafe, not a straight line.
 - [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
   (combat 46 s, 54–58 s; stealth 14 s; kill from behind and from above with the cue in `videos/shinobido lock in
@@ -230,6 +232,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude (owner request): target switch moved from D-pad/mouse wheel to an Elden Ring-style flick (right stick, mouse, arrows); Shinobido has no switch.
 2026-10-09 Codex: repaired inherited execution-camera test's reversed side assertion; retained configured framing and tested elapsed-time equivalence/release. 74 tests pass, clippy/240-action comparison green; viewer builds with incremental compilation disabled after stale-symbol link failure. Reviewed inherited diff and script; no visual check or feature completion claimed. Runner must commit this health fix before new feature work.
 - 2026-10-09 Perception: walls block sight (not sound) via Terrain::sight_clear; ESTIMATE numbers unchanged.
 - 2026-10-09 Claude: wall run (KABE_U01 rise, TRI_J01/KABE_E01 kick-off) from the pad; launch height/speed ESTIMATE; RUN_RE/LE split into its own item.

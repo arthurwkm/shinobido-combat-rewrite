@@ -81,8 +81,10 @@ animation names as evidence of button assignments.
 | Execution | Attack when execution cue is available | Shares attack; execution input not shown |
 | Item actions | Use item | Selected item chooses drink/throw/etc.; selection not shown |
 
-Additional viewer choices: R3 / middle mouse recentres the camera; D-pad left/right
-or mouse wheel switches targets while locked and cycles sandbox items otherwise.
+Additional viewer choices: R3 / middle mouse recentres the camera; D-pad right / Tab
+cycles sandbox items. Target switch does not exist in Shinobido; the viewer copies Elden
+Ring's (owner, 2026-10-09): while locked, flick the right stick, the mouse or the left/right
+arrow keys sideways to move the lock to the next target that side.
 These are **ESTIMATE**, not claims about the original pad. They keep target and item
 selection reachable without implementing an equipment menu. Automatic reactions,
 falls, landings and idle variants require no separate button. Other unbound clips
