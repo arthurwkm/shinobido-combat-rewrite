@@ -1,0 +1,9 @@
+# Run right 2 s and release; run right 1 s then reverse to left; dash right (circle held) 1.5 s and release.
+30 down lright
+150 up lright
+240 down lright
+300 up lright
+300 down lleft
+390 up lleft
+480 down lright circle
+570 up lright circle

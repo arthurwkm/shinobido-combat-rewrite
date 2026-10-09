@@ -1,0 +1,10 @@
+# Viewer copy of stop.txt.
+30 stick 1 0
+150 stick 0 0
+240 stick 1 0
+300 stick -1 0
+390 stick 0 0
+480 dash 1
+480 stick 1 0
+570 stick 0 0
+570 dash 0

@@ -8,5 +8,8 @@ The emulator is the ground truth over the clips and estimates. Test spot: open g
 | Action | Script | Game (emulator) | Viewer | Verdict |
 |---|---|---|---|---|
 | Standing jump | `jump` | airborne 18 frames at 25 fps = 0.72 s; fast rise ~0.16 s, ~0.3 s hang, fast fall; feet ~1.5 m up | before: apex 0.57 m, ~1.0 s. After `JUMP_V0` 120 (exe 0x604a28) and `UNIT_M` 0.84/9.5: apex 1.49 m, lands at the same script tick (84) | matches (timing, height); camera differs: the game's rises with him |
-| Run, stop, turn | `loco` | camera stays low behind; running towards the camera (stick back) he turns and faces it, camera does not swing behind | camera swings behind him; frames him higher and farther | differs: camera (M18 camera item) |
+| Camera | `loco` | Shinobido's own camera | the reference project's camera (owner decision: not Shinobido's) | not compared by design |
 | Running jump | `loco` (570–720) | airborne 18 frames at 25 fps like the standing jump, run speed carried; running again ~2 game frames after touchdown | before: LAND01 (26 f) always played out. Now a held stick leaves LAND01 from its type-5 event frame 2; RUN01 at the same tick (690) | matches |
+| Stop | `stop` (30–150 release) | ~0.24 s slide then the low ready stance (same pose as HALT01), still ~0.4 s after release | HALT01 (32 f) then STOP01 at tick 186 | matches (within ~0.1 s) |
+| Reverse while running | `stop` (240–390) | turns round in ~0.2 s and runs the other way | same within a few ticks | matches |
+| Dash (Circle held) | `stop` (480–570) | low ninja run, arms back, faster than the run | RUN_D05 at 5.7 m/s, same pose; HALT01 on release | matches |

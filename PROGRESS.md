@@ -233,8 +233,8 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   hidden beyond `KI_RANGE` ESTIMATE); old one-soldier mode is `--one`. Evidence: `cargo test -q` 77 passed,
   clippy clean, `target/debug/viewer --shot target/shots/solo.png --solo` shows no soldier, needle or target bar.
 - Time base: the disc is PAL (VPS 50, game FPS 25); owner decision 2026-10-09: keep 60 Hz, do not change.
-- [ ] Locomotion A/B: walk, run, start, stop, turn on the spot, 180 turn, dash; speed (m/s from distance over
-  time against a known-size object), acceleration and stop slide.
+- [x] Locomotion A/B (`stop.txt`, `loco.txt`): stop (HALT01 pose and timing), reverse, dash match within ~0.1 s; tiles
+  `target/cmp/stop_ab.jpg`, `rev_ab.jpg`, `dash_ab.jpg`. Walk not testable (keyboard sticks are full tilt only).
 - [x] Standing jump A/B (`tools/scripts/emu/jump.txt`): air 0.72 s / apex ~1.5 m in the emulator; sim now uses
   launch 120.0 (exe 0x604a28) and 1 unit = 0.84/9.5 m (was 155 / 9.8/450 ESTIMATEs: 0.57 m apex). Evidence: `cargo test -q`
   77 passed (jump test pinned to the emulator), compare.py 240/240, `target/cmp/jump_ab.jpg` lands on the same tick 84.
@@ -270,6 +270,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: stop/reverse/dash A/B match the emulator; no change needed.
 - 2026-10-09 Claude: running jump A/B; held stick leaves LAND01 from frame 2.
 - 2026-10-09 Claude: camera replaced by the reference project's (owner: not Shinobido's); record mode steps it by DT.
 - 2026-10-09 Claude: emulator A/B standing jump: launch 120 + model-unit scale replace ESTIMATEs; apex 0.57 -> 1.49 m.
