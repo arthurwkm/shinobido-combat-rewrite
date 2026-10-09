@@ -944,3 +944,39 @@ fn wall_run_reaching_the_top_kicks_off_with_kabe_e() {
     for _ in 0..37 { p.step_on(&t, true, false); }
     assert_eq!(p.world_action(), "KABE_E01");
 }
+
+#[test]
+fn jumping_at_a_ledge_hangs_shimmies_and_climbs_or_drops() {
+    use crate::sim::{player::{Player, State}, terrain::Terrain};
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [10.0, 0.0, 3.0]; // rooftop face at z 6, 3.5 m high, facing +z
+    for _ in 0..120 { p.step_on(&t, true, false); }
+    p.jump(); // wall run up the roof's face; the hands catch the edge on the way
+    let mut seen = std::collections::HashSet::new();
+    for _ in 0..60 { p.step_on(&t, true, false); seen.insert(p.world_action()); if p.state == State::Hang { break; } }
+    assert_eq!(p.state, State::Hang, "caught the ledge: {seen:?}");
+    assert!(p.pos[1] > 0.5 && p.pos[1] < 3.5, "hang height {}", p.pos[1]);
+    for _ in 0..120 { p.step_on(&t, false, false); }
+    assert_eq!(p.world_action(), "STOP_A06");
+    // shimmy to the right (-x) until the crate ends
+    p.target_heading = p.heading - std::f32::consts::FRAC_PI_2;
+    let x = p.pos[0];
+    for _ in 0..400 { p.step_on(&t, true, false); }
+    assert!(p.pos[0] < x && p.pos[0] > 6.0, "shimmied within the ledge: {} -> {}", x, p.pos[0]);
+    assert_eq!(p.state, State::Hang);
+    p.jump();
+    assert_eq!(p.world_action(), "CLIMB06");
+    for _ in 0..80 { p.step_on(&t, false, false); }
+    assert_eq!(p.state, State::Idle);
+    assert!((p.pos[1] - 3.5).abs() < 0.01, "on top: {}", p.pos[1]);
+    // drop
+    let mut q = Player::new();
+    q.pos = [10.0, 0.0, 3.0];
+    for _ in 0..120 { q.step_on(&t, true, false); }
+    q.jump();
+    for _ in 0..60 { q.step_on(&t, true, false); if q.state == State::Hang { break; } }
+    q.crouch_held = true;
+    for _ in 0..200 { q.step_on(&t, false, false); }
+    assert!(q.pos[1] < 0.01 && q.state != State::Hang, "dropped: {:?}", q.state);
+}

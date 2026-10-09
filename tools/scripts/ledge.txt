@@ -1,0 +1,8 @@
+# Run +z at the rooftop face (z=6, 3.5 m): jump wall-runs up, the hands catch the edge, shimmy right, climb.
+0 at 10 3
+0 yaw 0
+0 stick 0 1
+100 jump
+150 stick -1 0
+230 stick 0 0
+260 jump

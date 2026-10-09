@@ -91,3 +91,11 @@ pub const HUG_WALL_MIN: f32 = 2.0;
 pub const WALL_RUN_RISE: f32 = 3.0;
 // ESTIMATE: horizontal speed (m/tick) away from the wall after TRI_J01 / KABE_E01.
 pub const KICK_SPEED: f32 = 0.05;
+
+// ESTIMATE: ledge catch window. The hands reach the top while it is HANG_MIN..LEDGE_REACH above the feet, within
+// LEDGE_GRAB_DIST of the face; hanging feet sit CLIMB06's root rise below the top, HANG_OFFSET out from the face
+// (CLIMB06's forward root motion then ends the body on the top). No catch rule was found in the files.
+pub const LEDGE_REACH: f32 = 2.4;
+pub const HANG_MIN: f32 = 1.5;
+pub const LEDGE_GRAB_DIST: f32 = 0.5;
+pub const HANG_OFFSET: f32 = 0.15;

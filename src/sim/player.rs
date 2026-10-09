@@ -32,6 +32,10 @@ pub enum State {
     WallRun,
     /// TRI_J01 / KABE_E01: pushed off the wall, falling away from it with gravity.
     WallKick,
+    /// TWO06 catch, then STOP_A06 / HANG_L06 / HANG_R06 hanging from a ledge (jump climbs, crouch drops).
+    Hang,
+    /// CLIMB06 onto the ledge top.
+    Climb,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -85,6 +89,10 @@ pub struct Player {
     vy: f32,
     fall_from: f32,
     air_vel: [f32; 2],
+    /// Top height of the ledge being hung from.
+    hang_top: f32,
+    /// Set by dropping from a ledge, cleared on the ground: no instant re-catch.
+    grab_lock: bool,
 }
 
 impl Default for Player {
@@ -95,7 +103,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2] }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -112,6 +120,12 @@ impl Player {
             None => false,
         };
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
+        if grounded { self.grab_lock = false; }
+        if matches!(self.state, State::Hang | State::Climb) {
+            return self.step_ledge(terrain, forward);
+        }
+        self.try_grab(terrain);
+        if self.state == State::Hang { return; }
         self.step_action(forward, attack);
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
         if !grounded && !jumping && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch) {
@@ -281,6 +295,58 @@ impl Player {
         self.advance();
     }
 
+    /// Catch a ledge in reach while rising or falling (Jump after take-off, Fall): TWO06, body hung below the top.
+    fn try_grab(&mut self, terrain: &super::terrain::Terrain) {
+        use super::data::{HANG_MIN, HANG_OFFSET, LEDGE_GRAB_DIST, LEDGE_REACH};
+        let airborne = matches!(self.state, State::Fall | State::WallRun) || self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
+        if !airborne || self.grab_lock || self.crouch_held { return; }
+        let (s, c) = self.heading.sin_cos();
+        let Some(top) = terrain.ledge(self.pos, [s, c], LEDGE_REACH) else { return };
+        let dy = top[1] - self.pos[1];
+        if dy < HANG_MIN || (top[0] - self.pos[0]).hypot(top[2] - self.pos[2]) > LEDGE_GRAB_DIST { return; }
+        let rise = ACTIONS.iter().find(|a| a.name == "CLIMB06").map_or(2.3, |a| a.root.last().map_or(2.3, |k| k.1[1]));
+        let hung = [top[0] - s * HANG_OFFSET, top[1] - rise, top[2] - c * HANG_OFFSET];
+        if hung[1] < terrain.ground_height(hung) { return; } // too low to hang: CLIMB06 starts 2.3 m under the top
+        self.hang_top = top[1];
+        self.pos = hung;
+        self.vy = 0.0;
+        self.air_vel = [0.0; 2];
+        self.start(State::Hang, "TWO06");
+    }
+
+    /// Hanging and climbing own the body (no gravity or collision). Stick sideways shimmies while the ledge continues.
+    fn step_ledge(&mut self, terrain: &super::terrain::Terrain, forward: bool) {
+        if self.state == State::Climb {
+            self.advance();
+            if self.world.done() {
+                self.pos[1] = self.hang_top;
+                self.start(State::Idle, self.idle_clip);
+            }
+            return;
+        }
+        if self.crouch_held {
+            self.grab_lock = true;
+            self.fall_from = self.pos[1];
+            self.start(State::Fall, "FALL01");
+            return;
+        }
+        let d = self.target_heading - self.heading;
+        let side = if forward && d.sin().abs() > 0.5 { d.sin().signum() } else { 0.0 };
+        let name = self.world.action.name;
+        let clip = if side < 0.0 { "HANG_R06" } else if side > 0.0 { "HANG_L06" } else if name == "TWO06" && !self.world.done() { "TWO06" } else { "STOP_A06" };
+        if name != clip || self.world.done() {
+            self.start(State::Hang, clip);
+        }
+        let before = self.pos;
+        self.advance();
+        // The shimmy ends where the ledge does.
+        let (s, c) = self.heading.sin_cos();
+        let hand = [self.pos[0], self.hang_top - 1.0, self.pos[2]];
+        if terrain.ledge(hand, [s, c], 1.0).is_none_or(|t| (t[1] - self.hang_top).abs() > 0.01) {
+            self.pos = before;
+        }
+    }
+
     /// Set-05 lateral root motion; a wall end plays LOOK then holds the peek until the stick returns.
     fn step_hug(&mut self, forward: bool) {
         let name = self.world.action.name;
@@ -362,6 +428,9 @@ impl Player {
 
     /// Jump. Running into a tall wall (wall_tall, facing it) starts the wall run instead; a second press kicks off.
     pub fn jump(&mut self) {
+        if self.state == State::Hang {
+            return self.start(State::Climb, "CLIMB06");
+        }
         if self.state == State::WallRun {
             return self.wall_kick("TRI_J01");
         }
