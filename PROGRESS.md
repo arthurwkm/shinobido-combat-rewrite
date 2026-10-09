@@ -315,3 +315,4 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 - 2026-10-09 Ledge grab/hang/shimmy/climb/drop from the pad (Hang/Climb states, TWO06/STOP_A06/HANG_*06/CLIMB06), seen in viewer; ledges <2.34 m not hung from (ESTIMATE).
 - 2026-10-09 Claude: UP_FR/UP_BA01 are get-ups, not high jumps; CLIMB_B01 ground vault over crate stacks from the pad (State::Vault), seen in viewer; high-jump item checked.
 - 2026-10-09 Claude: air actions from the pad (AirAct: KICK_J01/KICK_JB01/FLIP_B01), seen in viewer; THRO_J01 deferred to the grab item.
+- 2026-10-09 Claude: attack modifiers from the pad (AT_E01/AT_DASH05/SOCCER01/AT_CA01 by R1/dash/back/forward + Square), seen in viewer; pairing is ESTIMATE; remainder split into its own item.
