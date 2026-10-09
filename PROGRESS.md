@@ -209,6 +209,11 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   rear-view guide interpretation and estimated combinations).
 
 
+## Milestone 16b — Acceptance gaps (docs/acceptance.md)
+- [ ] Item effects seen: MAKIBISHI caltrops drawn on the ground and slowing the soldier, NINJYUTU effect cue, from a script that presses the item outside DRINK01; compare poses with movement/combat clips where visible.
+- [ ] Soldier reactions seen: record a heavy blow (knock-back, HI_F07 + UP_BA07) and a hit from behind (HI_UC07) from the pad in the viewer.
+- [ ] Executions seen: record front and above kills from the pad (cue shown, paired motions) vs `shinobido lock in lock off stealth kill from above.mov`.
+
 ## Milestone 17 — Acceptance review
 - [ ] Acceptance review (AGENTS.md Loop step 9). For every in-scope line of AGENTS.md, record a scripted
   sequence, compare it with the clip and the reference, and fill `docs/acceptance.md` (line, evidence,
