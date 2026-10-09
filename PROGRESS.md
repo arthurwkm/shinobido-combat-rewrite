@@ -182,7 +182,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   hit events; search set 07 and the AI tables for the attack choice), replacing the ESTIMATE.
 - [x] (evidence: `cargo test -q` 71 passed incl. `soldier_investigates_gives_up_and_returns`, clippy clean; `target/debug/viewer --record target/rec/patrol --script tools/scripts/patrol.txt --patrol --every 100 --ticks 1200` -> `target/cmp/patrol.png`: eye icon yellow while he walks his leg, red once alerted, then chase and AT_A19/AT_B19 swings with the log lines; `flee` record shows chase/swing/guard cycle. Behaviour is ESTIMATE: patrol legs, investigate at the noise/glimpse spot with SEARCH07, give up after 5 s beyond 15 m then SEARCH07 and walk home, every 3rd in-range decision a GU_A07 block; the AI\battle weights stay undecoded, so no table drives the choice. Not compared frame by frame with combat 0-44 s; the flee script did not manage to run away (player got hit), so give-up is only unit-tested) Enemy AI from `AI\`: patrol, investigate on suspicion, chase on alert, choose attack/guard/step from the
   AIattle tables, give up and return. Compare with combat 0–44 s.
-- [ ] Perception: sight blocked by walls (terrain raycast), noise by crouch, walk or run, meter rise and decay.
+- [x] (evidence: `cargo test -q` 72 passed incl. `walls_block_sight_but_not_sound`, clippy clean; `Terrain::sight_clear` samples the eye-height line, `Stealth::step` takes the terrain; crouch noise/sight factors and meter rise/decay already existed; `target/debug/viewer --record target/rec/patrol2 --script tools/scripts/patrol.txt --patrol --every 100 --ticks 1200` frame 600 still shows red eye, chase and `AT_A19 hits you` log; occlusion itself is unit-tested only, no sandbox patrol path crosses a wall; eye colours stay ESTIMATE, not re-sampled from clip frames) Perception: sight blocked by walls (terrain raycast), noise by crouch, walk or run, meter rise and decay.
   The alert states drive the eye colours, sampled from stealth-clip frames.
 - [ ] Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
 - [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
@@ -219,6 +219,7 @@ Gameplay clips that would settle something; never blocking. The owner drops them
 (none)
 
 ## Log
+- 2026-10-09 Perception: walls block sight (not sound) via Terrain::sight_clear; ESTIMATE numbers unchanged.
 - 2026-10-09 Claude: wall run (KABE_U01 rise, TRI_J01/KABE_E01 kick-off) from the pad; launch height/speed ESTIMATE; RUN_RE/LE split into its own item.
 - 2026-10-08 (Codex): Repaired inherited red health checks before new feature work: resolved Bevy/player State collision and corrected the wall-relative direction/corner regression; 48 tests pass, clippy clean, 231/231 actions within tolerance. Preserved the inherited wall-hug implementation; leave fidelity unchecked. Returning this health-repair step to the runner for its required commit before continuing features; no staging/commit or GPU run by Codex.
 - 2026-10-08 Claude: wall hug from the pad (State::Hug, IKOU_B06/STOP_A06/ONE06/STOP_B06/BACK06); hug side-step speed and 2 m wall minimum are ESTIMATE; fidelity gaps split into a new M14 item. Added `at x z` viewer script command.

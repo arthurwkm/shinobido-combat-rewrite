@@ -612,7 +612,7 @@ fn lock_on_selects_switches_releases_and_strafes() {
 #[test]
 fn stealth_fills_from_sight_and_noise_and_alerts() {
     use super::{enemy::{Enemy, State}, stealth::{Alert, Stealth}};
-    let run = |e: &mut Enemy, s: &mut Stealth, p: [f32; 3], act: &str, n: u32| (0..n).for_each(|_| s.step(e, p, act));
+    let run = |e: &mut Enemy, s: &mut Stealth, p: [f32; 3], act: &str, n: u32| (0..n).for_each(|_| s.step(&Default::default(), e, p, act));
     // in front (heading 0 faces +z), standing: seen, alerts within a few seconds
     let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
     run(&mut e, &mut s, [0.0, 0.0, 5.0], "STOP01", 30);
@@ -629,6 +629,18 @@ fn stealth_fills_from_sight_and_noise_and_alerts() {
     assert!(s.meter > 0.3, "{}", s.meter);
     run(&mut e, &mut s, [0.0, 0.0, -6.0], "WALK_F02", 600);
     assert_eq!(s.meter, 0.0);
+}
+
+#[test]
+fn walls_block_sight_but_not_sound() {
+    use super::{enemy::Enemy, stealth::Stealth, terrain::{Collider, Terrain}};
+    let mut t = Terrain::default();
+    t.colliders.push(Collider::new([-2.0, 0.0, 2.0], [2.0, 4.0, 3.0], false));
+    let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
+    for _ in 0..120 { s.step(&t, &mut e, [0.0, 0.0, 5.0], "STOP01"); }
+    assert!(!s.seen && s.meter == 0.0);
+    for _ in 0..120 { s.step(&Terrain::default(), &mut e, [0.0, 0.0, 5.0], "STOP01"); }
+    assert!(s.seen && s.meter > 0.0);
 }
 
 #[test]
@@ -795,7 +807,7 @@ fn crouch_holds_walks_and_is_quieter() {
     // 2 m behind the soldier: a crouch walk is heard only inside HEAR_CROUCH, a plain walk is heard
     let heard = |act: &str| {
         let (mut e, mut s) = (Enemy::new([0.0; 3]), Stealth::default());
-        (0..60).for_each(|_| s.step(&mut e, [0.0, 0.0, -2.0], act));
+        (0..60).for_each(|_| s.step(&Default::default(), &mut e, [0.0, 0.0, -2.0], act));
         s.meter
     };
     assert!(heard("WALK_F05") == 0.0 && heard("WALK_F02") > 0.0);
@@ -1333,7 +1345,7 @@ fn soldier_investigates_gives_up_and_returns() {
     let mut s = Stealth::default();
     let mut seen = vec![];
     for _ in 0..2400 {
-        s.step(&mut e, [0.0, 0.0, -2.5], "WALK_A01");
+        s.step(&Default::default(), &mut e, [0.0, 0.0, -2.5], "WALK_A01");
         e.step([0.0, 0.0, -2.5]);
         if seen.last() != Some(&e.state) { seen.push(e.state); }
         if s.meter >= 1.0 { break; }
@@ -1348,7 +1360,7 @@ fn soldier_investigates_gives_up_and_returns() {
     let mut seen = vec![];
     let mut p = [0.0, 0.0, 16.0];
     for _ in 0..4000 {
-        s.step(&mut e, p, "STOP01");
+        s.step(&Default::default(), &mut e, p, "STOP01");
         e.step(p);
         if seen.last() != Some(&e.state) { seen.push(e.state); }
         if e.state == State::Investigate { e.slow = 1.0; p = [0.0, 0.0, -60.0]; }

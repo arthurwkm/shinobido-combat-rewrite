@@ -1,7 +1,7 @@
 //! Enemy awareness: sight cone and footstep noise fill a 0..1 meter (the HUD's stealth bar); at 1 the soldier is alerted.
-//! All numbers ESTIMATE (data.rs). ponytail: no wall occlusion for sight, add when the viewer terrain feeds line tests.
+//! All numbers ESTIMATE (data.rs).  Walls block sight (not sound).
 
-use super::{data, enemy::{Enemy, State}, DT};
+use super::{data, terrain::Terrain, enemy::{Enemy, State}, DT};
 use std::f32::consts::{PI, TAU};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -31,13 +31,13 @@ impl Stealth {
     }
 
     /// One 60 Hz frame. `action` is the player's current clip (sets the noise); alerting is sticky.
-    pub fn step(&mut self, e: &mut Enemy, player: [f32; 3], action: &str) {
+    pub fn step(&mut self, terrain: &Terrain, e: &mut Enemy, player: [f32; 3], action: &str) {
         let (dx, dz) = (player[0] - e.pos[0], player[2] - e.pos[2]);
         let dist = dx.hypot(dz);
         let off = ((dx.atan2(dz) - e.heading + PI).rem_euclid(TAU) - PI).abs();
         let crouch = action == "STOP_S05" || action.starts_with("WALK_") && action.ends_with("05");
         let range = if crouch { data::SIGHT_RANGE * data::SIGHT_CROUCH } else { data::SIGHT_RANGE };
-        self.seen = dist <= range && off <= data::SIGHT_CONE;
+        self.seen = dist <= range && off <= data::SIGHT_CONE && terrain.sight_clear(e.pos, player);
         let noise = if crouch {
             data::HEAR_CROUCH
         } else if action.starts_with("RUN") {

@@ -386,7 +386,7 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
     sim.0.carry_step(&mut world.0);
     if sim.0.enemy.hp > 0 {
         let (pos, action) = (sim.0.player.pos, sim.0.player.world_action());
-        aware.0.step(&mut sim.0.enemy, pos, action);
+        aware.0.step(&world.0, &mut sim.0.enemy, pos, action);
     }
     let level = aware.0.level();
     let want = pad.0.lock || level == Alert::Alerted || sim.0.player.world_action().starts_with("AT_") || (sim.0.player.drawn && level != Alert::Unaware);

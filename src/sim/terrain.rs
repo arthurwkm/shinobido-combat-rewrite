@@ -53,6 +53,15 @@ impl Terrain {
         self.colliders.iter().any(|b| !b.ramp && b.contains(p, 0.0) && p[1] >= b.min[1] && p[1] < b.max[1])
     }
 
+    /// Eye-height line between two points is not cut by a solid box (sampled every 0.25 m).
+    pub fn sight_clear(&self, a: [f32; 3], b: [f32; 3]) -> bool {
+        let n = (((b[0] - a[0]).hypot(b[2] - a[2])) / 0.25).ceil() as i32;
+        (1..n).all(|i| {
+            let t = i as f32 / n as f32;
+            !self.blocked([a[0] + (b[0] - a[0]) * t, 1.5, a[2] + (b[2] - a[2]) * t])
+        })
+    }
+
     pub fn ground_height(&self, p: [f32; 3]) -> f32 {
         self.colliders.iter().filter(|b| b.contains(p, 0.0))
             .map(|b| b.top(p[2])).filter(|&y| y <= p[1] + SUPPORT_EPS).fold(0.0, f32::max)
