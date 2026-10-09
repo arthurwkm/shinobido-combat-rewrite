@@ -149,7 +149,7 @@ impl Terrain {
 }
 
 /// Ramps steeper than this (rise over run) are drawn as stairs by the viewer; the sim still sees a ramp.
-pub const STAIRS_SLOPE: f32 = 0.3;
+pub const STAIRS_SLOPE: f32 = 0.25;
 
 impl Terrain {
     /// The viewer sandbox: tall walls with a corner, a tiled-roof building, a slope, stairs,
