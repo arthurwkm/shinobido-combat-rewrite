@@ -1,0 +1,4 @@
+# heavy blow: dash at the soldier (6 m ahead, facing the player) and press Square: the dash attack (18) throws him back (HI_F07), then UP_BA07
+0 stick 0 1
+0 dash 1
+28 attack

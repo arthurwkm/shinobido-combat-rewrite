@@ -211,7 +211,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 
 ## Milestone 16b — Acceptance gaps (docs/acceptance.md)
 - [x] (evidence: viewer `draw_items` draws caltrops as yellow spikes + slow ring and NINJYUTU as a violet cone fan; `target/debug/viewer --record target/rec/caltrop --script tools/scripts/caltrop.txt --every 15 --ticks 190` -> `target/cmp/caltrop_sheet.png`: spikes+ring at 1 m ahead during MAKIBISHI01, fan during NINJYUTU01; slowing is unit-tested; still differs: gizmo stand-ins not the game's effect art, no clip frame of the items exists to compare, soldier not shown inside the ring) Item effects seen: MAKIBISHI caltrops drawn on the ground and slowing the soldier, NINJYUTU effect cue, from a script that presses the item outside DRINK01; compare poses with movement/combat clips where visible.
-- [ ] Soldier reactions seen: record a heavy blow (knock-back, HI_F07 + UP_BA07) and a hit from behind (HI_UC07) from the pad in the viewer.
+- [x] (evidence: `target/debug/viewer --record target/rec/react4 --script tools/scripts/react2.txt --every 10 --ticks 150 --solo` -> `target/cmp/react4_sheet.png`: dash + Square (AT_DASH05, 18) throws the soldier down, target bar reads HI_F07 then UP_BA07; `--record target/rec/behind3 --script tools/scripts/behind.txt` -> `behind3_sheet.png`: Square at his back (AT_A01) reads HI_UC07, then he turns and swings; found and fixed: HEAVY_HIT was 4 but every swing deals 5-18, so HI_UC07/HI_BC07 were unreachable, now 12 ESTIMATE, test extended; target bar now shows the soldier's action; `cargo test -q` 77 passed, clippy clean; still differs: no clip frame of a soldier hit reaction to compare, B/U/C letters still undecoded) Soldier reactions seen: record a heavy blow (knock-back, HI_F07 + UP_BA07) and a hit from behind (HI_UC07) from the pad in the viewer.
 - [ ] Executions seen: record front and above kills from the pad (cue shown, paired motions) vs `shinobido lock in lock off stealth kill from above.mov`.
 
 ## Milestone 17 — Acceptance review
@@ -354,3 +354,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-09: camera item closed (distance 3.8 m, focus 0.9 m measured on movement.mov frame).
 - 2026-10-09 (Claude): M16 pad map item closed: R2 item binding, controls legend in debug HUD, controls.md corrected.
 - 2026-10-09 M16b item effects drawn in the viewer (caltrops, NINJYUTU fan), seen in `caltrop` record; gizmo placeholders.
+- 2026-10-09 (Claude): soldier reactions seen (react4/behind3); HEAVY_HIT 4->12 ESTIMATE since every swing exceeded 4 and light reactions were unreachable; soldier action shown in the target bar, `soldier x z deg` script command.

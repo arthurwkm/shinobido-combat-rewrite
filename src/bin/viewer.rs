@@ -88,6 +88,7 @@ enum Hud {
     EnemyBar,
     Log,
     Readout,
+    Target,
 }
 
 
@@ -192,6 +193,7 @@ fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>,
             (Some("dash"), [b]) => i.dash = *b != 0.0,
             (Some("at"), [x, z]) => { sim.0.player.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; }
             (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.hit("HI_BS07", 99_999); }
+            (Some("soldier"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.heading = h.to_radians(); }
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,
             (Some("switch"), [d]) => i.switch = *d as i8,
@@ -465,7 +467,7 @@ fn setup_hud(mut commands: Commands) {
     commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(98)), None)));
     commands.spawn((Text::new(""), font(15.0), Hud::Readout, abs(None, Some(px(20)), Some(px(20)), None)));
     commands.spawn((Text::new(CONTROLS_LEGEND), font(13.0), TextColor(Color::srgb(0.7, 0.7, 0.7)), abs(Some(px(28)), None, None, Some(px(12)))));
-    commands.spawn((Text::new("Soldier"), font(18.0), abs(Some(percent(25)), None, None, Some(px(66)))));
+    commands.spawn((Text::new("Soldier"), font(18.0), Hud::Target, abs(Some(percent(25)), None, None, Some(px(66)))));
     bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
 }
 
@@ -520,6 +522,7 @@ fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, O
             (Hud::PlayerBar, _, Some(mut n)) => n.width = percent(100.0 * hud::player_bar(&sim.0)),
             (Hud::EnemyBar, _, Some(mut n)) => n.width = percent(100.0 * hud::enemy_bar(&sim.0)),
             (Hud::Log, Some(mut t), _) => t.0 = dbg.0.log.join("\n"),
+            (Hud::Target, Some(mut t), _) => t.0 = format!("Soldier  {}", sim.0.enemies().nth(sim.0.focus).map_or("", |e| e.action())),
             (Hud::Readout, Some(mut t), _) => t.0 = dbg.0.readout(&sim.0, &pad.0),
             _ => {}
         }

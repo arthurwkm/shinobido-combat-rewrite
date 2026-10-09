@@ -1317,7 +1317,9 @@ fn items_heal_slow_the_soldier_and_stagger_him() {
 #[test]
 fn reaction_follows_side_and_weight_and_heavy_hits_knock_down() {
     use super::combat::soldier_reaction as r;
-    assert_eq!((r(false, 2), r(true, 2), r(false, 5), r(true, 5)), ("HI_BC07", "HI_UC07", "HI_F07", "HI_F07"));
+    assert_eq!((r(false, 2), r(true, 2), r(false, 13), r(true, 18)), ("HI_BC07", "HI_UC07", "HI_F07", "HI_F07"));
+    // the opening swing (AT_A01, 7) is not heavy: from behind it staggers, from the front it flinches
+    assert_eq!((r(false, 7), r(true, 7)), ("HI_BC07", "HI_UC07"));
     let mut e = super::enemy::Enemy::new([0.0; 3]);
     e.hit("HI_F07", 5);
     let mut seen = vec![];

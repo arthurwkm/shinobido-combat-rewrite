@@ -1,0 +1,3 @@
+# hit from behind: soldier faces away (+z), player 1.6 m behind him, Square
+0 soldier 0 1.6 0
+12 attack
