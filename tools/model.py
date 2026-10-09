@@ -37,6 +37,30 @@ def geometries(d):
     return out
 
 
+def height(d):
+    """Bind-pose vertical bounds: native vertices through their atomic frame and its ancestors."""
+    clump = next(p for t, _, _, p in chunks(d) if t == 0x10)
+    fl = next(p for t, _, _, p in chunks(d, clump + 12) if t == 0x0E)
+    count = struct.unpack_from("<I", d, fl + 24)[0]
+    frames = [struct.unpack_from("<12f2i", d, fl + 28 + 56 * i) for i in range(count)]
+    geometry = geometries(d)
+    ys = []
+    for t, size, _, p in chunks(d, clump + 12, clump + 12 + struct.unpack_from("<I", d, clump + 4)[0]):
+        if t != 0x14:
+            continue
+        q = next(q for tt, _, _, q in chunks(d, p + 12, p + 12 + size) if tt == 1)
+        frame, gi = struct.unpack_from("<2I", d, q + 12)
+        for _, pk in packets(geometry[gi][2]):
+            for v in pk["pos"]:
+                f = frame
+                while f >= 0:
+                    m = frames[f]
+                    v = [m[9 + k] + sum(v[j] * m[3 * j + k] for j in range(3)) for k in range(3)]
+                    f = m[12]
+                ys.append(v[1])
+    return min(ys), max(ys)
+
+
 def materials(d):
     """Per geometry, the texture name of each material (None when untextured): material list 0x8 -> 0x7 -> texture 0x6 -> name 0x2."""
     clump = next(p for t, _, _, p in chunks(d) if t == 0x10)

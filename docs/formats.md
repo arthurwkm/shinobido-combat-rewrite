@@ -123,7 +123,7 @@ a few Acquire-specific chunks (`0x1b`, `0x1000060`, unread).
   have none); tracks 18 and 23 (ids 15, 20 = the hands, last of each arm chain) are static (≤2 keys) in ~115 of 128
   `*01` clips while every other rotation track is static in <10; the id tree's limb chains match the anatomy.
   Quaternion component order inside a key is still unverified.
-- Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale unknown.
+- Model units differ from motion units (hips frame offset y 9.5 vs 0.84 m in `.nmt` position tracks); scale 0.84/9.5 m, subsequently confirmed by the emulator jump calibration.
 
 ## model\KAGETORA_BODY.rws geometry — confirmed by `python tools/model.py` (2026-10-08)
 
@@ -503,13 +503,50 @@ Survey by `tools/camera.py` (`ok: 110 .cmt parsed ...`).
   `tools/compare.py` checks all 110 extracted clips against their source root displacement and duration.
 
 ## Pose export (`tools/pose.py`, 2026-10-08) — viewer rig data
-Writes `extracted/anim/skeleton.bin` (28 nodes: parent id, rest offset x `SCALE` 0.84/9.5 to metres, ESTIMATE) and `clips.bin`
-(183 player/enemy clips sampled per frame: hips position, 21 local quaternions for node ids 0..20). Quaternions are used
+Writes `extracted/anim/skeleton.bin` (28 nodes: parent id, rest offset x `SCALE` 0.84/9.5 to metres; emulator-calibrated), followed by six f32 head-local min/max bounds, and `clips.bin`
+(238 player/enemy clips sampled per frame: hips position, 21 local quaternions for node ids 0..20). Quaternions are used
 as stored (x, y, z, w), local to the parent, offset applied in the parent's frame; position tracks are interpolated linearly
 and quaternions by normalised lerp between keys (Hermite tangents ignored). Hypothesis, checked by FK on STOP01 frame 0
 (`sim::pose::Skeleton::joints`): spine rises, head ~1.26 m, ankles ~0.24 m above hips-0.84 ground, arms hang; the conjugate
 order puts the limbs through the body, so the stored order stands. **Confirmed 2026-10-08**: the quaternion of each frame's rest matrix *transposed* (RW row-vector matrices) matches STOP01 frame 0 (|dot| 0.87-0.99 for 17 of 21 tracks; the rest are w≈0 pairs), so stored quats are absolute local rotations in standard column convention, which is what `Skeleton::joints` assumes. Hips position is relative to the root (no double
 counting with root motion). 66-track clips (set-05 modes) are exported too: track 0 empty, track 1 root T (root motion), then a (T, Q) pair per bone j=0..31 at tracks 1+2j / 2+2j, bone j = HAnim node j-1 (**confirmed 2026-10-08**: the static T tracks equal the skeleton rest offsets in DFS order, e.g. thigh 0.068/-0.014, spine 0.132). Other counts (SHEATH_BU05 68, LOOK07 22) are not exported.
+
+
+### Kagetora stature and mannequin head (2026-10-09)
+
+- **Confirmed from file transforms:** `tools/model.py::height` applies each atomic's frame and all
+  ancestors to its native vertices. BODY atomics attach to hips frame 2 (+9.5 Y), not the scene origin.
+  HEAD_H/HEAD_L attach to frame 1; frame 0 translates to Y 15.296393 and rotates almost −90° about X.
+  Using raw head Y extents without this rotation gives the wrong height. BODY sole Y = 0.048700333;
+  head/hair crown Y = 17.791200905. Stature = **17.742500572 model units = 1.568810577 m** at
+  0.84/9.5 m/unit. Both head LODs give the same extrema. Hips frame Y = 9.5 units (0.84 m), or
+  9.451299667 units (0.835693865 m) above the sole. The files do **not** support 1.7–1.8 m at this scale.
+- **Confirmed skeleton consistency:** `model.check` checks every BODY bone length against its inverse
+  bind matrices. Thigh + shin = 7.874873638 units (0.696304616 m); spine node 7 to head node 10
+  along the chain = 4.165136337 units (0.368285739 m). Bind head joint Y = 15.296394 units;
+  hair extends another 2.494807 units (0.220594 m). No missing node, wrong offset or uniform scale
+  error was found. STOP01's bent pose explains why its head joint is below the bind-pose head joint;
+  a head joint is not the crown. STOP_S05 translations differ nonuniformly and do not justify rescaling.
+- **Confirmed rendering cause:** the old 0.105 m sphere was attached at the midpoint of nodes 9/10;
+  Bevy `looking_to` aligns −Z with the segment, so its +Z 0.02 m offset moved toward the neck.
+  Its STOP01 frame-0 top was **1.368420 m** (regression failed before the fix).
+  The exporter now appends HEAD_H's local bounds to `skeleton.bin`; the viewer draws their primitive
+  box at node 10 with node 10's actual accumulated rotation, instead of the neck segment rotation.
+  Bounds include hair; this remains a plain mannequin, not a skinned game mesh.
+- **Confirmed headless result:** STOP01 frame-0 box top **1.541869 m**, 2.694 cm below measured stature.
+  **Approximation:** the box encloses the head/hair silhouette; it is not the exact vertex silhouette
+  (rigidly transformed head vertices peak at 1.513075 m in this bent pose). Visual acceptance is pending.
+  Root motion, hips tracks and all rest offsets are unchanged. STOP01 hips remain 0.837891 m;
+  ankles 0.239353/0.239509 m and toe node 24 0.133839 m remain unchanged. This does not establish
+  grounded soles in the animated pose; no uniform skeleton enlargement or ground correction was applied.
+- **Confirmed hang re-derivation:** TWO06 frame 36 hands = 1.837324/1.831354 m, average 1.834339 m;
+  STOP_A06 remains approximately 1.839 m. `HANG_REACH` therefore remains **1.84 m**; changing only
+  the head does not move the hands. The test now pins the TWO06 average within 1 cm of the constant
+  as well as testing world contact on the ledge. No change to `player.rs::hang_at` is needed.
+- Reproduce with `.venv/bin/python tools/pose.py` (requires BODY and HEAD_H; `tools/setup.py` extracts
+  both). It validates the BODY/HEAD_H geometry and bone lengths, asserts stature, prints the extrema,
+  and regenerates 238 pose clips; `compare.py` independently checks 240 simulation actions.
+  `skeleton.bin` now requires the 24-byte bounds suffix; rerun the exporter for older local data.
 
 
 ### Hang contact height (2026-10-09)
@@ -544,8 +581,8 @@ counting with root motion). 66-track clips (set-05 modes) are exported too: trac
   Scaling the whole pose to make 1.84 become 2.34 would also raise the ankles.
   A targeted cross-check of STOP_S05's static translation tracks against model
   offsets gives nonuniform length ratios (~0.074–0.103 for limb/spine nodes), not
-  evidence for that global enlargement. The export scale remains an **ESTIMATE**;
-  absolute stature/foot contact remain a separate rig-calibration uncertainty.
+  evidence for that global enlargement. This historical stature uncertainty is resolved by the model measurement above;
+  pose-specific foot contact remains a separate uncertainty.
 - **Confirmed:** CLIMB06 starts at the corrected hanging position; `step_ledge`
   caps `pos.y` at `hang_top` during ascent and still snaps there on completion.
   The extracted root path is unchanged; the cap prevents its extra ~0.496 m from

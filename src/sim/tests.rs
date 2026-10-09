@@ -742,6 +742,7 @@ fn pose_parses_and_poses_a_two_bone_chain() {
             sk.extend(x.to_le_bytes());
         }
     }
+    sk.extend([0u8; 24]); // head-local bounds
     let skeleton = Skeleton::parse(&sk).unwrap();
     assert_eq!(skeleton.parent[7], Some(0));
     assert_eq!(skeleton.parent[23], None);
@@ -1501,6 +1502,9 @@ fn ledge_pose_hand_heights() {
     use crate::sim::pose::{Clips, Skeleton};
     let skel = Skeleton::parse(&std::fs::read("extracted/anim/skeleton.bin").unwrap()).unwrap();
     let clips = Clips::parse(&std::fs::read("extracted/anim/clips.bin").unwrap()).unwrap();
+    let held = skel.joints(clips.row("TWO06", 36).unwrap());
+    let reach = (held[15][1] + held[20][1]) / 2.0;
+    assert!((reach - super::data::HANG_REACH).abs() < 0.01);
     let terrain = super::terrain::Terrain::sandbox();
     let mut p = super::player::Player::new();
     p.pos = [10.0, 1.5, 5.8];
@@ -1519,4 +1523,23 @@ fn ledge_pose_hand_heights() {
             println!("{name} frame {frame}: hands {:.6}/{:.6}, head {:.6}, ankles {:.6}/{:.6}", j[15][1], j[20][1], j[10][1], j[3][1], j[6][1]);
         }
     }
+}
+
+#[test]
+fn stop_mannequin_matches_model_height() {
+    use crate::sim::pose::{Clips, Skeleton};
+    let skel = Skeleton::parse(&std::fs::read("extracted/anim/skeleton.bin").unwrap()).unwrap();
+    let clips = Clips::parse(&std::fs::read("extracted/anim/clips.bin").unwrap()).unwrap();
+    let (j, q) = skel.pose(clips.row("STOP01", 0).unwrap());
+    let mut top = f32::NEG_INFINITY;
+    for x in [skel.head_min[0], skel.head_max[0]] {
+        for y in [skel.head_min[1], skel.head_max[1]] {
+            for z in [skel.head_min[2], skel.head_max[2]] {
+                top = top.max(j[10][1] + super::pose::rotate(q[10], [x, y, z])[1]);
+            }
+        }
+    }
+    assert!((j[0][1] - 0.8378906).abs() < 1e-6, "motion hips must not be rescaled");
+    assert!((j[24][1] - 0.1338388).abs() < 1e-5, "rest offsets must not be rescaled");
+    assert!((top - 1.5688106).abs() < 0.03, "STOP01 crown {top}");
 }

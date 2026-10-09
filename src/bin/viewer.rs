@@ -288,12 +288,12 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
             // Mannequin part: bone length is fixed by the rest offset, so the mesh is built at that length.
             let o = skel.offset[n];
             let len = (o[0] * o[0] + o[1] * o[1] + o[2] * o[2]).sqrt().max(0.01);
-            let (mesh, off) = match n {
-                10 => (Sphere::new(0.105).mesh().build(), 0.02), // head, centred a little above the head joint
-                7 | 8 => (Cuboid::new(if n == 7 { 0.26 } else { 0.32 }, 0.2, len).into(), 0.0), // waist and chest
+            let mesh: Mesh = match n {
+                10 => Sphere::new(0.11).mesh().build(), // skull, centred in the model's head bounds (the bounds include hair and scarf)
+                7 | 8 => Cuboid::new(if n == 7 { 0.26 } else { 0.32 }, 0.2, len).into(), // waist and chest
                 _ => {
                     let r = match n { 1 | 4 => 0.06, 2 | 5 => 0.07, 3 | 6 => 0.055, 9 => 0.04, 11 | 16 => 0.05, 12 | 17 => 0.05, 13 | 18 => 0.045, 14 | 19 => 0.04, _ => 0.035 };
-                    (Capsule3d::new(r, (len - 2.0 * r).max(0.0)).into(), 0.0)
+                    Capsule3d::new(r, (len - 2.0 * r).max(0.0)).into()
                 }
             };
             let mesh = meshes.add(mesh);
@@ -302,7 +302,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
                 // Capsules stand along Y: the child turns them onto the part's Z axis.
                 let turn = if matches!(n, 7 | 8 | 10) { Quat::IDENTITY } else { Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) };
                 commands.spawn((Part(n, who), Transform::default(), Visibility::Inherited)).with_children(|c| {
-                    c.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(mat.clone()), Transform::from_translation(Vec3::Z * off).with_rotation(turn)));
+                    c.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(mat.clone()), Transform::from_translation(if n == 10 { (Vec3::from(skel.head_min) + Vec3::from(skel.head_max)) / 2.0 } else { Vec3::ZERO }).with_rotation(turn)));
                 });
             }
         }
@@ -620,7 +620,11 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
     let p = &sim.0.player;
     let rows = std::iter::once(clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)))
         .chain(sim.0.enemies().map(|e| clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))));
-    let joints: Vec<_> = rows.map(|r| r.map(|(row, pos, heading)| skel.joints(row).map(|j| Vec3::from(pos) + Quat::from_rotation_y(heading) * Vec3::from(j)))).collect();
+    let poses: Vec<_> = rows.map(|r| r.map(|(row, pos, heading)| {
+        let (joints, rotations) = skel.pose(row);
+        let turn = Quat::from_rotation_y(heading);
+        (joints.map(|j| Vec3::from(pos) + turn * Vec3::from(j)), turn * Quat::from_array(rotations[10]))
+    })).collect();
     let seg = |joints: &[Vec3; NODES], n: usize| {
         let (a, b) = (joints[skel.parent[n].unwrap_or(n)], joints[n]);
         let len = a.distance(b).max(1e-3);
@@ -628,18 +632,18 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
     };
     for (Bone(n, who), mut t, mut v) in &mut bones {
         *v = if *debug { Visibility::Inherited } else { Visibility::Hidden };
-        let Some(joints) = &joints[*who] else { continue };
+        let Some((joints, _)) = &poses[*who] else { continue };
         let (tr, len) = seg(joints, *n);
         *t = tr.with_scale(Vec3::new(1.0, 1.0, len));
     }
     for (Part(n, who), mut t) in &mut parts {
-        if let Some(joints) = &joints[*who] {
-            *t = seg(joints, *n).0;
+        if let Some((joints, head_rotation)) = &poses[*who] {
+            *t = if *n == 10 { Transform::from_translation(joints[10]).with_rotation(*head_rotation) } else { seg(joints, *n).0 };
         }
     }
     let drawn = p.drawn;
     for (Katana(who), mut t) in &mut katanas {
-        let Some(joints) = &joints[*who] else { continue };
+        let Some((joints, _)) = &poses[*who] else { continue };
         *t = if *who > 0 || drawn {
             let (a, b) = (joints[19], joints[20]); // right forearm to hand: arm 16 sits on -x, the right side facing +z
             let dir = (b - a).normalize_or_zero();

@@ -11,6 +11,9 @@ pub struct Skeleton {
     pub parent: [Option<usize>; NODES],
     /// Rest offset in the parent's frame, metres.
     pub offset: [[f32; 3]; NODES],
+    /// Head mesh bounds local to node 10, including hair, metres.
+    pub head_min: [f32; 3],
+    pub head_max: [f32; 3],
 }
 
 pub struct Clips {
@@ -30,17 +33,29 @@ impl Skeleton {
         if u32_at(d, 0)? as usize != NODES {
             return None;
         }
-        let mut s = Skeleton { parent: [None; NODES], offset: [[0.0; 3]; NODES] };
+        let mut s = Skeleton { parent: [None; NODES], offset: [[0.0; 3]; NODES], head_min: [0.0; 3], head_max: [0.0; 3] };
         for n in 0..NODES {
             let p = 4 + 16 * n;
             s.parent[n] = usize::try_from(u32_at(d, p)? as i32).ok().filter(|&q| q < NODES);
             s.offset[n] = [f32_at(d, p + 4)?, f32_at(d, p + 8)?, f32_at(d, p + 12)?];
+        }
+        for k in 0..3 {
+            s.head_min[k] = f32_at(d, 4 + 16 * NODES + 4 * k)?;
+            s.head_max[k] = f32_at(d, 4 + 16 * NODES + 12 + 4 * k)?;
+            if !s.head_min[k].is_finite() || !s.head_max[k].is_finite() || s.head_min[k] > s.head_max[k] {
+                return None;
+            }
         }
         Some(s)
     }
 
     /// World joint positions for one clip row, hips at the row's position, root at the origin.
     pub fn joints(&self, row: &[f32]) -> [[f32; 3]; NODES] {
+        self.pose(row).0
+    }
+
+    /// Joint positions and absolute rotations, for parts attached to a joint rather than a segment.
+    pub fn pose(&self, row: &[f32]) -> ([[f32; 3]; NODES], [[f32; 4]; NODES]) {
         let mut pos = [[0.0; 3]; NODES];
         let mut rot = [[0.0, 0.0, 0.0, 1.0]; NODES];
         // Parents come before children when walking up from each node; resolve by repeated passes (tree depth < 12).
@@ -60,7 +75,7 @@ impl Skeleton {
                 done[n] = true;
             }
         }
-        pos
+        (pos, rot)
     }
 }
 
@@ -97,7 +112,7 @@ fn qmul(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
     ]
 }
 
-fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
+pub(super) fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
     let u = [q[0], q[1], q[2]];
     let c = |a: [f32; 3], b: [f32; 3]| [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     let t = c(u, v).map(|x| 2.0 * x);

@@ -129,7 +129,7 @@ pub const LEDGE_REACH: f32 = 2.4;
 pub const HANG_MIN: f32 = 1.5;
 pub const LEDGE_GRAB_DIST: f32 = 0.5;
 pub const HANG_OFFSET: f32 = 0.15;
-// TWO06 / STOP_A06 hand height above the actor origin, measured with Skeleton::joints (docs/formats.md).
+// TWO06 frame 36 hands average 1.834339 m; STOP_A06 ~1.839 m. Rechecked after model-sized head fix (formats.md).
 pub const HANG_REACH: f32 = 1.84;
 // ESTIMATE: ground vault (CLIMB_B01, hips rise ~1.8 m in the clip; movement 24-26 s, 40 s). A box top VAULT_MIN..VAULT_MAX
 // above the feet, within VAULT_DIST of the face, is vaulted by Jump; lower tops are jumped, higher ones are wall-run.

@@ -3,19 +3,20 @@
     python tools/pose.py        (needs extracted/volume/motion and model; see docs/formats.md "Pose export")
 
 skeleton.bin: u32 n=28; per node id 0..27: i32 parent id (-1 for the root id 23), 3 x f32 rest offset in the parent's frame
-(model units, already x SCALE to metres). clips.bin: u32 count; per clip: 24 bytes name (NUL padded), u32 frames, then per
-frame 24 f32: hips position (3), then 21 local quaternions x y z w for node ids 0..20 (as stored in the .nmt).
+(model units, already x SCALE to metres), then 6 f32 head-local min/max bounds in metres. clips.bin: u32 count; per clip: 24 bytes name (NUL padded), u32 frames, then per
+frame 87 f32: hips position (3), then 21 local quaternions x y z w for node ids 0..20 (as stored in the .nmt).
 """
 
 import struct
 
 import rws
+import model
 from extract import enemy_names, player_names
 from iso import ROOT
 from nmt import MOTION, parse
 
 OUT = ROOT / "extracted" / "anim"
-SCALE = 0.84 / 9.5  # ESTIMATE: hips height in .nmt (0.84 m) over the model's hips offset (9.5 units)
+SCALE = 0.84 / 9.5  # World/model units: emulator jump calibration, docs/formats.md.
 NODES = 28
 
 
@@ -49,10 +50,22 @@ def skeleton():
         i = by_id[n]
         p = ids[par[i]] if par[i] and par[i] < len(ids) and ids[par[i]] is not None else -1
         out += struct.pack("<i3f", p, *(x * SCALE for x in off[i]))
-    return out
+    head = (rws.MODEL / "KAGETORA_HEAD_H.rws").read_bytes()
+    vertices = [v for _, _, native, _ in model.geometries(head) for _, pk in model.packets(native) for v in pk["pos"]]
+    # Head vertices are local to node 10; include hair in the primitive's bounds.
+    bounds = [[fn(v[k] for v in vertices) * SCALE for k in range(3)] for fn in (min, max)]
+    return out + struct.pack("<6f", *bounds[0], *bounds[1])
 
 
 def main():
+    body = (rws.MODEL / "KAGETORA_BODY.rws").read_bytes()
+    head = (rws.MODEL / "KAGETORA_HEAD_H.rws").read_bytes()
+    model.check(body)
+    model.check(head)
+    sole, _ = model.height(body)
+    _, crown = model.height(head)
+    assert abs((crown - sole) * SCALE - 1.568810577) < 1e-6
+    print(f"model: sole {sole:.9f}, crown {crown:.9f}, height {crown - sole:.9f} units = {(crown - sole) * SCALE:.9f} m")
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "skeleton.bin").write_bytes(skeleton())
     # 24-track clips: root T, root Q, hips T, 21 Q. 66-track clips (set 05 modes): root T, root Q, then a (T, Q) pair per

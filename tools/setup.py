@@ -8,5 +8,5 @@ import sys
 from pathlib import Path
 
 T = Path(__file__).parent
-for cmd in (["volume.py", "extract", "motion\\"], ["volume.py", "extract", "model\\KAGETORA_BODY.rws"], ["extract.py"], ["pose.py"]):
+for cmd in (["volume.py", "extract", "motion\\"], ["volume.py", "extract", "model\\KAGETORA_BODY.rws"], ["volume.py", "extract", "model\\KAGETORA_HEAD_H.rws"], ["extract.py"], ["pose.py"]):
     subprocess.run([sys.executable, str(T / cmd[0]), *cmd[1:]], check=True)
