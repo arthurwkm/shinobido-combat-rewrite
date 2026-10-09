@@ -1,0 +1,5 @@
+# R1+Square twice: uppercut then downward strike
+0 stick 0 0
+10 lock 1
+12 attack
+40 attack
