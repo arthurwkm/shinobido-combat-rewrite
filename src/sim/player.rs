@@ -105,6 +105,21 @@ pub struct Player {
     vault_h: f32,
     /// Heading at take-off / fall start: a stick turned away from it in the air is the back flick.
     air_heading: f32,
+    /// Direction/modifier held with the attack button (set by `Input`); picks the attack, see `press_attack`.
+    pub attack_mod: AttackMod,
+}
+
+/// Modifier held with Square (docs/controls.md "Attack and move list").
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum AttackMod {
+    #[default]
+    Plain,
+    Forward,
+    Back,
+    /// R1 held: rising uppercut.
+    Lock,
+    /// Circle held while running: leap forward and slash.
+    Dash,
 }
 
 impl Default for Player {
@@ -115,7 +130,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -548,12 +563,28 @@ impl Player {
             self.fall_from = if self.state == State::Fall { self.fall_from } else { self.pos[1] };
             return self.start(State::AirAct, clip);
         }
+        // R1 is held while the uppercut is pressed, so the guard stance is already up: Square leaves it.
+        if self.state == State::Guard && self.attack_mod == AttackMod::Lock {
+            return self.start(State::Attack, "AT_E01");
+        }
         let f = self.world.frame;
+        // ESTIMATE: pairing of rows to motions by cancel graph and clip names (AT_CA = forward power slash, SOCCER =
+        // kick, AT_E = uppercut, AT_DASH05 = dash leap); not frame-matched against the attack video.
+        let want = match self.attack_mod {
+            AttackMod::Forward => Some("AT_CA01"),
+            AttackMod::Back => Some("SOCCER01"),
+            AttackMod::Lock if self.state != State::Attack => Some("AT_E01"),
+            AttackMod::Dash if self.state != State::Attack => Some("AT_DASH05"),
+            _ => None,
+        };
+        let by_name = |n: &str| ACTIONS.iter().find(|x| x.name == n);
         let target = if self.state == State::Attack {
             let a = self.world.action;
-            a.cancels.iter().filter(|c| c.1 <= f && f < c.2).find_map(|c| ACTIONS.iter().find(|x| x.id == c.0))
+            let open = a.cancels.iter().filter(|c| c.1 <= f && f < c.2);
+            let preferred = want.and_then(by_name).and_then(|w| open.clone().find(|c| c.0 == w.id));
+            preferred.or_else(|| open.clone().next()).and_then(|c| ACTIONS.iter().find(|x| x.id == c.0))
         } else {
-            ACTIONS.iter().find(|x| x.name == "AT_A01")
+            want.and_then(|w| if w == "AT_CA01" { None } else { by_name(w) }).or_else(|| by_name("AT_A01"))
         };
         if let Some(t) = target {
             self.request(State::Attack, t.name);

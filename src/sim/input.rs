@@ -2,7 +2,7 @@
 //! gamepad or keyboard; edge flags (`attack`, `jump`, `item`) are set by any render frame and consumed by one tick.
 
 use super::data::{STICK_DEAD, STICK_WALK};
-use super::player::Player;
+use super::player::{AttackMod, Player};
 use super::terrain::Terrain;
 
 #[derive(Default, Clone, Copy, Debug)]
@@ -35,6 +35,15 @@ impl Input {
         p.guard_held = self.lock;
         p.crouch_held = self.crouch;
         p.run_clip = if self.dash { "RUN_D05" } else { "RUN01" };
+        // ESTIMATE: Forward/Back are the stick within 60 degrees of / opposite to the current heading.
+        let rel = (p.target_heading - p.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        p.attack_mod = match () {
+            _ if moving && rel.abs() > 2.0 => AttackMod::Back,
+            _ if self.lock => AttackMod::Lock,
+            _ if self.dash && moving => AttackMod::Dash,
+            _ if moving && rel.abs() < 1.05 => AttackMod::Forward,
+            _ => AttackMod::Plain,
+        };
         if self.jump && self.crouch {
             let dir = if !moving || y >= x.abs() { "FRONT01" } else if y <= -x.abs() { "BACK01" } else if x > 0.0 { "RIGHT01" } else { "LEFT01" };
             p.dodge(dir);

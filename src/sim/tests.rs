@@ -1023,3 +1023,39 @@ fn air_attack_kicks_back_flick_flips_and_both_land() {
     g.step_on(&t, false, true);
     assert_eq!(g.state, State::Attack, "on the ground Square is still a slash");
 }
+
+#[test]
+fn attack_modifiers_pick_kick_uppercut_dash_and_power_slash() {
+    use super::player::{AttackMod, Player, State};
+    let first = |m: AttackMod, run: &'static str| {
+        let mut p = Player::new();
+        p.run_clip = run;
+        p.attack_mod = m;
+        p.step(false, true);
+        (p.state, p.world_action())
+    };
+    assert_eq!(first(AttackMod::Plain, "RUN01"), (State::Attack, "AT_A01"));
+    assert_eq!(first(AttackMod::Forward, "RUN01"), (State::Attack, "AT_A01"));
+    assert_eq!(first(AttackMod::Back, "RUN01"), (State::Attack, "SOCCER01"));
+    assert_eq!(first(AttackMod::Lock, "RUN01"), (State::Attack, "AT_E01"));
+    assert_eq!(first(AttackMod::Dash, "RUN_D05"), (State::Attack, "AT_DASH05"));
+    // forward press inside AT_A01's window chains to the power slash AT_CA01
+    let mut p = Player::new();
+    p.step(false, true);
+    for _ in 0..21 { p.step(false, false); }
+    p.attack_mod = AttackMod::Forward;
+    p.step(false, true);
+    assert_eq!(p.world_action(), "AT_CA01");
+}
+
+#[test]
+fn square_from_the_guard_stance_with_r1_held_throws_the_uppercut() {
+    use super::player::{AttackMod, Player, State};
+    let mut p = Player::new();
+    p.guard_held = true;
+    p.step(false, false);
+    assert_eq!(p.state, State::Guard);
+    p.attack_mod = AttackMod::Lock;
+    p.step(false, true);
+    assert_eq!((p.state, p.world_action()), (State::Attack, "AT_E01"));
+}

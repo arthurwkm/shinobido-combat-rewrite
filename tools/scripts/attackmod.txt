@@ -1,0 +1,12 @@
+# R1 + Square (uppercut), then run with dash and Square (leap), then back + Square (kick)
+0 stick 0 0
+10 lock 1
+12 attack
+80 lock 0
+100 stick 0 1
+110 dash 1
+150 attack
+230 dash 0
+240 stick 0 0
+260 stick 0 -1
+262 attack
