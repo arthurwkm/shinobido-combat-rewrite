@@ -11,11 +11,13 @@ pub struct Camera {
     pub pull: f32,
     /// 0 = normal framing, 1 = close-up side cut of an execution.
     pub cut: f32,
+    /// 0 = normal pitch, 1 = lowered to look up a climb (rooftop, movement 28-32 s).
+    pub tilt: f32,
 }
 
 impl Default for Camera {
     fn default() -> Self {
-        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0, cut: 0.0 }
+        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0, cut: 0.0, tilt: 0.0 }
     }
 }
 
@@ -60,10 +62,16 @@ impl Camera {
         }
     }
 
+    /// Ease the climb tilt in or out; `dt` is elapsed render time.
+    pub fn follow_climb(&mut self, climbing: bool, dt: f32) {
+        let blend = 1.0 - (-CAM_HUG_RATE * dt.max(0.0)).exp();
+        self.tilt += (if climbing { 1.0 } else { 0.0 } - self.tilt) * blend;
+    }
+
     /// (eye, focus) in the world frame for a player at `pos`.
     pub fn eye(&self, pos: [f32; 3]) -> ([f32; 3], [f32; 3]) {
         let f = [pos[0], pos[1] + CAM_FOCUS_HEIGHT, pos[2]];
-        let pitch = self.pitch + (CAM_EXEC_PITCH - self.pitch) * self.cut;
+        let pitch = self.pitch + CAM_CLIMB_PITCH * self.tilt + (CAM_EXEC_PITCH - self.pitch) * self.cut;
         let (cp, sp) = (pitch.cos(), pitch.sin());
         let dist = CAM_DIST + (CAM_HUG_DIST - CAM_DIST) * self.pull;
         let dist = dist + (CAM_EXEC_DIST - dist) * self.cut;
@@ -113,6 +121,21 @@ mod tests {
         for _ in 0..120 { c.follow_exec(None, DT); }
         assert!(c.cut < 0.001);
         assert_eq!(c.yaw, yaw, "release preserves orbit");
+    }
+
+    #[test]
+    fn climb_tilt_lowers_the_eye_and_wall_clips_it() {
+        let mut c = Camera::default();
+        let (e0, _) = c.eye([0.0; 3]);
+        for _ in 0..120 { c.follow_climb(true, DT); }
+        assert!(c.eye([0.0; 3]).0[1] < e0[1]);
+        let t = super::super::terrain::Terrain::sandbox();
+        let f = [0.0, 1.3, 0.0];
+        assert_eq!(t.camera_clip(f, f), f);
+        let w = t.colliders.iter().find(|b| !b.ramp && b.max[1] > 3.0).unwrap();
+        let inside = [(w.min[0] + w.max[0]) / 2.0, 1.5, (w.min[2] + w.max[2]) / 2.0];
+        let clipped = t.camera_clip([inside[0], 1.5, w.min[2] - 3.0], inside);
+        assert!(clipped[2] < w.min[2], "stopped outside the wall");
     }
 
     #[test]

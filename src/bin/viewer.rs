@@ -522,10 +522,12 @@ fn update_hud(sim: Res<Sim>, pad: Res<Pad>, dbg: Res<Dbg>, mut q: Query<(&Hud, O
 }
 
 /// Mouse motion and right stick orbit the camera around the player.
+#[allow(clippy::too_many_arguments)]
 fn orbit(
     pad: Res<Pad>,
     mut cam: ResMut<Cam>,
     sim: Res<Sim>,
+    world: Res<World>,
     motion: Res<AccumulatedMouseMotion>,
     pads: Query<&Gamepad>,
     time: Res<Time>,
@@ -544,7 +546,10 @@ fn orbit(
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
     let p = &sim.0.player;
     cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), time.delta_secs());
+    let a = p.world_action();
+    cam.0.follow_climb(matches!(a, "CLIMB06" | "STOP_A06" | "TWO06") || a.starts_with("HANG"), time.delta_secs());
     let (e, f) = cam.0.eye(p.focus_pos());
+    let e = world.0.camera_clip(f, e);
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }
 

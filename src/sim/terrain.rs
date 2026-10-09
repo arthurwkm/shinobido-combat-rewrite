@@ -62,6 +62,17 @@ impl Terrain {
         })
     }
 
+    /// Pull `eye` toward `focus` until the segment clears every solid box (0.2 m margin).
+    pub fn camera_clip(&self, focus: [f32; 3], eye: [f32; 3]) -> [f32; 3] {
+        let len = ((eye[0] - focus[0]).powi(2) + (eye[1] - focus[1]).powi(2) + (eye[2] - focus[2]).powi(2)).sqrt();
+        let n = (len / 0.1).ceil() as i32;
+        let at = |t: f32| [0, 1, 2].map(|k| focus[k] + (eye[k] - focus[k]) * t);
+        match (1..=n).map(|i| i as f32 / n as f32).find(|&t| self.blocked(at(t))) {
+            Some(t) => at((t - 0.2 / len).max(0.0)),
+            None => eye,
+        }
+    }
+
     pub fn ground_height(&self, p: [f32; 3]) -> f32 {
         self.colliders.iter().filter(|b| b.contains(p, 0.0))
             .map(|b| b.top(p[2])).filter(|&y| y <= p[1] + SUPPORT_EPS).fold(0.0, f32::max)

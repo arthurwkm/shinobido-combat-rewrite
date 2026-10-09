@@ -82,6 +82,7 @@ pub const CAM_EXEC_RATE: f32 = 6.0;
 pub const CAM_HUG_RATE: f32 = 4.0;
 // ESTIMATE: side view 60 degrees from the outward wall normal; awaiting movement 38 s comparison.
 pub const CAM_HUG_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
+pub const CAM_CLIMB_PITCH: f32 = -0.35; // ESTIMATE: movement.mov 28-32 s camera looks up at the rooftop edge
 pub const CAM_PITCH: f32 = 0.3;
 pub const CAM_PITCH_MIN: f32 = -0.2;
 pub const CAM_PITCH_MAX: f32 = 1.2;

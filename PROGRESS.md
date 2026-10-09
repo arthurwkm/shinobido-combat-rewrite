@@ -203,6 +203,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 ## Milestone 16 — Camera, controls and HUD feel
 - [ ] Camera from the clips: distance, pitch, height and lag measured on frames; no clipping through walls;
   pulls close at walls and corners; tilts on rooftop climbs. Compare records with the clips.
+  - Done so far (2026-10-09): `Terrain::camera_clip` (eye pulled in front of solid boxes, 0.2 m margin) and `Camera::follow_climb` tilt (`CAM_CLIMB_PITCH` ESTIMATE) while action is HANG*/STOP_A06/TWO06/CLIMB06. Test `climb_tilt_lowers_the_eye_and_wall_clips_it`; `cargo test -q` 77 passed, clippy clean. Seen: `target/debug/viewer --record target/rec/ledgecam --script tools/scripts/ledge.txt --every 15 --ticks 420` frames 225/270/330 vs movement.mov 28/30/32 s (`target/cmp/camclimb.png`): camera looks up at hang and climb as in the clip, stays outside the wall. Still differs: clip camera sits farther (player ~half our size at climb) and shows sky; lag and distance/pitch not yet measured on frames. Left unchecked.
 - [ ] Full PS2 pad map from docs/controls.md, every action reachable; a controls legend in the debug HUD.
   Check docs/controls.md against `img/shinobido controls.png` first (shoulders, guard, evasion; replaces the
   rear-view guide interpretation and estimated combinations).
