@@ -123,12 +123,14 @@ pub const WALL_RUN_RISE: f32 = 3.0;
 pub const KICK_SPEED: f32 = 0.05;
 
 // ESTIMATE: ledge catch window. The hands reach the top while it is HANG_MIN..LEDGE_REACH above the feet, within
-// LEDGE_GRAB_DIST of the face; hanging feet sit CLIMB06's root rise below the top, HANG_OFFSET out from the face
+// LEDGE_GRAB_DIST of the face; hanging feet sit HANG_REACH below the top, HANG_OFFSET out from the face
 // (CLIMB06's forward root motion then ends the body on the top). No catch rule was found in the files.
 pub const LEDGE_REACH: f32 = 2.4;
 pub const HANG_MIN: f32 = 1.5;
 pub const LEDGE_GRAB_DIST: f32 = 0.5;
 pub const HANG_OFFSET: f32 = 0.15;
+// TWO06 / STOP_A06 hand height above the actor origin, measured with Skeleton::joints (docs/formats.md).
+pub const HANG_REACH: f32 = 1.84;
 // ESTIMATE: ground vault (CLIMB_B01, hips rise ~1.8 m in the clip; movement 24-26 s, 40 s). A box top VAULT_MIN..VAULT_MAX
 // above the feet, within VAULT_DIST of the face, is vaulted by Jump; lower tops are jumped, higher ones are wall-run.
 pub const VAULT_MIN: f32 = 1.2;

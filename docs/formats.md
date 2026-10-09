@@ -512,6 +512,49 @@ order puts the limbs through the body, so the stored order stands. **Confirmed 2
 counting with root motion). 66-track clips (set-05 modes) are exported too: track 0 empty, track 1 root T (root motion), then a (T, Q) pair per bone j=0..31 at tracks 1+2j / 2+2j, bone j = HAnim node j-1 (**confirmed 2026-10-08**: the static T tracks equal the skeleton rest offsets in DFS order, e.g. thigh 0.068/-0.014, spine 0.132). Other counts (SHEATH_BU05 68, LOOK07 22) are not exported.
 
 
+### Hang contact height (2026-10-09)
+
+- **Confirmed in the viewer code:** `pose_bones` places animated joints at
+  `p.pos + heading * skel.joints(row)`; bones/parts are independent world entities.
+  `draw`'s `p.pos.y + 0.85` applies only to the fallback capsule (`Rig`), not the
+  animated mannequin. Adding that offset to these measurements would be incorrect.
+- **Confirmed from the exported skeleton and clips**, using the exact Rust loader/FK:
+  `cargo test -q ledge_pose_hand_heights -- --nocapture`. Heights in metres above
+  the actor's feet origin (`p.pos.y`), hand nodes 15/20:
+
+  | Clip | Frame | Left/right hand Y |
+  | --- | ---: | --- |
+  | TWO06 | 0 / 36 | 1.886635/1.881608 / 1.837324/1.831354 |
+  | HANG_L06 | 0 / 30 | 1.848324/1.846556 / 1.865803/1.837325 |
+  | HANG_R06 | 0 / 30 | 1.846565/1.848197 / 1.837521/1.861125 |
+  | STOP_A06 | 0 / 50 | 1.839301/1.837204 / 1.838760/1.839325 |
+  | CLIMB06 | 0 | 1.832844/1.837148 |
+
+- **Confirmed contact bug:** `hang_at` subtracted CLIMB06's final root Y
+  (2.3359375 m), which is travel, not the hanging pose's hand reach. On the 3.5 m
+  roof this put the actor at 1.1640625 m and STOP_A06 hands at 3.003364/3.001267 m.
+  Subtracting the measured rounded reach, `HANG_REACH = 1.84`, puts the actor at
+  1.66 m and those hands at 3.499301/3.497204 m. Catch, idle, shimmy and climb-entry
+  samples are within 0.047 m of the edge; the regression tests world hand contact,
+  crouched walk-off and the existing climb completion at exactly roof height.
+- **Decision: placement fix (a), no global rescale.** STOP01 frame 0 head joint is
+  1.294750 m and ankle joints are 0.239353/0.239509 m above the actor origin;
+  these are unchanged, and do not establish the proposed 1.7–1.8 m standing height
+  or ground contact. They are joints in the bent ready pose, not mesh bounds.
+  Scaling the whole pose to make 1.84 become 2.34 would also raise the ankles.
+  A targeted cross-check of STOP_S05's static translation tracks against model
+  offsets gives nonuniform length ratios (~0.074–0.103 for limb/spine nodes), not
+  evidence for that global enlargement. The export scale remains an **ESTIMATE**;
+  absolute stature/foot contact remain a separate rig-calibration uncertainty.
+- **Confirmed:** CLIMB06 starts at the corrected hanging position; `step_ledge`
+  caps `pos.y` at `hang_top` during ascent and still snaps there on completion.
+  The extracted root path is unchanged; the cap prevents its extra ~0.496 m from
+  leaving the actor floating before completion (regression failed at 3.536221 m
+  before this cap). **ESTIMATE:** how the game reconciles climb travel with contact.
+  **Pending visual check:** catch/shimmy contact and the climb transition against
+  `target/pcsx2/edgegrab.mov` / `climb.mov`; no viewer was run by Codex.
+
+
 ### Wall hug versus ledge poses (2026-10-08)
 
 - **Confirmed from source tracks:** `HUG_RH05` / `HUG_LH05` translate along local

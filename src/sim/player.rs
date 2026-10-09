@@ -393,11 +393,10 @@ impl Player {
     }
 
     fn hang_at(&mut self, terrain: &super::terrain::Terrain, top: [f32; 3], heading: f32) -> bool {
-        use super::data::HANG_OFFSET;
+        use super::data::{HANG_OFFSET, HANG_REACH};
         let (s, c) = heading.sin_cos();
-        let rise = ACTIONS.iter().find(|a| a.name == "CLIMB06").map_or(2.3, |a| a.root.last().map_or(2.3, |k| k.1[1]));
-        let hung = [top[0] - s * HANG_OFFSET, top[1] - rise, top[2] - c * HANG_OFFSET];
-        if hung[1] < terrain.ground_height(hung) { return false; } // too low to hang: CLIMB06 starts 2.3 m under the top
+        let hung = [top[0] - s * HANG_OFFSET, top[1] - HANG_REACH, top[2] - c * HANG_OFFSET];
+        if hung[1] < terrain.ground_height(hung) { return false; } // too low to hang without putting the feet underground
         self.heading = heading;
         self.hang_top = top[1];
         self.pos = hung;
@@ -420,6 +419,8 @@ impl Player {
         }
         if self.state == State::Climb {
             self.advance();
+            // The hand-anchored start needs less rise than the full CLIMB06 root path.
+            self.pos[1] = self.pos[1].min(self.hang_top);
             if self.world.done() {
                 self.pos[1] = self.hang_top;
                 self.start(State::Idle, self.idle_clip);

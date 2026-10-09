@@ -977,7 +977,7 @@ fn wall_run_reaching_the_top_kicks_off_with_kabe_e() {
 #[test]
 fn crouched_roof_walk_off_catches_turns_and_shimmies() {
     use crate::sim::{player::{Player, State}, terrain::Terrain};
-    for (crouch, height) in [(true, 3.5), (false, 3.5), (true, 2.0)] {
+    for (crouch, height) in [(true, 3.5), (false, 3.5), (true, 2.0), (true, 1.5)] {
         let mut t = Terrain::sandbox();
         t.colliders.iter_mut().find(|b| b.min == [6.0, 0.0, 6.0]).unwrap().max[1] = height;
         let mut p = Player::new();
@@ -989,15 +989,14 @@ fn crouched_roof_walk_off_catches_turns_and_shimmies() {
             p.step_on(&t, true, false);
             if matches!(p.state, State::Hang | State::Fall) { break; }
         }
-        if !crouch || height == 2.0 {
+        if !crouch || height == 1.5 {
             assert_eq!(p.state, State::Fall);
             continue;
         }
         assert_eq!(p.state, State::Hang);
         assert_eq!(p.world_action(), "TWO06");
         assert!(p.heading.sin().abs() < 0.001 && p.heading.cos() > 0.999);
-        let rise = ACTIONS.iter().find(|a| a.name == "CLIMB06").unwrap().root.last().unwrap().1[1];
-        assert!((p.pos[1] + rise - 3.5).abs() < 0.001);
+        assert!((p.pos[1] + super::data::HANG_REACH - height).abs() < 0.001);
         assert!(p.pos[2] < 6.0 && p.pos[1] > 0.0);
         for _ in 0..120 { p.step_on(&t, false, false); }
         assert_eq!(p.state, State::Hang, "holding crouch must keep the caught ledge");
@@ -1036,7 +1035,10 @@ fn jumping_at_a_ledge_hangs_shimmies_and_climbs_or_drops() {
     assert_eq!(p.state, State::Hang);
     p.jump();
     assert_eq!(p.world_action(), "CLIMB06");
-    for _ in 0..80 { p.step_on(&t, false, false); }
+    for _ in 0..80 {
+        p.step_on(&t, false, false);
+        assert!(p.pos[1] <= 3.5, "climb must not float above the roof: {}", p.pos[1]);
+    }
     assert_eq!(p.state, State::Idle);
     assert!((p.pos[1] - 3.5).abs() < 0.01, "on top: {}", p.pos[1]);
     // drop
@@ -1492,4 +1494,29 @@ fn running_jump_lands_straight_back_into_the_run() {
     while p.state != State::Land { p.step(true, false); }
     for _ in 0..4 { p.step(true, false); }
     assert_eq!(p.state, State::Run, "emulator: running again ~2 game frames after touchdown");
+}
+
+#[test]
+fn ledge_pose_hand_heights() {
+    use crate::sim::pose::{Clips, Skeleton};
+    let skel = Skeleton::parse(&std::fs::read("extracted/anim/skeleton.bin").unwrap()).unwrap();
+    let clips = Clips::parse(&std::fs::read("extracted/anim/clips.bin").unwrap()).unwrap();
+    let terrain = super::terrain::Terrain::sandbox();
+    let mut p = super::player::Player::new();
+    p.pos = [10.0, 1.5, 5.8];
+    p.state = super::player::State::Fall;
+    p.step_on(&terrain, false, false);
+    assert_eq!(p.state, super::player::State::Hang);
+    for name in ["STOP01", "TWO06", "HANG_L06", "HANG_R06", "STOP_A06", "CLIMB06"] {
+        let action = ACTIONS.iter().find(|a| a.name == name).unwrap();
+        for frame in [0, action.frames / 2] {
+            let j = skel.joints(clips.row(name, frame).unwrap());
+            if name != "STOP01" && (name != "CLIMB06" || frame == 0) {
+                for hand in [15, 20] {
+                    assert!((p.pos[1] + j[hand][1] - 3.5).abs() < 0.1, "{name} frame {frame}: hand {}", j[hand][1]);
+                }
+            }
+            println!("{name} frame {frame}: hands {:.6}/{:.6}, head {:.6}, ankles {:.6}/{:.6}", j[15][1], j[20][1], j[10][1], j[3][1], j[6][1]);
+        }
+    }
 }
