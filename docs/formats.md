@@ -396,6 +396,21 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
   (`0x3f0540`) returns IDs with stride 75 which do not name corresponding motions when treated
   as mtnfile indices. **Unresolved:** this list's ID namespace and consumer; these selectors
   are not evidence for spatial execution conditions.
+- **Confirmed bounded consumer trace (2026-10-09):** `0x3f7980` allocates a 0x28-byte
+  entry; +4 is the entry kind, +8 the selector input and +0xc the selector result.
+  `0x263050` obtains an entry through `0x27d560` (index into a linked list), then copies
+  +0xc to manager +0x1dc at `0x2630c0–0x2630c4`. This is a distinct field from the
+  resource ID at entry +0x1c: `0x263124–0x263130` passes that latter field to
+  `0x159980` with resource-class argument 3. Another consumer follows
+  `0x25a4ec → 0x3f7a90 → 0x26ab50`; `0x26ac88–0x26ac94` likewise requests
+  entry +0x1c, and `0x26e280` constructs a runtime object from the entry kind/index.
+  **Unresolved:** neither path converts selector +0xc to a motion ID; class 3 has not
+  been identified. These are confirmed memory/call relationships, not evidence that
+  `0x3f07e0` selects execution motions. Do not reinterpret its numeric coincidences
+  with `KI_HI*` mtnfile indices as a confirmed pairing.
+  Reproduce with `.venv/bin/python target/check_execution_consumer.py` (local ignored
+  address assertions against `extracted/SCES_539.31`; source mappings use the ELF
+  first load segment), or disassemble only the functions named above with rabbitizer.
 - **ESTIMATE retained:** existing S-only victim selection and KIME player pairing are placeholders,
   not confirmed executions. Do not cycle A/B/C/D arbitrarily. Next lookup: trace the list consumer
   and its ID-to-motion conversion; next visual check: compare `HI_*01` phases with combat 46 s,

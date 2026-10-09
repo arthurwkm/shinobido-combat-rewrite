@@ -64,8 +64,8 @@ pub const EXEC_REACH: f32 = 1.5;
 pub const EXEC_ABOVE_MIN: f32 = 2.0;
 pub const EXEC_BEHIND_MIN: f32 = 2.4;
 pub const EXEC_FRONT_HP: f32 = 0.25;
-// ESTIMATE: paired execution clips per kind (player, victim); no paired clips exist in the files (formats.md "Execution packs")
-// and the S variant of each KI_HI reaction is taken as the plain kill. Distance (m) the victim is placed from the player.
+// ESTIMATE: placeholder execution pairs; HI_* phase continuity now argues against the KIME mapping
+// (formats.md "Execution phase audit"). Distance (m) ahead; align player height to victim height, never lift the victim.
 pub const EXEC_CLIPS: [(&str, &str); 3] = [("KIME_A01", "KI_HIBS07"), ("KIME_B01", "KI_HIUS07"), ("KIME_B01", "KI_HICS07")];
 pub const EXEC_DIST: f32 = 0.8;
 // ESTIMATE: follow camera from the clips (docs/video_notes.md: ~3 m back, pitched down 25-30 deg); the camera

@@ -117,11 +117,12 @@ impl Fight {
     fn kill(&mut self, kind: super::execution::Kind) {
         let (pc, ec) = kind.clips();
         let (p, e) = (&mut self.player, &mut self.enemy);
-        // Face the victim; the victim is put EXEC_DIST ahead of the player (above kills keep their height).
+        // ESTIMATE alignment: start the paired clips at the victim's height, including aerial kills.
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
         p.heading = dx.atan2(dz);
+        p.pos[1] = e.pos[1];
         let (s, c) = p.heading.sin_cos();
-        e.pos = [p.pos[0] + s * data::EXEC_DIST, if kind == super::execution::Kind::Above { p.pos[1] } else { e.pos[1] }, p.pos[2] + c * data::EXEC_DIST];
+        e.pos = [p.pos[0] + s * data::EXEC_DIST, e.pos[1], p.pos[2] + c * data::EXEC_DIST];
         if kind == super::execution::Kind::Front {
             e.heading = p.heading + std::f32::consts::PI; // faces the player
         } else if kind == super::execution::Kind::Back {
