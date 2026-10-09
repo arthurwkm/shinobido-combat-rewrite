@@ -1,0 +1,8 @@
+# DRINK, then MAKIBISHI dropped ahead, then NINJYUTU staggers the soldier standing in front
+0 stick 0 0
+2 at 0 -8
+5 item
+40 itemnext
+45 item
+50 itemnext
+55 item

@@ -120,7 +120,7 @@ fn parse_shot() -> Option<Shot> {
 }
 
 /// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
-/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
+/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | itemnext | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
 /// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
 #[derive(Resource)]
 struct Record {
@@ -171,6 +171,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("attack"), _) => i.attack = true,
             (Some("jump"), _) => i.jump = true,
             (Some("item"), _) => i.item = true,
+            (Some("itemnext"), _) => i.item_next = true,
             (Some("exec"), _) => exec.0 = true,
             _ => eprintln!("script: bad line `{cmd}`"),
         }
@@ -332,6 +333,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.attack |= mouse.just_pressed(MouseButton::Left);
     i.jump |= keys.just_pressed(KeyCode::Space);
     i.item |= keys.just_pressed(KeyCode::KeyQ);
+    i.item_next |= keys.just_pressed(KeyCode::Tab);
     i.lock = mouse.pressed(MouseButton::Right);
     i.crouch = keys.pressed(KeyCode::ControlLeft);
     i.dash = keys.pressed(KeyCode::ShiftLeft);
@@ -344,6 +346,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         i.attack |= g.just_pressed(GamepadButton::West);
         i.jump |= g.just_pressed(GamepadButton::South);
         i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
+        i.item_next |= g.just_pressed(GamepadButton::DPadRight);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
         i.crouch |= g.pressed(GamepadButton::LeftTrigger);
         i.dash |= g.pressed(GamepadButton::East);
@@ -362,6 +365,12 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
     }
     if sim.0.enemy.state == shinobido_combat_rewrite::sim::enemy::State::Held && std::mem::take(&mut pad.0.attack) {
         sim.0.mash();
+    }
+    if std::mem::take(&mut pad.0.item_next) {
+        sim.0.next_item();
+    }
+    if pad.0.item {
+        sim.0.use_item();
     }
     if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.roll() {
         pad.0.jump = false;

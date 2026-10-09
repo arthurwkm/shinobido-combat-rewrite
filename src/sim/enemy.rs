@@ -41,11 +41,13 @@ pub struct Enemy {
     /// Frames spent in `Held` and presses made meanwhile.
     pub held_for: u32,
     pub mashes: u32,
+    /// Root-motion speed factor (1 normally, less in caltrops).
+    pub slow: f32,
 }
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0 }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0 }
     }
 
     pub fn action(&self) -> &'static str {
@@ -148,8 +150,8 @@ impl Enemy {
         self.world.step();
         let d: [f32; 3] = std::array::from_fn(|i| self.world.pos[i] - before[i]);
         let (s, c) = self.heading.sin_cos();
-        self.pos[0] += d[0] * c + d[2] * s;
+        self.pos[0] += (d[0] * c + d[2] * s) * self.slow;
         self.pos[1] += d[1];
-        self.pos[2] += d[2] * c - d[0] * s;
+        self.pos[2] += (d[2] * c - d[0] * s) * self.slow;
     }
 }

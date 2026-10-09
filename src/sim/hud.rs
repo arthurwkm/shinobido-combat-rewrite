@@ -42,9 +42,10 @@ impl Debug {
         let queued: Vec<&str> = [(input.attack, "attack"), (input.jump, "jump"), (input.item, "item")]
             .iter().filter(|q| q.0).map(|q| q.1).collect();
         format!(
-            "action  {}\nframe   {}/{}\nspeed   {:.2} m/s\nheight  {:.2} m\nlock-on {}\nqueued  {}",
+            "action  {}\nframe   {}/{}\nspeed   {:.2} m/s\nheight  {:.2} m\nlock-on {}\nitem    {:?} x{}\nqueued  {}",
             p.world_action(), p.world_frame(), p.world_len(), self.speed, p.pos[1],
             if input.lock { "held" } else { "off" },
+            f.items.selected, f.items.count[f.items.selected as usize],
             if queued.is_empty() { "-".into() } else { queued.join(" ") },
         )
     }

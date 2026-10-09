@@ -13,6 +13,8 @@ pub struct Input {
     pub attack: bool,
     pub jump: bool,
     pub item: bool,
+    /// Edge: select the next item (the viewer's tick takes `item` and this before `apply`, `Fight::use_item`).
+    pub item_next: bool,
     /// Held: lock-on (R1) guards when idle; crouch (L1) with `jump` dodges (ESTIMATE combinations, docs/controls.md).
     pub lock: bool,
     pub crouch: bool,
@@ -49,9 +51,6 @@ impl Input {
             p.dodge(dir);
         } else if self.jump {
             p.jump();
-        }
-        if self.item {
-            p.special("DRINK01");
         }
         p.step_on(terrain, moving, self.attack);
         self.attack = false;

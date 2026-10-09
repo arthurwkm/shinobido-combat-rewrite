@@ -139,3 +139,14 @@ pub const THROW_LIFT: f32 = 1.0;
 pub const THROWN_HIT_RADIUS: f32 = 0.8;
 pub const THROWN_DAMAGE: i32 = 25;
 pub const GRAVITY_MS2: f32 = 9.8;
+
+// ESTIMATE: items (docs/controls.md: the item button uses the selected item; nothing in the files says what each does).
+// Starting counts [DRINK, MAKIBISHI, NINJYUTU], hp restored by DRINK, caltrops dropped CALTROP_FWD ahead that slow the
+// soldier to CALTROP_SLOW within CALTROP_RADIUS, NINJYUTU staggers him within range (m) and cone (rad) without damage.
+pub const ITEM_COUNTS: [u32; 3] = [3, 5, 2];
+pub const DRINK_HEAL: i32 = 40;
+pub const CALTROP_FWD: f32 = 1.0;
+pub const CALTROP_RADIUS: f32 = 1.2;
+pub const CALTROP_SLOW: f32 = 0.4;
+pub const NINJYUTU_RANGE: f32 = 4.0;
+pub const NINJYUTU_CONE: f32 = 0.8;

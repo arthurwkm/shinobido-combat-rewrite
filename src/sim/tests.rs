@@ -1268,3 +1268,28 @@ fn hit_drops_the_load_and_the_dead_soldier_can_be_carried() {
     f.carry_step(&mut t);
     assert!(f.carry.load.is_none() && f.enemy.pos[1] < 0.5, "dropped on the floor");
 }
+
+#[test]
+fn items_heal_slow_the_soldier_and_stagger_him() {
+    use super::{combat::{items::Item, Fight}, enemy::{Enemy, State as E}, player::Player};
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 3.0]));
+    f.player_hp = 50;
+    assert!(f.use_item());
+    assert_eq!((f.player_hp, f.items.count[0], f.player.world_action()), (90, 2, "DRINK01"));
+    for _ in 0..200 { f.step(false, false); }
+    f.next_item();
+    assert_eq!(f.items.selected, Item::Makibishi);
+    assert!(f.use_item() && f.items.caltrops.len() == 1);
+    f.enemy.pos = [f.items.caltrops[0][0], 0.0, f.items.caltrops[0][1]];
+    f.step(false, false);
+    assert_eq!(f.enemy.slow, super::data::CALTROP_SLOW);
+    for _ in 0..200 { f.step(false, false); }
+    f.next_item();
+    f.enemy.pos = [0.0, 0.0, 2.0];
+    f.enemy.alert();
+    assert!(f.use_item());
+    assert_eq!((f.enemy.state, f.enemy.hp), (E::Hit, super::data::ENEMY_HP));
+    f.items.count[2] = 0;
+    for _ in 0..200 { f.step(false, false); }
+    assert!(!f.use_item(), "none left");
+}

@@ -1,6 +1,7 @@
 //! Hits both ways between the player and one enemy. Reach, cone and damage values are ESTIMATE (data.rs).
 
 mod carry;
+pub mod items;
 use super::{data, enemy::{Enemy, State as EnemyState}, player::{hit_damage, Player, State}};
 
 pub struct Fight {
@@ -13,6 +14,7 @@ pub struct Fight {
     /// Roll into the enemy: extra metres per frame along the roll heading on top of FRONT01's root motion.
     roll: Option<[f32; 2]>,
     pub carry: carry::Carry,
+    pub items: items::Items,
 }
 
 /// True when `to` lies inside the frontal cone of something at `from` facing `heading`, within reach.
@@ -31,7 +33,7 @@ fn in_cone(heading: f32, dx: f32, dz: f32, cone: f32) -> bool {
 
 impl Fight {
     pub fn new(player: Player, enemy: Enemy) -> Self {
-        Fight { player, enemy, player_hp: data::PLAYER_HP, player_landed: false, enemy_landed: false, roll: None, carry: Default::default() }
+        Fight { player, enemy, player_hp: data::PLAYER_HP, player_landed: false, enemy_landed: false, roll: None, carry: Default::default(), items: Default::default() }
     }
 
     /// Advance both one frame, then resolve hits.
@@ -42,6 +44,7 @@ impl Fight {
 
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
+        self.caltrops();
         self.enemy.step(self.player.pos);
         self.hold();
         self.rolling();
