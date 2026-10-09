@@ -1059,3 +1059,22 @@ fn square_from_the_guard_stance_with_r1_held_throws_the_uppercut() {
     p.step(false, true);
     assert_eq!((p.state, p.world_action()), (State::Attack, "AT_E01"));
 }
+
+#[test]
+fn chain_targets_follow_the_modifier_jumping_strike_and_27_kicks() {
+    use super::player::{AttackMod, Player};
+    let at_c = |m: AttackMod, frame: u32| {
+        let mut p = Player::new();
+        p.step(false, true);
+        for _ in 0..21 { p.step(false, false); }
+        p.step(false, true);
+        assert_eq!(p.world_action(), "AT_C01");
+        while p.world_frame() < frame { p.step(false, false); }
+        p.attack_mod = m;
+        p.step(false, true);
+        p.world_action()
+    };
+    assert_eq!(at_c(AttackMod::Forward, 19), "AT_DA01");
+    assert_eq!(at_c(AttackMod::Lock, 21), "FUTO27");
+    assert_eq!(at_c(AttackMod::Plain, 17), "AT_D01");
+}

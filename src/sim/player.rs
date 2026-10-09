@@ -570,7 +570,7 @@ impl Player {
         let f = self.world.frame;
         // ESTIMATE: pairing of rows to motions by cancel graph and clip names (AT_CA = forward power slash, SOCCER =
         // kick, AT_E = uppercut, AT_DASH05 = dash leap); not frame-matched against the attack video.
-        let want = match self.attack_mod {
+        let want: Option<&str> = match self.attack_mod {
             AttackMod::Forward => Some("AT_CA01"),
             AttackMod::Back => Some("SOCCER01"),
             AttackMod::Lock if self.state != State::Attack => Some("AT_E01"),
@@ -581,7 +581,14 @@ impl Player {
         let target = if self.state == State::Attack {
             let a = self.world.action;
             let open = a.cancels.iter().filter(|c| c.1 <= f && f < c.2);
-            let preferred = want.and_then(by_name).and_then(|w| open.clone().find(|c| c.0 == w.id));
+            // ESTIMATE: inside a chain Forward prefers the jumping strike (AT_DA) before the power slash, R1 the
+            // 27-set kicks (FUTO27, KICK27) that AT_C01's cancel list offers.
+            let prefs: &[&str] = match self.attack_mod {
+                AttackMod::Forward => &["AT_DA01", "AT_CA01"],
+                AttackMod::Lock => &["FUTO27", "KICK27"],
+                _ => want.as_slice(),
+            };
+            let preferred = prefs.iter().filter_map(|n| by_name(n)).find_map(|w| open.clone().find(|c| c.0 == w.id));
             preferred.or_else(|| open.clone().next()).and_then(|c| ACTIONS.iter().find(|x| x.id == c.0))
         } else {
             want.and_then(|w| if w == "AT_CA01" { None } else { by_name(w) }).or_else(|| by_name("AT_A01"))

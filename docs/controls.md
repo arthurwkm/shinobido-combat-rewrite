@@ -93,3 +93,6 @@ simulation tick; held inputs persist across ticks. This avoids the current viewe
 known missed/duplicated `just_pressed` taps, without adding gameplay input buffering.
 The existing viewer still uses W to run, Shift to walk, A/D to turn, Space to attack
 and G to guard; this documentation item does not change runtime controls.
+
+Chain pairing (ESTIMATE, from the cancel graph, not frame-matched): inside AT_C01 (third slash) Forward + Square picks AT_DA01
+(jumping strike, then AT_CA01 power slash), R1 + Square picks FUTO27 (kick, falls back to KICK27); plain Square picks AT_D01.
