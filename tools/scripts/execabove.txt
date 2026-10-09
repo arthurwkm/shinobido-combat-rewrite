@@ -1,0 +1,6 @@
+# unaware soldier at origin, player 2.5 m overhead: Triangle = kill from above
+0 stick 0 0
+0 soldier 0 0 0
+1 at 0 0.5
+1 rise 2.5
+3 exec

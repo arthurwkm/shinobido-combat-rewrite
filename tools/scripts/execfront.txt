@@ -1,0 +1,6 @@
+# wounded soldier (hp 10) at origin facing +z, player in front at z 1: Triangle = front kill
+0 stick 0 0
+0 soldier 0 0 0
+1 at 0 1
+2 wound 0 0 0
+6 exec
