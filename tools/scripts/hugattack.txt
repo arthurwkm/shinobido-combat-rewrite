@@ -1,0 +1,7 @@
+# Crouch into the wall at z=8, hug it, then Square (AT_E01_H), later Forward + Square (AT_CA01_H)
+0 at -8 6
+0 crouch 1
+1 stick 0 1
+100 stick 0 0
+130 attack
+220 crouch 0

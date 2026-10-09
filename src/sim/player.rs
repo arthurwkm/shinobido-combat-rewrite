@@ -563,6 +563,16 @@ impl Player {
             self.fall_from = if self.state == State::Fall { self.fall_from } else { self.pos[1] };
             return self.start(State::AirAct, clip);
         }
+        // ESTIMATE: from a wall hug the `_H` variants play, picked like the open-ground attacks (Forward = power
+        // slash, R1 = uppercut, Back = 27 kick, else AT_E01_H); the wall-facing hug is left.
+        if self.state == State::Hug {
+            let clip = match self.attack_mod {
+                AttackMod::Forward => "AT_CA01_H",
+                AttackMod::Back => "KICK27_H",
+                _ => "AT_E01_H",
+            };
+            return self.start(State::Attack, clip);
+        }
         // R1 is held while the uppercut is pressed, so the guard stance is already up: Square leaves it.
         if self.state == State::Guard && self.attack_mod == AttackMod::Lock {
             return self.start(State::Attack, "AT_E01");
