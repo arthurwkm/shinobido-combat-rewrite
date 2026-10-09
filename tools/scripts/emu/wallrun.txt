@@ -1,0 +1,4 @@
+# Run at the hut wall ahead and press Cross on contact (stick held throughout), then let go.
+30 down lup
+80 tap cross
+240 up lup

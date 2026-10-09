@@ -1,0 +1,6 @@
+# Viewer copy of wallrun.txt: run +z at the 3.5 m rooftop (face at z=6) and press Jump on contact, stick held.
+0 at 10 3.5
+0 yaw 0
+30 stick 0 1
+80 jump
+240 stick 0 0
