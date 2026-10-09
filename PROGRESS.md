@@ -210,7 +210,7 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 
 
 ## Milestone 16b — Acceptance gaps (docs/acceptance.md)
-- [ ] Item effects seen: MAKIBISHI caltrops drawn on the ground and slowing the soldier, NINJYUTU effect cue, from a script that presses the item outside DRINK01; compare poses with movement/combat clips where visible.
+- [x] (evidence: viewer `draw_items` draws caltrops as yellow spikes + slow ring and NINJYUTU as a violet cone fan; `target/debug/viewer --record target/rec/caltrop --script tools/scripts/caltrop.txt --every 15 --ticks 190` -> `target/cmp/caltrop_sheet.png`: spikes+ring at 1 m ahead during MAKIBISHI01, fan during NINJYUTU01; slowing is unit-tested; still differs: gizmo stand-ins not the game's effect art, no clip frame of the items exists to compare, soldier not shown inside the ring) Item effects seen: MAKIBISHI caltrops drawn on the ground and slowing the soldier, NINJYUTU effect cue, from a script that presses the item outside DRINK01; compare poses with movement/combat clips where visible.
 - [ ] Soldier reactions seen: record a heavy blow (knock-back, HI_F07 + UP_BA07) and a hit from behind (HI_UC07) from the pad in the viewer.
 - [ ] Executions seen: record front and above kills from the pad (cue shown, paired motions) vs `shinobido lock in lock off stealth kill from above.mov`.
 
@@ -353,3 +353,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-09 Claude: death and body item closed: corpse persists and the carry/throw already built is seen working in the carrybody record.
 - 2026-10-09: camera item closed (distance 3.8 m, focus 0.9 m measured on movement.mov frame).
 - 2026-10-09 (Claude): M16 pad map item closed: R2 item binding, controls legend in debug HUD, controls.md corrected.
+- 2026-10-09 M16b item effects drawn in the viewer (caltrops, NINJYUTU fan), seen in `caltrop` record; gizmo placeholders.

@@ -6,6 +6,7 @@ use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::input::mouse::AccumulatedMouseMotion;
 use shinobido_combat_rewrite::sim::lockon::LockOn;
 use shinobido_combat_rewrite::sim::camera::Camera as Orbit;
+use shinobido_combat_rewrite::sim::data;
 use shinobido_combat_rewrite::sim::data::{CAM_MOUSE_SENS, CAM_STICK_SPEED, SWITCH_FLICK, SWITCH_MOUSE_PX, SWITCH_REARM};
 use shinobido_combat_rewrite::sim::hud::{self, Debug};
 use shinobido_combat_rewrite::sim::input::Input;
@@ -252,7 +253,7 @@ fn main() {
         .add_systems(Update, (
             (record_step, tick).chain().run_if(resource_exists::<Record>),
             read_pad.run_if(|r: Option<Res<Record>>| r.is_none()),
-            orbit, draw, move_crates, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
+            orbit, draw, move_crates, pose_bones, cue, draw_grid, draw_items, update_hud, update_game_hud).chain())
         .run();
 }
 
@@ -630,4 +631,27 @@ fn draw_grid(mut gizmos: Gizmos) {
         Vec2::splat(2.0),
         Color::srgba(0.6, 0.65, 0.6, 0.18),
     );
+}
+
+/// Item effects: caltrops as little crossed spikes on the ground (ring = slow radius); NINJYUTU as a fan of rays in its cone.
+fn draw_items(sim: Res<Sim>, world: Res<World>, mut gizmos: Gizmos) {
+    let f = &sim.0;
+    for c in &f.items.caltrops {
+        let y = world.0.ground_height([c[0], 50.0, c[1]]);
+        let col = Color::srgb(0.85, 0.8, 0.3);
+        for k in 0..6 {
+            let a = k as f32 * std::f32::consts::FRAC_PI_3 + c[0] * 7.0;
+            let (s, co) = a.sin_cos();
+            gizmos.line(Vec3::new(c[0] + s * 0.12, y + 0.08, c[1] + co * 0.12), Vec3::new(c[0] - s * 0.12, y + 0.3, c[1] - co * 0.12), col);
+        }
+        gizmos.circle(Isometry3d::new(Vec3::new(c[0], y + 0.08, c[1]), Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)), data::CALTROP_RADIUS, col.with_alpha(0.35));
+    }
+    if f.player.world_action() == "NINJYUTU01" {
+        let p = f.player.pos;
+        for k in -4..=4 {
+            let a = f.player.heading + k as f32 / 4.0 * data::NINJYUTU_CONE;
+            let (s, c) = a.sin_cos();
+            gizmos.line(Vec3::new(p[0], 1.0, p[2]), Vec3::new(p[0] + s * data::NINJYUTU_RANGE, 1.0, p[2] + c * data::NINJYUTU_RANGE), Color::srgb(0.5, 0.4, 1.0));
+        }
+    }
 }

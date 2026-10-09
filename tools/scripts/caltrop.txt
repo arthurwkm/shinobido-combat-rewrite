@@ -1,0 +1,10 @@
+# turn to face away from the camera, drop MAKIBISHI ahead (spikes + slow ring), then the NINJYUTU fan
+0 stick 0 0
+2 at 0 -8
+2 yaw 180
+3 stick 0 -1
+20 stick 0 0
+40 itemnext
+42 item
+120 itemnext
+125 item
