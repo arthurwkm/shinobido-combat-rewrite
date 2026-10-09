@@ -31,7 +31,17 @@ impl Default for Sim {
             enemy.heading = std::f32::consts::FRAC_PI_2;
             enemy.patrol();
         }
-        Sim(Fight::new(Player::default(), enemy))
+        let mut fight = Fight::new(Player::default(), enemy);
+        // More soldiers of the same type, watching from the sides (positions ESTIMATE); `--solo` or `--patrol` keeps one.
+        let args: Vec<String> = std::env::args().collect();
+        if !args.iter().any(|a| a == "--solo" || a == "--patrol") {
+            for (x, z) in [(5.0, 8.0), (-5.0, 9.0)] {
+                let mut e = Enemy::new([x, 0.0, z]);
+                e.heading = (-x).atan2(-z); // facing the player's start
+                fight.others.push(e);
+            }
+        }
+        Sim(fight)
     }
 }
 
@@ -85,15 +95,15 @@ struct Rig;
 
 /// One cuboid per skeleton node, stretched from its parent joint to its own (the game skeleton drawn as primitives); `true` = the soldier's.
 #[derive(Component)]
-struct Bone(usize, bool);
+struct Bone(usize, usize);
 
-/// A mannequin piece (capsule, sphere or box) on the same bone as `Bone(n, foe)`; the cuboids show with B.
+/// A mannequin piece (capsule, sphere or box) on the same bone as `Bone(n, who)`; the cuboids show with B.
 #[derive(Component)]
-struct Part(usize, bool);
+struct Part(usize, usize);
 
 /// The katana of Kagetora (`false`) or the soldier (`true`): in the right hand when drawn, on the left hip when sheathed.
 #[derive(Component)]
-struct Katana(bool);
+struct Katana(usize);
 
 /// Floating diamond over the soldier while an execution is available.
 #[derive(Component)]
@@ -243,7 +253,8 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>, world: Res<World>, anim: Res<Anim>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: ResMut<Assets<StandardMaterial>>, world: Res<World>, anim: Res<Anim>, sim: Res<Sim>) {
+    let rigs = 1 + sim.0.enemies().count(); // rig 0 is the player, the rest one per soldier
     commands.spawn((Camera3d::default(), Transform::default()));
     commands.spawn((DirectionalLight { illuminance: 9000.0, shadow_maps_enabled: true, ..default() }, Transform::default().looking_to(Vec3::new(-0.5, -1.0, 0.35), Vec3::Y)));
     commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(400.0, 400.0))), MeshMaterial3d(mats.add(StandardMaterial { base_color: Color::srgb(0.2, 0.23, 0.2), perceptual_roughness: 0.95, ..default() }))));
@@ -252,11 +263,11 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
     if let Some((skel, _)) = &anim.0 {
         let unit = meshes.add(Cuboid::new(0.08, 0.08, 1.0));
         let foe_mat = mats.add(Color::srgb(0.6, 0.15, 0.12)); // A_BUSHI1 is the red soldier
-        let foe = foe_mat.clone();
         // Nodes 21-22 have no tracks (formats.md): drawn they stick straight forward out of the hips.
         for n in (0..NODES).filter(|&n| skel.parent[n].is_some_and(|p| p != 23) && !matches!(n, 21 | 22)) {
-            commands.spawn((Bone(n, false), Mesh3d(unit.clone()), MeshMaterial3d(body.clone()), Transform::default(), Visibility::Hidden));
-            commands.spawn((Bone(n, true), Mesh3d(unit.clone()), MeshMaterial3d(foe.clone()), Transform::default(), Visibility::Hidden));
+            for who in 0..rigs {
+                commands.spawn((Bone(n, who), Mesh3d(unit.clone()), MeshMaterial3d(if who == 0 { body.clone() } else { foe_mat.clone() }), Transform::default(), Visibility::Hidden));
+            }
             // Mannequin part: bone length is fixed by the rest offset, so the mesh is built at that length.
             let o = skel.offset[n];
             let len = (o[0] * o[0] + o[1] * o[1] + o[2] * o[2]).sqrt().max(0.01);
@@ -269,18 +280,19 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mats: Res
                 }
             };
             let mesh = meshes.add(mesh);
-            for (foe, mat) in [(false, &body), (true, &foe_mat)] {
+            for who in 0..rigs {
+                let mat = if who == 0 { &body } else { &foe_mat };
                 // Capsules stand along Y: the child turns them onto the part's Z axis.
                 let turn = if matches!(n, 7 | 8 | 10) { Quat::IDENTITY } else { Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) };
-                commands.spawn((Part(n, foe), Transform::default(), Visibility::Inherited)).with_children(|c| {
+                commands.spawn((Part(n, who), Transform::default(), Visibility::Inherited)).with_children(|c| {
                     c.spawn((Mesh3d(mesh.clone()), MeshMaterial3d(mat.clone()), Transform::from_translation(Vec3::Z * off).with_rotation(turn)));
                 });
             }
         }
         let steel = mats.add(Color::srgb(0.75, 0.77, 0.8));
         let blade = meshes.add(Cuboid::new(0.025, 0.025, 0.9));
-        for foe in [false, true] {
-            commands.spawn((Katana(foe), Mesh3d(blade.clone()), MeshMaterial3d(steel.clone()), Transform::default()));
+        for who in 0..rigs {
+            commands.spawn((Katana(who), Mesh3d(blade.clone()), MeshMaterial3d(steel.clone()), Transform::default()));
         }
     } else {
         commands.spawn((Rig, Mesh3d(meshes.add(Capsule3d::new(0.3, 1.1))), MeshMaterial3d(body), Transform::default()));
@@ -385,14 +397,17 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
 #[allow(clippy::too_many_arguments)]
 fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
     // Triangle: put down what is carried, else grab/execute, else lift a crate or body; Square throws the load.
-    if std::mem::take(&mut exec.0) && !sim.0.release_load(pad.0.lock) && !sim.0.grab(pad.0.lock) {
+    // Actions on a soldier go to the locked one, else the nearest.
+    let target = lock.0.target.unwrap_or_else(|| sim.0.nearest());
+    sim.0.focus = target;
+    if std::mem::take(&mut exec.0) && !sim.0.release_load(pad.0.lock) && !sim.0.with_target(target, |f| f.grab(pad.0.lock)) {
         sim.0.pick(&mut world.0);
     }
     if pad.0.attack && sim.0.release_load(true) {
         pad.0.attack = false;
     }
-    if sim.0.enemy.state == shinobido_combat_rewrite::sim::enemy::State::Held && std::mem::take(&mut pad.0.attack) {
-        sim.0.mash();
+    if let Some(held) = sim.0.held().filter(|_| std::mem::take(&mut pad.0.attack)) {
+        sim.0.with_target(held, |f| f.mash());
     }
     if std::mem::take(&mut pad.0.item_next) {
         sim.0.next_item();
@@ -400,11 +415,12 @@ fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, ca
     if pad.0.item {
         sim.0.use_item();
     }
-    if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.roll() {
+    if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.with_target(target, |f| f.roll()) {
         pad.0.jump = false;
     }
     // R1 held: lock the soldier ahead (none when out of range or dead); released or gone drops it.
-    let targets: Vec<[f32; 3]> = (sim.0.enemy.state != EnemyState::Dead).then_some(sim.0.enemy.pos).into_iter().collect();
+    // One entry per soldier so a lock index is a soldier index; the dead sit at infinity (never in range).
+    let targets: Vec<[f32; 3]> = sim.0.enemies().map(|e| if e.state == EnemyState::Dead { [f32::INFINITY; 3] } else { e.pos }).collect();
     if !pad.0.lock {
         lock.0.release();
     } else if lock.0.target.is_none() {
@@ -421,10 +437,7 @@ fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, ca
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
     sim.0.carry_step(&mut world.0);
-    if sim.0.enemy.hp > 0 {
-        let (pos, action) = (sim.0.player.pos, sim.0.player.world_action());
-        aware.0.step(&world.0, &mut sim.0.enemy, pos, action);
-    }
+    aware.0.meter = sim.0.stealth_step(&world.0); // the eye icon shows the most aware soldier
     let level = aware.0.level();
     let want = pad.0.lock || level == Alert::Alerted || sim.0.player.world_action().starts_with("AT_") || (sim.0.player.drawn && level != Alert::Unaware);
     sim.0.player.update_drawn(want);
@@ -557,29 +570,30 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
         *debug = !*debug;
     }
     let Some((skel, clips)) = &anim.0 else { return };
-    let (p, e) = (&sim.0.player, &sim.0.enemy);
-    let rows = [clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)), clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))];
-    let joints = rows.map(|r| r.map(|(row, pos, heading)| skel.joints(row).map(|j| Vec3::from(pos) + Quat::from_rotation_y(heading) * Vec3::from(j))));
+    let p = &sim.0.player;
+    let rows = std::iter::once(clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)))
+        .chain(sim.0.enemies().map(|e| clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))));
+    let joints: Vec<_> = rows.map(|r| r.map(|(row, pos, heading)| skel.joints(row).map(|j| Vec3::from(pos) + Quat::from_rotation_y(heading) * Vec3::from(j)))).collect();
     let seg = |joints: &[Vec3; NODES], n: usize| {
         let (a, b) = (joints[skel.parent[n].unwrap_or(n)], joints[n]);
         let len = a.distance(b).max(1e-3);
         (Transform::from_translation((a + b) / 2.0).looking_to(if len > 1e-3 { b - a } else { Vec3::Z }, Vec3::Y), len)
     };
-    for (Bone(n, foe), mut t, mut v) in &mut bones {
+    for (Bone(n, who), mut t, mut v) in &mut bones {
         *v = if *debug { Visibility::Inherited } else { Visibility::Hidden };
-        let Some(joints) = &joints[*foe as usize] else { continue };
+        let Some(joints) = &joints[*who] else { continue };
         let (tr, len) = seg(joints, *n);
         *t = tr.with_scale(Vec3::new(1.0, 1.0, len));
     }
-    for (Part(n, foe), mut t) in &mut parts {
-        if let Some(joints) = &joints[*foe as usize] {
+    for (Part(n, who), mut t) in &mut parts {
+        if let Some(joints) = &joints[*who] {
             *t = seg(joints, *n).0;
         }
     }
     let drawn = p.drawn;
-    for (Katana(foe), mut t) in &mut katanas {
-        let Some(joints) = &joints[*foe as usize] else { continue };
-        *t = if *foe || drawn {
+    for (Katana(who), mut t) in &mut katanas {
+        let Some(joints) = &joints[*who] else { continue };
+        *t = if *who > 0 || drawn {
             let (a, b) = (joints[19], joints[20]); // right forearm to hand: arm 16 sits on -x, the right side facing +z
             let dir = (b - a).normalize_or_zero();
             Transform::from_translation(b + dir * 0.35).looking_to(dir, Vec3::Y)
@@ -592,9 +606,9 @@ fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, m
 
 /// The execution cue: a spinning diamond above the soldier's head while `execution::available` offers a kill.
 fn cue(sim: Res<Sim>, time: Res<Time>, mut c: Single<(&mut Transform, &mut Visibility), With<Cue>>) {
-    let e = &sim.0.enemy;
-    let on = execution::available(&sim.0.player, e).is_some();
-    *c.1 = if on { Visibility::Visible } else { Visibility::Hidden };
+    let e = sim.0.enemies().find(|e| execution::available(&sim.0.player, e).is_some());
+    *c.1 = if e.is_some() { Visibility::Visible } else { Visibility::Hidden };
+    let e = e.unwrap_or(&sim.0.enemy);
     c.0.translation = Vec3::new(e.pos[0], e.pos[1] + 2.1, e.pos[2]);
     c.0.rotation = Quat::from_rotation_y(time.elapsed_secs() * 3.0) * Quat::from_rotation_x(0.6);
 }

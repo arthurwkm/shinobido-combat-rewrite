@@ -6,11 +6,14 @@ use super::{data, enemy::{Enemy, State as EnemyState}, player::{hit_damage, Play
 
 pub struct Fight {
     pub player: Player,
+    /// The soldier at index 0 of `enemies()`; the rest are in `others`. Per-frame code visits each by swapping it in.
     pub enemy: Enemy,
+    pub others: Vec<Enemy>,
+    /// Index into `enemies()` that the HUD, the cue and the camera follow (the locked target, else the nearest).
+    pub focus: usize,
     pub player_hp: i32,
     /// One hit per swing: set when the current swing has landed, cleared when it ends.
     player_landed: bool,
-    enemy_landed: bool,
     /// Roll into the enemy: extra metres per frame along the roll heading on top of FRONT01's root motion.
     roll: Option<[f32; 2]>,
     pub carry: carry::Carry,
@@ -39,7 +42,7 @@ fn in_cone(heading: f32, dx: f32, dz: f32, cone: f32) -> bool {
 
 impl Fight {
     pub fn new(player: Player, enemy: Enemy) -> Self {
-        Fight { player, enemy, player_hp: data::PLAYER_HP, player_landed: false, enemy_landed: false, roll: None, carry: Default::default(), items: Default::default() }
+        Fight { player, enemy, others: Vec::new(), focus: 0, player_hp: data::PLAYER_HP, player_landed: false, roll: None, carry: Default::default(), items: Default::default() }
     }
 
     /// Advance both one frame, then resolve hits.
@@ -50,18 +53,67 @@ impl Fight {
 
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
-        self.caltrops();
-        self.enemy.step(self.player.pos);
-        self.hold();
         self.rolling();
-        self.separate();
-        self.resolve();
+        self.for_each(|f, _| {
+            f.caltrops();
+            f.enemy.step(f.player.pos);
+            f.hold();
+            f.separate();
+            f.resolve();
+        });
+    }
+
+    /// Every soldier: the first, then `others`.
+    pub fn enemies(&self) -> impl Iterator<Item = &Enemy> {
+        std::iter::once(&self.enemy).chain(self.others.iter())
+    }
+
+    /// Run `f` with soldier `i` (an index into `enemies()`) swapped into `self.enemy`; out of range runs on soldier 0.
+    pub fn with_target<R>(&mut self, i: usize, f: impl FnOnce(&mut Fight) -> R) -> R {
+        let i = if i <= self.others.len() { i } else { 0 };
+        if i > 0 { std::mem::swap(&mut self.enemy, &mut self.others[i - 1]); }
+        let r = f(self);
+        if i > 0 { std::mem::swap(&mut self.enemy, &mut self.others[i - 1]); }
+        r
+    }
+
+    pub fn for_each(&mut self, mut f: impl FnMut(&mut Fight, usize)) {
+        for i in 0..=self.others.len() {
+            self.with_target(i, |s| f(s, i));
+        }
+    }
+
+    /// The living soldier nearest the player (0 when none is alive).
+    pub fn nearest(&self) -> usize {
+        let d = |e: &Enemy| (e.pos[0] - self.player.pos[0]).hypot(e.pos[2] - self.player.pos[2]);
+        self.enemies().enumerate().filter(|(_, e)| e.state != EnemyState::Dead)
+            .min_by(|a, b| d(a.1).total_cmp(&d(b.1))).map_or(0, |(i, _)| i)
+    }
+
+    /// The soldier the player is holding, if any.
+    pub fn held(&self) -> Option<usize> {
+        self.enemies().position(|e| e.state == EnemyState::Held)
+    }
+
+    /// Step each living soldier's awareness; the strongest meter is returned for the HUD's eye icon.
+    pub fn stealth_step(&mut self, t: &super::terrain::Terrain) -> f32 {
+        let (pos, action) = (self.player.pos, self.player.world_action());
+        let mut top = 0.0f32;
+        for e in std::iter::once(&mut self.enemy).chain(self.others.iter_mut()) {
+            if e.hp > 0 {
+                let mut s = std::mem::take(&mut e.stealth);
+                s.step(t, e, pos, action);
+                e.stealth = s;
+            }
+            top = top.max(e.stealth.meter);
+        }
+        top
     }
 
     /// Push the two apart (half each) until their bodies no longer overlap; execution pairs stay put.
     fn separate(&mut self) {
         let (p, e) = (&mut self.player, &mut self.enemy);
-        if p.state == State::Special || self.roll.is_some() || self.carry.load == Some(carry::Load::Body) {
+        if p.state == State::Special || self.roll.is_some() || matches!(self.carry.load, Some(carry::Load::Body(_))) {
             return;
         }
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
@@ -203,7 +255,7 @@ impl Fight {
     fn resolve(&mut self) {
         let (p, e) = (&mut self.player, &mut self.enemy);
         if p.attack_active() {
-            if !self.player_landed && in_front(p.pos, p.heading, e.pos) {
+            if !self.player_landed && e.state != EnemyState::Dead && in_front(p.pos, p.heading, e.pos) {
                 self.player_landed = true;
                 let dmg = hit_damage(p.attack_arg().unwrap_or(0), data::PLAYER_POWER, 0.0);
                 let behind = !in_cone(e.heading, p.pos[0] - e.pos[0], p.pos[2] - e.pos[2], std::f32::consts::FRAC_PI_2);
@@ -213,8 +265,8 @@ impl Fight {
             self.player_landed = false;
         }
         if e.attack_active() {
-            if !self.enemy_landed && in_front(e.pos, e.heading, p.pos) {
-                self.enemy_landed = true;
+            if !e.landed && in_front(e.pos, e.heading, p.pos) {
+                e.landed = true;
                 let guarding = matches!(p.state, State::Guard) && in_front(p.pos, p.heading, e.pos);
                 if !guarding && self.player_hp > 0 {
                     self.player_hp = (self.player_hp - data::ENEMY_DAMAGE).max(0);
@@ -222,7 +274,7 @@ impl Fight {
                 }
             }
         } else {
-            self.enemy_landed = false;
+            e.landed = false;
         }
     }
 }

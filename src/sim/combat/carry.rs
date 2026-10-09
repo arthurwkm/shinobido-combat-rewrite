@@ -7,7 +7,8 @@ use crate::sim::terrain::Terrain;
 pub enum Load {
     /// Index into `Terrain::colliders` (listed in `Terrain::crates`).
     Crate(usize),
-    Body,
+    /// The dead soldier at this index of `Fight::enemies()`.
+    Body(usize),
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -46,8 +47,10 @@ impl Fight {
             .min_by(|&a, &b| dist(a).total_cmp(&dist(b)));
         let load = match crate_ {
             Some(i) => Load::Crate(i),
-            None if self.enemy.state == EnemyState::Dead && near(self.enemy.pos, data::PICK_REACH) => Load::Body,
-            None => return false,
+            None => match self.enemies().position(|e| e.state == EnemyState::Dead && near(e.pos, data::PICK_REACH)) {
+                Some(i) => Load::Body(i),
+                None => return false,
+            },
         };
         if !self.player.begin_pick() {
             return false;
@@ -102,9 +105,9 @@ impl Fight {
     }
 
     fn follow(&mut self, load: Load) {
-        if load == Load::Body {
-            self.enemy.pos = self.carry.at;
-            self.enemy.heading = self.player.heading;
+        if let Load::Body(i) = load {
+            let (at, heading) = (self.carry.at, self.player.heading);
+            self.with_target(i, |f| { f.enemy.pos = at; f.enemy.heading = heading; });
         }
     }
 
@@ -117,10 +120,18 @@ impl Fight {
             pos = next;
         }
         vel[1] -= data::GRAVITY_MS2 * crate::sim::DT;
-        let e = &mut self.enemy;
-        if load != Load::Body && e.state != EnemyState::Dead && (e.pos[0] - pos[0]).hypot(e.pos[2] - pos[2]) <= data::THROWN_HIT_RADIUS
-            && pos[1] > e.pos[1] - 1.0 && pos[1] < e.pos[1] + 1.8 {
-            e.hit("HI_BS07", data::THROWN_DAMAGE);
+        let mut struck = false;
+        if !matches!(load, Load::Body(_)) {
+            self.for_each(|f, _| {
+                let e = &mut f.enemy;
+                if !struck && e.state != EnemyState::Dead && (e.pos[0] - pos[0]).hypot(e.pos[2] - pos[2]) <= data::THROWN_HIT_RADIUS
+                    && pos[1] > e.pos[1] - 1.0 && pos[1] < e.pos[1] + 1.8 {
+                    e.hit("HI_BS07", data::THROWN_DAMAGE);
+                    struck = true;
+                }
+            });
+        }
+        if struck {
             vel[0] = 0.0;
             vel[2] = 0.0;
         }
@@ -138,7 +149,7 @@ impl Fight {
         let base = [at[0], t.ground_height(at), at[2]];
         match load {
             Load::Crate(i) => t.place_crate(i, base),
-            Load::Body => self.enemy.pos = base,
+            Load::Body(i) => self.with_target(i, |f| f.enemy.pos = base),
         }
         self.carry = Carry::default();
     }

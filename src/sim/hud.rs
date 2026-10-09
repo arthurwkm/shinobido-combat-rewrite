@@ -17,16 +17,17 @@ impl Debug {
     /// Call once per sim tick after the step: logs hp losses and measures speed.
     pub fn observe(&mut self, f: &Fight) {
         self.tick += 1;
+        let total: i32 = f.enemies().map(|e| e.hp).sum();
         if let Some((php, ehp, pos)) = self.last {
             if f.player_hp < php {
                 self.push(format!("{:>5} enemy {} hits you  -{}", self.tick, f.enemy.action(), php - f.player_hp));
             }
-            if f.enemy.hp < ehp {
-                self.push(format!("{:>5} {} hits enemy  -{}", self.tick, f.player.world_action(), ehp - f.enemy.hp));
+            if total < ehp {
+                self.push(format!("{:>5} {} hits enemy  -{}", self.tick, f.player.world_action(), ehp - total));
             }
             self.speed = (f.player.pos[0] - pos[0]).hypot(f.player.pos[2] - pos[2]) / super::DT;
         }
-        self.last = Some((f.player_hp, f.enemy.hp, f.player.pos));
+        self.last = Some((f.player_hp, total, f.player.pos));
     }
 
     fn push(&mut self, line: String) {
@@ -57,7 +58,7 @@ pub fn player_bar(f: &Fight) -> f32 {
 }
 
 pub fn enemy_bar(f: &Fight) -> f32 {
-    f.enemy.hp.max(0) as f32 / data::ENEMY_HP as f32
+    f.enemies().nth(f.focus).map_or(0, |e| e.hp.max(0)) as f32 / data::ENEMY_HP as f32
 }
 
 /// Eye awareness icon colour (RGB). ESTIMATE: calm teal as seen in the stealth clip, amber, red (docs/video_notes.md).
@@ -69,11 +70,11 @@ pub fn eye_colour(a: Alert) -> [f32; 3] {
     }
 }
 
-/// Ki compass needle: bearing of the living enemy relative to the camera, radians, 0 = straight ahead, clockwise +.
+/// Ki compass needle: bearing of the nearest living enemy relative to the camera, radians, 0 = straight ahead, clockwise +.
 pub fn compass(f: &Fight, cam_yaw: f32) -> Option<f32> {
     use std::f32::consts::{PI, TAU};
-    if f.enemy.hp <= 0 { return None; }
-    let (dx, dz) = (f.enemy.pos[0] - f.player.pos[0], f.enemy.pos[2] - f.player.pos[2]);
+    let e = f.enemies().nth(f.nearest()).filter(|e| e.hp > 0)?;
+    let (dx, dz) = (e.pos[0] - f.player.pos[0], e.pos[2] - f.player.pos[2]);
     Some((dx.atan2(dz) - cam_yaw + PI).rem_euclid(TAU) - PI)
 }
 

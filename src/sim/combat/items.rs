@@ -52,11 +52,13 @@ impl Fight {
                 self.items.caltrops.push([p.pos[0] + s * data::CALTROP_FWD, p.pos[2] + c * data::CALTROP_FWD]);
             }
             Item::Ninjyutu => {
-                let e = &mut self.enemy;
-                let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
-                if dx.hypot(dz) <= data::NINJYUTU_RANGE && in_cone(p.heading, dx, dz, data::NINJYUTU_CONE)
-                    && !matches!(e.state, EnemyState::Dead | EnemyState::Held | EnemyState::Down | EnemyState::GetUp) {
-                    e.hit("HI_BS07", 0);
+                let (pos, heading) = (p.pos, p.heading);
+                for e in std::iter::once(&mut self.enemy).chain(self.others.iter_mut()) {
+                    let (dx, dz) = (e.pos[0] - pos[0], e.pos[2] - pos[2]);
+                    if dx.hypot(dz) <= data::NINJYUTU_RANGE && in_cone(heading, dx, dz, data::NINJYUTU_CONE)
+                        && !matches!(e.state, EnemyState::Dead | EnemyState::Held | EnemyState::Down | EnemyState::GetUp) {
+                        e.hit("HI_BS07", 0);
+                    }
                 }
             }
         }

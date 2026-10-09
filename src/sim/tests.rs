@@ -1375,3 +1375,25 @@ fn soldier_investigates_gives_up_and_returns() {
         assert!(seen.contains(&st), "{st:?} missing in {seen:?}");
     }
 }
+
+#[test]
+fn several_soldiers_each_fight_stay_aware_and_take_hits() {
+    use super::{data, combat::Fight, enemy::{Enemy, State as ES}, player::Player, terrain::Terrain};
+    // soldier 0 behind the player, soldier 1 in front: the swing must find soldier 1
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, -1.0]));
+    f.others.push(Enemy::new([0.0, 0.0, 1.0]));
+    f.step(false, true);
+    for _ in 0..40 { f.step(false, false); }
+    assert_eq!(f.enemy.hp, data::ENEMY_HP);
+    assert!(f.others[0].hp < data::ENEMY_HP);
+    assert_eq!(f.nearest(), 1);
+    // each soldier has his own meter; the far one in front of the player is alerted alone
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, -30.0]));
+    f.others.push(Enemy::new([0.0, 0.0, 3.0]));
+    f.others[0].heading = std::f32::consts::PI; // faces the player
+    for _ in 0..600 { f.stealth_step(&Terrain::default()); f.step_enemy(); }
+    assert_eq!(f.enemy.stealth.meter, 0.0);
+    assert_eq!(f.others[0].stealth.meter, 1.0);
+    assert_ne!(f.others[0].state, ES::Idle);
+    assert_eq!(f.enemy.state, ES::Idle);
+}

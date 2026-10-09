@@ -1,0 +1,9 @@
+# three soldiers: the first is dead, the lock flicks between the other two
+0 at 0 0
+0 yaw 0
+0 kill 0 6
+10 lock 1
+70 switch 1
+130 switch -1
+190 switch 1
+250 lock 0

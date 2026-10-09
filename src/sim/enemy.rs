@@ -1,7 +1,7 @@
 //! The foot soldier (I_BUSHI, motion set 07, docs/enemy.md) as an engine-free state machine.
 //! Transitions are ESTIMATE: the AI files give attack choice tables, not these states.
 
-use super::{data, World, DT};
+use super::{data, stealth::Stealth, World, DT};
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum State {
@@ -60,11 +60,15 @@ pub struct Enemy {
     /// Frames of guard left to hold before dropping the block on his own.
     guard_left: u32,
     swings: usize,
+    /// The current swing has already hit the player (one hit per swing); cleared when it ends.
+    pub landed: bool,
+    /// What he has noticed of the player: his own meter, so several soldiers each have their own awareness.
+    pub stealth: Stealth,
 }
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0 }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0, landed: false, stealth: Stealth::default() }
     }
 
     pub fn action(&self) -> &'static str {
