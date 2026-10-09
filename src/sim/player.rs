@@ -524,6 +524,14 @@ impl Player {
         self.start(State::Special, name);
     }
 
+    /// Drop straight down (the from-above kill's approach): FALL01 with no carried momentum.
+    pub fn dive(&mut self) {
+        self.air_vel = [0.0; 2];
+        self.fall_from = self.pos[1];
+        self.vy = 0.0;
+        self.start(State::Fall, "FALL01");
+    }
+
     /// Reach for a load: PICK01 from free locomotion, then `State::Carry` once it ends.
     pub fn begin_pick(&mut self) -> bool {
         self.carrying = self.request(State::Special, "PICK01");

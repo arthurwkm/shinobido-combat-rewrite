@@ -18,6 +18,8 @@ pub struct Fight {
     roll: Option<[f32; 2]>,
     pub carry: carry::Carry,
     pub items: items::Items,
+    /// From-above kill in progress: the player is falling onto soldier `.0` (an `enemies()` index); the pair starts on landing.
+    dive: Option<usize>,
 }
 
 /// True when `to` lies inside the frontal cone of something at `from` facing `heading`, within reach.
@@ -42,7 +44,7 @@ fn in_cone(heading: f32, dx: f32, dz: f32, cone: f32) -> bool {
 
 impl Fight {
     pub fn new(player: Player, enemy: Enemy) -> Self {
-        Fight { player, enemy, others: Vec::new(), focus: 0, player_hp: data::PLAYER_HP, player_landed: false, roll: None, carry: Default::default(), items: Default::default() }
+        Fight { player, enemy, others: Vec::new(), focus: 0, player_hp: data::PLAYER_HP, player_landed: false, roll: None, carry: Default::default(), items: Default::default(), dive: None }
     }
 
     /// Advance both one frame, then resolve hits.
@@ -54,6 +56,7 @@ impl Fight {
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
         self.rolling();
+        self.land_dive();
         self.for_each(|f, _| {
             f.caltrops();
             f.enemy.step(f.player.pos);
@@ -162,8 +165,25 @@ impl Fight {
     /// Start the execution that `execution::available` offers: align the pair, play both clips, the soldier dies.
     pub fn execute(&mut self) -> bool {
         let Some(kind) = super::execution::available(&self.player, &self.enemy) else { return false };
-        self.kill(kind);
+        if kind == super::execution::Kind::Above && self.dive.is_none() {
+            self.dive = Some(self.focus);
+            self.player.dive();
+        } else {
+            self.kill(kind);
+        }
         true
+    }
+
+    /// Finish a from-above kill once the player has dropped to the soldier's height (the drop is the game's approach, clip 4-30 s).
+    fn land_dive(&mut self) {
+        let Some(i) = self.dive else { return };
+        let (py, ey) = (self.player.pos[1], self.with_target(i, |f| f.enemy.pos[1]));
+        if self.with_target(i, |f| f.enemy.state == EnemyState::Dead) {
+            self.dive = None;
+        } else if py - ey <= 0.05 {
+            self.dive = None;
+            self.with_target(i, |f| f.kill(super::execution::Kind::Above));
+        }
     }
 
     fn kill(&mut self, kind: super::execution::Kind) {

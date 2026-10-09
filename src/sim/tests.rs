@@ -684,6 +684,14 @@ fn every_execution_plays_paired_and_kills() {
         let mut f = Fight::new(p, e);
         let victim_height = f.enemy.pos[1];
         assert!(f.grab(false), "Triangle must choose {kind:?} before a grab");
+        if kind == Kind::Above {
+            assert_eq!(f.enemy.state, State::Idle, "the soldier lives while the player is still falling");
+            assert!(f.player.pos[1] > 1.0);
+            for _ in 0..200 {
+                f.step(false, false);
+                if f.enemy.state == State::Dead { break; }
+            }
+        }
         assert_eq!(f.enemy.pos[1], victim_height, "an aerial execution must not lift the victim off the ground");
         assert_eq!(f.player.pos[1], victim_height, "the paired clips start at the victim's height");
         let (pc, ec) = kind.clips();
