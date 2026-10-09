@@ -69,9 +69,7 @@ What is known about it is in `docs/formats.md`; read it before any format work a
 3. **Gameplay videos in `videos/`** (owner-supplied: `shinobido movement/combat/stealth.mov`, 60 fps), for
    what only shows on screen: which animation plays for an input, camera behaviour, effects, HUD. Read
    frames with `ffmpeg` into `target/` and look at small tiles; never commit videos or frames.
-   The emulator (owner's PCSX2 at `~/Downloads/PCSX2-v2.6.3.app`) is for sessions with the owner present
-   only: the night sandbox blocks `screencapture` and `osascript` (tested 2026-10-08). Unattended, use the
-   videos; when they don't settle something, add a Request in `PROGRESS.md` and continue with an `ESTIMATE`.
+   The emulator (owner's PCSX2 at `~/Downloads/PCSX2-v2.6.3.app`).
 4. **`ESTIMATE`** in `src/sim/data.rs`, with a one-line reason.
 
 Not allowed: whole-program decompilation, splat/matching-decomp projects, m2c, decoding `ACQ.BIN`,

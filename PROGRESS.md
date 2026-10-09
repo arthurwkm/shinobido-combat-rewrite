@@ -185,8 +185,13 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 - [x] (evidence: `cargo test -q` 72 passed incl. `walls_block_sight_but_not_sound`, clippy clean; `Terrain::sight_clear` samples the eye-height line, `Stealth::step` takes the terrain; crouch noise/sight factors and meter rise/decay already existed; `target/debug/viewer --record target/rec/patrol2 --script tools/scripts/patrol.txt --patrol --every 100 --ticks 1200` frame 600 still shows red eye, chase and `AT_A19 hits you` log; occlusion itself is unit-tested only, no sandbox patrol path crosses a wall; eye colours stay ESTIMATE, not re-sampled from clip frames) Perception: sight blocked by walls (terrain raycast), noise by crouch, walk or run, meter rise and decay.
   The alert states drive the eye colours, sampled from stealth-clip frames.
 - [x] (evidence: `cargo test -q` 73 passed incl. `locked_stick_strafes_around_the_target`, clippy clean; `target/debug/viewer --record target/rec/lock --script tools/scripts/lock.txt --every 50 --ticks 330` -> `target/cmp/lock.png`: R1 shows `lock-on locked`, GU_B01 guard when still, WALK_R02/WALK_B02 strafing facing the soldier, lock-on off and SHEATH01 after release; R1 select/release, wheel or D-pad (while R1 held) switch, lock camera via `follow_lock`; not compared with a combat.mov frame, and the debug speed read 0.00 m/s during the strafe frames although the unit test shows -x travel, unexplained; switch needs a second soldier, next item) Lock-on in the viewer: R1 select, switch and release, lock camera, strafing; HUD shows it.
+- [ ] Lock-on from the new clips (`videos/shinobido lock in strafe fight.mov`, `videos/shinobido lock in lock off
+  stealth kill from above.mov`): target switch, strafing and guard against an attack; match timings, motions and
+  camera, fix what differs. Sideways roll while locked (owner, 2026-10-09; not in the clips but counts): it
+  follows the same arc around the target as the strafe, not a straight line.
 - [ ] Executions from the pad as in the clips: cue before the input, three kinds, close-up camera cut
-  (combat 46 s, 54–58 s; stealth 14 s); victim variants (A/B/C/D) by situation.
+  (combat 46 s, 54–58 s; stealth 14 s; kill from behind and from above with the cue in `videos/shinobido lock in
+  lock off stealth kill from above.mov`); victim variants (A/B/C/D) by situation.
   Codex audit 2026-10-09: fixed the cue offering an execution during `State::Special` while Triangle rejected it; eligibility now lives in `execution::available` for both HUD and `Fight::execute`. Regression failed with `Some(Back)` vs `None` before the fix; all three existing kind tests now enter through Triangle's `Fight::grab(false)` path. Cue/camera changes need viewer check, for Claude: `target/debug/viewer --record target/rec/exec --script tools/scripts/exec.txt --every 2 --ticks 250`, compare combat 46 s/54–58 s and stealth 14 s; no record was run in Codex. The feature is **not yet at viewer-only completion**: three bounded variant lookups found corresponding C-to-BA phase links and attack events in supposedly passive `HI_*01` clips, undermining the current KIME pairing. Findings/addresses and next lookup are in `docs/formats.md` “Execution phase audit”; do not randomly assign A/B/C/D. Next: identify the consumer/ID namespace of the lists built via `0x3f7980`, or visually establish HI_*01 attacker phases; implement phase selection before checking this item. S-only/KIME pairing remains ESTIMATE. Evidence: `cargo test -q` → `74 passed; 0 failed`; `cargo clippy -q --all-targets` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`; `CARGO_INCREMENTAL=0 cargo build -q --bin viewer` → exit 0, no output. No new dependencies; no stage/commit (runner owns it).
   Health repair 2026-10-09 (Codex): inherited unfinished close-up implementation and `tools/scripts/exec.txt`; its test asserted +X although positive camera yaw places the eye on -X. Corrected the assertion against the configured angle, added 30/60 Hz equivalence and release-yaw checks. No camera parameters changed. Evidence: `cargo test -q` → `74 passed; 0 failed`; `cargo clippy -q --all-targets` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`; `git diff --check` → exit 0. `cargo build -q --bin viewer` failed with undefined anonymous LLVM symbols for arm64; `CARGO_INCREMENTAL=0 cargo build -q --bin viewer` → exit 0, empty `target/logs/health-viewer-build.log`. Next: finish auditing the cue/three kinds/victim variants, then compare the execution record with the listed clip frames in Claude (Codex has no GPU). Feature remains unchecked; this is the health-fix handoff for the runner's required first commit.
 - [ ] Death and body: the corpse stays, and it can be picked up and carried (with M14 carry).
@@ -197,6 +202,8 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
 - [ ] Camera from the clips: distance, pitch, height and lag measured on frames; no clipping through walls;
   pulls close at walls and corners; tilts on rooftop climbs. Compare records with the clips.
 - [ ] Full PS2 pad map from docs/controls.md, every action reachable; a controls legend in the debug HUD.
+  Check docs/controls.md against `img/shinobido controls.png` first (shoulders, guard, evasion; replaces the
+  rear-view guide interpretation and estimated combinations).
 - [ ] Game HUD fidelity: health bar with emblem, eye icon shape and colours, spiked ki compass ring. Crops
   side by side with clip frames.
 - [ ] Sandbox fidelity: tiled sloping roofs, a garden patch for stealth, the walled corridor at the clip's
@@ -209,13 +216,15 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   finds no gap.
 
 ## Requests
-- PCSX2 for unattended sessions: AGENTS.md method step 3 still says emulator only with the owner present, and
-  `night-settings.json` has no sandbox exclusion for `tools/pcsx2.py`; the owner applies both (agents may not).
-Gameplay clips that would settle something; never blocking. The owner drops them in `videos/`.
-- Lock-on in use (target switch, strafing) and guard against an attack: not in the current clips.
-- A stealth kill from behind and one from above, showing the cue before the input.
-
-- Original shoulder controls, guard and evasion inputs: a control tutorial showing button names would confirm the rear-view guide interpretation and estimated combinations.
+(none open)
+Answered 2026-10-09 by the owner:
+- Lock-on in use and guard: `videos/shinobido lock in strafe fight.mov` and `videos/shinobido lock in lock off
+  stealth kill from above.mov` (M15 lock-on item).
+- Stealth kill from behind and from above with the cue: `videos/shinobido lock in lock off stealth kill from
+  above.mov` (M15 executions item).
+- Original shoulder controls, guard and evasion inputs: `img/shinobido controls.png` (M16 pad map item).
+- PCSX2 may be used unattended (AGENTS.md method step 3); left stick left is now A (was Esc),
+  `tools/pcsx2.py` KEYS already matches.
 
 ## Blockers
 (none)
