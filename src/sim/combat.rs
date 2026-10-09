@@ -25,6 +25,12 @@ fn in_front(from: [f32; 3], heading: f32, to: [f32; 3]) -> bool {
     d.abs() <= data::FRONT_CONE
 }
 
+/// The soldier's reaction clip: a heavy blow throws him back (HI_F07, then the get-up from his back), a hit from
+/// behind staggers him (HI_UC07), a light frontal hit flinches (HI_BC07). ESTIMATE: the B/U/C letters are not decoded.
+pub fn soldier_reaction(behind: bool, dmg: i32) -> &'static str {
+    if dmg >= data::HEAVY_HIT { "HI_F07" } else if behind { "HI_UC07" } else { "HI_BC07" }
+}
+
 /// True when the offset (dx, dz) lies within `cone` radians of `heading`.
 fn in_cone(heading: f32, dx: f32, dz: f32, cone: f32) -> bool {
     let d = (dx.atan2(dz) - heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
@@ -202,7 +208,8 @@ impl Fight {
             if !self.player_landed && in_front(p.pos, p.heading, e.pos) {
                 self.player_landed = true;
                 let dmg = hit_damage(p.attack_arg().unwrap_or(0), data::PLAYER_POWER, 0.0);
-                e.hit("HI_BS07", dmg);
+                let behind = !in_cone(e.heading, p.pos[0] - e.pos[0], p.pos[2] - e.pos[2], std::f32::consts::FRAC_PI_2);
+                e.hit(soldier_reaction(behind, dmg), dmg);
             }
         } else {
             self.player_landed = false;

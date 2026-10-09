@@ -138,6 +138,7 @@ impl Enemy {
             State::Held if done => self.world = World::new("GU_B07"),
             State::Down if done => self.start(State::GetUp, "UP_FR07"),
             State::GetUp if done => self.start(State::Chase, "RUN07"),
+            State::Hit if done && self.world.action.name == "HI_F07" => self.start(State::GetUp, "UP_BA07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
             State::Chase if dist <= data::ENEMY_ATTACK_RANGE => self.start(State::Attack, data::ENEMY_ATTACK_CLIP),
             State::Idle | State::Patrol | State::Chase if done => self.world = World::new(self.world.action.name),

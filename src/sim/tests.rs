@@ -1293,3 +1293,17 @@ fn items_heal_slow_the_soldier_and_stagger_him() {
     for _ in 0..200 { f.step(false, false); }
     assert!(!f.use_item(), "none left");
 }
+
+#[test]
+fn reaction_follows_side_and_weight_and_heavy_hits_knock_down() {
+    use super::combat::soldier_reaction as r;
+    assert_eq!((r(false, 2), r(true, 2), r(false, 5), r(true, 5)), ("HI_BC07", "HI_UC07", "HI_F07", "HI_F07"));
+    let mut e = super::enemy::Enemy::new([0.0; 3]);
+    e.hit("HI_F07", 5);
+    let mut seen = vec![];
+    for _ in 0..400 {
+        e.step([0.0, 0.0, 9.0]);
+        if seen.last() != Some(&e.action()) { seen.push(e.action()); }
+    }
+    assert_eq!(&seen[..3], ["HI_F07", "UP_BA07", "RUN07"]);
+}

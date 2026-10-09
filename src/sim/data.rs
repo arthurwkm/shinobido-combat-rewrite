@@ -26,6 +26,8 @@ pub const PLAYER_HIT_CLIP: &str = "HI_BC01";
 /// ESTIMATE: stick turned this far (rad) from the take-off heading counts as the back flick (about 130 degrees).
 pub const AIR_BACK_ANGLE: f32 = 2.3;
 pub const AIR_SPEED: f32 = 1.69 / 30.0;
+// ESTIMATE: attack-object damage (event arg0 x power) from which the soldier is thrown back instead of flinching.
+pub const HEAVY_HIT: i32 = 4;
 // ESTIMATE: distance (m) at which a chasing soldier starts its swing.
 pub const ENEMY_ATTACK_RANGE: f32 = 1.5;
 // ESTIMATE: soldier hit points; the executable's health values were not looked up.
