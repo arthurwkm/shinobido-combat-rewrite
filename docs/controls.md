@@ -24,11 +24,11 @@ not extracted game data. Gamepad names use physical positions, avoiding the Xbox
 | Jump | Cross | South face | Space | Press |
 | Lock-on | R1 | Right bumper | Right mouse | Hold |
 | Hide/Crouch | L1 | Left bumper | Left Ctrl | Hold |
-| Use item | L2 | Left trigger | Q | Press |
+| Use item | L2 or R2 (the guide's leader lines point at both) | Either trigger | Q | Press |
 | Equipment screen | Select | Select/Back | Tab | Documented only; menus out of scope |
 | Pause menu | Start | Start | Escape | Documented only; menus out of scope |
 
-The guide does not label R2, D-pad, or stick clicks. Do not infer original-game
+The guide does not label the D-pad, or stick clicks. Do not infer original-game
 functions for those controls. The hold/press choices, movement relative to the
 camera, walk/run stick threshold and dash behaviour are **ESTIMATE**: the static
 image names actions but does not specify these rules. For keyboard walking, use

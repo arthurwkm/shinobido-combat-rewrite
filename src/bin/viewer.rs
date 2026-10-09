@@ -77,6 +77,9 @@ enum Game {
     Needle,
 }
 
+/// Pad map from docs/controls.md (PS2 button, keyboard/mouse).
+const CONTROLS_LEGEND: &str = "Square/LMB attack  Triangle/E grab\nCircle/Shift dash  Cross/Space jump\nR1/RMB lock-on  L1/Ctrl hide-crouch\nL2 R2/Q item  D-pad/Tab cycle\nStick/WASD move (Alt walk)\nR-stick/mouse camera";
+
 /// Debug HUD pieces (reference hud.rs layout): bars and log top-left, readout top-right, target bar bottom.
 #[derive(Component)]
 enum Hud {
@@ -374,7 +377,7 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
         }
         i.attack |= g.just_pressed(GamepadButton::West);
         i.jump |= g.just_pressed(GamepadButton::South);
-        i.item |= g.just_pressed(GamepadButton::LeftTrigger2);
+        i.item |= g.just_pressed(GamepadButton::LeftTrigger2) || g.just_pressed(GamepadButton::RightTrigger2);
         i.lock |= g.pressed(GamepadButton::RightTrigger);
         i.item_next |= g.just_pressed(GamepadButton::DPadRight);
         let rx = g.get(GamepadAxis::RightStickX).unwrap_or(0.0);
@@ -460,6 +463,7 @@ fn setup_hud(mut commands: Commands) {
     bar(&mut commands, Node { width: px(240), height: px(11), ..abs(Some(px(28)), None, Some(px(80)), None) }, Hud::PlayerBar, red);
     commands.spawn((Text::new(""), font(15.0), TextColor(Color::srgb(0.95, 0.85, 0.5)), Hud::Log, abs(Some(px(28)), None, Some(px(98)), None)));
     commands.spawn((Text::new(""), font(15.0), Hud::Readout, abs(None, Some(px(20)), Some(px(20)), None)));
+    commands.spawn((Text::new(CONTROLS_LEGEND), font(13.0), TextColor(Color::srgb(0.7, 0.7, 0.7)), abs(Some(px(28)), None, None, Some(px(12)))));
     commands.spawn((Text::new("Soldier"), font(18.0), abs(Some(percent(25)), None, None, Some(px(66)))));
     bar(&mut commands, Node { width: percent(50), height: px(9), ..abs(Some(percent(25)), None, None, Some(px(48))) }, Hud::EnemyBar, red);
 }
