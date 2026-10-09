@@ -1,6 +1,6 @@
 """Drive the owner's PCSX2 (Shinobido running) with key events and grab its own screenshots.
 
-    python tools/pcsx2.py shot <name>             F8 screenshot -> target/pcsx2/<name>.png
+    python tools/pcsx2.py shot <name>             game window capture -> target/pcsx2/<name>.png
     python tools/pcsx2.py load                    load the current save-state slot (F3)
     python tools/pcsx2.py play <script> [<name>]  timed pad script (below); frames go to target/pcsx2/<name>/
     python tools/pcsx2.py video <script> [<name>] same, and records the game window to target/pcsx2/<name>.mov
@@ -17,7 +17,6 @@ Needs macOS Accessibility (key events) for the process that runs it; PCSX2 is br
 because it pauses on focus loss. Timing is wall-clock, not emulated frames: expect +-1-2 frames.
 """
 
-import shutil
 import subprocess
 import sys
 import time
@@ -28,7 +27,6 @@ import Quartz
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "target" / "pcsx2"
-SNAPS = Path.home() / "Library/Application Support/PCSX2/snaps"
 
 # macOS virtual key codes of the owner's bindings.
 KEYS = {
@@ -66,23 +64,18 @@ def tap(p, name, hold=0.05):
     key(p, name, False)
 
 
+def window():
+    """The game window's (id, bounds); PCSX2 titles it after the running game."""
+    w = next(w for w in Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID)
+             if w.get("kCGWindowOwnerName") == "PCSX2" and w.get("kCGWindowName", "").startswith("Shinobido"))
+    return w["kCGWindowNumber"], w["kCGWindowBounds"]
+
+
 def shot(p, dest):
-    """F8, then move PCSX2's newest snapshot to `dest` (waits up to 3 s)."""
-    before = set(SNAPS.glob("*.png"))
-    tap(p, "f8")
-    for _ in range(60):
-        new = set(SNAPS.glob("*.png")) - before
-        if new:
-            src = max(new, key=lambda f: f.stat().st_mtime)
-            size = -1
-            while src.stat().st_size != size:  # let the writer finish (0.1 s was not enough at 1365x1024)
-                size = src.stat().st_size
-                time.sleep(0.2)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(src, dest)
-            return dest
-        time.sleep(0.05)
-    sys.exit("no screenshot appeared in " + str(SNAPS))
+    """Capture the game window to `dest` (F8 snapshots came back half-written)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["screencapture", "-x", "-o", "-l", str(window()[0]), str(dest)], check=True)
+    return dest
 
 
 def load(p):
@@ -134,9 +127,7 @@ def play(p, script, name):
 
 def video(p, script, name):
     """`play` while macOS `screencapture` records the PCSX2 game window (real time, the screen's frame rate)."""
-    w = next(w for w in Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID)
-             if w.get("kCGWindowOwnerName") == "PCSX2" and w.get("kCGWindowName", "").startswith("Shinobido"))
-    b = w["kCGWindowBounds"]
+    b = window()[1]
     last = max(int(l.split()[0]) for l in Path(script).read_text().splitlines() if l.split("#")[0].split())
     dest = OUT / f"{name}.mov"
     dest.parent.mkdir(parents=True, exist_ok=True)

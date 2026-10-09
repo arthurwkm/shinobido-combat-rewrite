@@ -135,7 +135,8 @@ fn walking_covers_the_walk_cycle_root_motion() {
 }
 
 #[test]
-fn jump_leaves_the_ground_at_frame_5_and_lands_about_51_frames_later() {
+/// Emulator A/B (tools/scripts/emu/jump.txt): airborne 0.72 s (43 ticks), feet about 1.5 m up.
+fn jump_leaves_the_ground_at_frame_5_and_lands_like_the_emulator() {
     use super::player::{Player, State};
     let mut p = Player::new();
     p.jump();
@@ -147,8 +148,8 @@ fn jump_leaves_the_ground_at_frame_5_and_lands_about_51_frames_later() {
             land = Some(f);
         }
     }
-    assert!((55..=62).contains(&land.unwrap()), "{land:?}");
-    assert!(peak > 0.5 && peak < 1.5, "{peak}");
+    assert!((5 + 43..=5 + 48).contains(&land.unwrap()), "{land:?}");
+    assert!(peak > 1.3 && peak < 1.7, "{peak}");
     assert_eq!(p.state, State::Idle);
 }
 

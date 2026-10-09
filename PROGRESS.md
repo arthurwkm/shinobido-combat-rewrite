@@ -235,9 +235,12 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - Time base: the disc is PAL (VPS 50, game FPS 25); owner decision 2026-10-09: keep 60 Hz, do not change.
 - [ ] Locomotion A/B: walk, run, start, stop, turn on the spot, 180 turn, dash; speed (m/s from distance over
   time against a known-size object), acceleration and stop slide.
-- [ ] Jumps A/B: jump, high jump, flips, landing; air time, apex, horizontal reach.
-- [ ] Camera A/B: distance, height, pitch, follow lag while running away/towards/sideways, recentre; first run
-  shows the game's camera low behind and lagging, the character shrinking as he runs ahead.
+- [x] Standing jump A/B (`tools/scripts/emu/jump.txt`): air 0.72 s / apex ~1.5 m in the emulator; sim now uses
+  launch 120.0 (exe 0x604a28) and 1 unit = 0.84/9.5 m (was 155 / 9.8/450 ESTIMATEs: 0.57 m apex). Evidence: `cargo test -q`
+  77 passed (jump test pinned to the emulator), compare.py 240/240, `target/cmp/jump_ab.jpg` lands on the same tick 84.
+- [ ] Jumps A/B: running jump, high jump, flips, landing; horizontal reach; check ledges/roofs still match the new apex.
+- [ ] Camera A/B: distance, height, pitch, follow lag while running away/towards/sideways, recentre. Seen so far: game
+  camera low behind; does not swing behind when he runs towards it; rises with him in a jump (viewer stays level).
 - Mannequin: owner decision 2026-10-09, the player model is fine as is.
 - [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
   unaware. A/B the first contact.
@@ -260,6 +263,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: emulator A/B standing jump: launch 120 + model-unit scale replace ESTIMATEs; apex 0.57 -> 1.49 m.
 - 2026-10-09 Claude: `--solo` truly alone (`--one` keeps one soldier); KI_RANGE hides needle and target bar; owner: keep 60 Hz, model fine.
 - 2026-10-09 Claude (owner present): emulator A/B harness (pcsx2.py video/esc, emucmp.py); first run/stop/jump A/B; M18 plan.
 - 2026-10-09 Claude: above kill now dives (FALL01) before the pair; acceptance second pass finds no gap, Acceptance review checked.

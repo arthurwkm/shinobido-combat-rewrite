@@ -291,6 +291,10 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   (`0x110330–0x110350`, bound register not traced).
 - **Hypothesis:** units are game units (not metres; run is 3.4 m/s in root motion), so the metre value of gravity is unknown.
   Initial jump velocity (set at jump start) not found; no sim use yet.
+- **Confirmed by emulator A/B (2026-10-09, docs/emucompare.md):** a standing jump with launch `vy` = 120.0 (the impulse Y
+  float at 0x604a28, below) under this gravity is airborne 0.76 s with a ~0.3 s hang; PCSX2 shows 0.72 s and the same hang.
+  With 1 game unit = 0.84/9.5 m (model units, hips 9.5 vs 0.84 m) the apex is 1.49 m, matching the emulator (~1.5 m at the feet).
+  So game world units are model units, and gravity is 450 u/s^2 = 39.8 m/s^2 above |vy| 15.
 
 ### Turn function 0x10bf80 (found 2026-10-08)
 

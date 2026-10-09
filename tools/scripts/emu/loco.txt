@@ -1,0 +1,11 @@
+# Locomotion A/B (pcsx2.py video). Run 2 s, stop; run right 1 s; run back 1 s; stand jump; run + jump.
+30 down lup
+150 up lup
+210 down lright
+270 up lright
+330 down ldown
+390 up ldown
+450 tap cross
+570 down lup
+630 tap cross
+720 up lup

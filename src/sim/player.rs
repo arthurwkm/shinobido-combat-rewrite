@@ -49,11 +49,13 @@ fn gravity(vy: f32) -> f32 {
     let m = vy.abs();
     if m > 15.0 { -450.0 } else { -100.0 - 0.4 * m }
 }
-/// ESTIMATE: launch velocity in game units/s; chosen so the airborne time (~51 frames) matches JUMP01's footstep
-/// events at frames 5 (take-off) and 56 (landing). The launch value itself was not found in the executable.
-const JUMP_V0: f32 = 155.0;
-/// ESTIMATE: metres per game unit, so that -450 u/s^2 is 9.8 m/s^2.
-const UNIT_M: f32 = 9.8 / 450.0;
+/// Launch velocity in game units/s: the impulse Y float 120.0 at 0x604a28 (formats.md "Wall ascent and impulse").
+/// Emulator A/B 2026-10-09 (`tools/scripts/emu/jump.txt`): a standing jump is airborne 18 frames at 25 fps (0.72 s)
+/// with a ~0.3 s hang at the top; this and `gravity` give 0.76 s and the same hang.
+const JUMP_V0: f32 = 120.0;
+/// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
+/// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
+const UNIT_M: f32 = 0.84 / 9.5;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
 /// ESTIMATE: frames after pressing Jump in which a back flick of the stick starts FLIP_B01.

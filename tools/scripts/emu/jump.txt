@@ -1,0 +1,5 @@
+# three standing jumps
+30 tap cross
+150 tap cross
+270 tap cross
+360 shot

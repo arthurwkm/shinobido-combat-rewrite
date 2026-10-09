@@ -1,0 +1,11 @@
+# Same as loco.txt for the viewer (--solo).
+30 stick 0 1
+150 stick 0 0
+210 stick 1 0
+270 stick 0 0
+330 stick 0 -1
+390 stick 0 0
+450 jump
+570 stick 0 1
+630 jump
+720 stick 0 0
