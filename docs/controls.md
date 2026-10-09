@@ -19,7 +19,7 @@ not extracted game data. Gamepad names use physical positions, avoiding the Xbox
 | Move | Left stick | Left stick | W/A/S/D | Hold, relative to camera; strafe while locked |
 | Camera | Right stick | Right stick | Mouse motion | Orbit |
 | Attack | Square | West face | Left mouse | Press; repeated presses request chains |
-| Grab | Triangle | North face | E | Context action |
+| Grab | Triangle | North face | E | Context action (also lifts a crate or a dead soldier; Triangle again puts it down, Square throws it) |
 | Dash | Circle | East face | Left Shift | Hold |
 | Jump | Cross | South face | Space | Press |
 | Lock-on | R1 | Right bumper | Right mouse | Hold |

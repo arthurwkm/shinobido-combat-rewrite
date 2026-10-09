@@ -247,7 +247,7 @@ fn at_a01_damage_param_scales_with_power_and_bias() {
 #[test]
 fn terrain_walls_ramps_ledges_and_falling() {
     use super::{terrain::{Collider, Terrain}, player::Player};
-    let terrain = Terrain { colliders: vec![Collider::new([ -2.0, 0.0, 1.0], [2.0, 2.0, 2.0], false)] };
+    let terrain = Terrain { colliders: vec![Collider::new([ -2.0, 0.0, 1.0], [2.0, 2.0, 2.0], false)], ..Default::default() };
     let mut p = Player::new();
     for _ in 0..120 { p.step_on(&terrain, true, false); }
     assert!(p.pos[2] <= 0.701 && p.pos[2] > 0.6, "{:?}", p.pos);
@@ -257,7 +257,7 @@ fn terrain_walls_ramps_ledges_and_falling() {
     for _ in 0..120 { p.step_on(&terrain, true, false); }
     assert_eq!(p.pos[1], 0.0);
     assert!(p.pos[2] > 3.0);
-    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)] };
+    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)], ..Default::default() };
     let mut p = Player::new();
     for _ in 0..50 { p.step_on(&ramp, true, false); }
     assert!((p.pos[1] - p.pos[2] / 4.0).abs() < 0.001, "{:?}", p.pos);
@@ -267,7 +267,7 @@ fn terrain_walls_ramps_ledges_and_falling() {
 #[test]
 fn terrain_jump_lands_on_roof_and_ceiling_stops_ascent() {
     use super::{terrain::{Collider, Terrain}, player::{Player, State}};
-    let roof = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)] };
+    let roof = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)], ..Default::default() };
     let mut p = Player::new();
     p.pos[1] = 2.0;
     p.jump();
@@ -276,7 +276,7 @@ fn terrain_jump_lands_on_roof_and_ceiling_stops_ascent() {
     assert!(peak > 2.5);
     assert_eq!(p.pos[1], 2.0);
     assert_eq!(p.state, State::Idle);
-    let ceiling = Terrain { colliders: vec![Collider::new([-2.0, 1.9, -2.0], [2.0, 2.0, 2.0], false)] };
+    let ceiling = Terrain { colliders: vec![Collider::new([-2.0, 1.9, -2.0], [2.0, 2.0, 2.0], false)], ..Default::default() };
     let mut p = Player::new();
     p.jump();
     for _ in 0..120 { p.step_on(&ceiling, false, false); assert!(p.pos[1] <= 0.201); }
@@ -286,12 +286,12 @@ fn terrain_jump_lands_on_roof_and_ceiling_stops_ascent() {
 #[test]
 fn terrain_sweeps_thin_walls_slides_and_descends_ramps() {
     use super::terrain::{Collider, Terrain};
-    let wall = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 1.0], [2.0, 3.0, 1.01], false)] };
+    let wall = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 1.0], [2.0, 3.0, 1.01], false)], ..Default::default() };
     let (p, normal, _) = wall.move_body([0.0; 3], [1.0, 0.0, 5.0], true);
     assert!(p[2] <= 0.701);
     assert!((p[0] - 1.0).abs() < 0.001);
     assert_eq!(normal, Some([0.0, 0.0, -1.0]));
-    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)] };
+    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 1.0, 4.0], true)], ..Default::default() };
     let (p, _, _) = ramp.move_body([0.0, 0.75, 3.0], [0.0, 0.75, 1.0], true);
     assert!((p[1] - 0.25).abs() < 0.001, "{p:?}");
     let (p, normal, _) = ramp.move_body([0.0, 0.0, 5.0], [0.0, 0.0, 3.0], true);
@@ -299,7 +299,7 @@ fn terrain_sweeps_thin_walls_slides_and_descends_ramps() {
     assert_eq!(normal, Some([0.0, 0.0, 1.0]));
     assert_eq!(wall.ledge([0.0; 3], [0.0, -1.0], 4.0), None);
     assert_eq!(wall.ledge([0.0; 3], [0.0, 1.0], 2.0), None);
-    let blocked = Terrain { colliders: vec![wall.colliders[0], Collider::new([-2.0, 3.5, 0.0], [2.0, 4.0, 2.0], false)] };
+    let blocked = Terrain { colliders: vec![wall.colliders[0], Collider::new([-2.0, 3.5, 0.0], [2.0, 4.0, 2.0], false)], ..Default::default() };
     assert_eq!(blocked.ledge([0.0; 3], [0.0, 1.0], 3.1), None);
 }
 
@@ -387,7 +387,7 @@ fn locomotion_selection_switches_mid_cycle_and_rejects_other_clips() {
 #[test]
 fn walking_off_a_ledge_plays_fall_then_landing_by_drop_and_ground_jumps_are_actions() {
     use super::{terrain::{Collider, Terrain}, player::{Player, State}};
-    let terrain = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 5.0, 2.0], false)] };
+    let terrain = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 5.0, 2.0], false)], ..Default::default() };
     let mut p = Player::new();
     p.pos = [0.0, 5.0, 1.5];
     let (mut fell, mut land) = (false, "");
@@ -839,7 +839,7 @@ fn wall_hug_enters_slides_peeks_and_leaves() {
 fn hug_peeks_both_corners_and_returns_before_moving() {
     use super::player::{Player, State};
     use super::terrain::{Terrain, Collider};
-    let terrain = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 2.0], [1.0, 4.0, 3.0], false)] };
+    let terrain = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 2.0], [1.0, 4.0, 3.0], false)], ..Default::default() };
     for direction in [-1.0_f32, 1.0] {
         let mut p = Player::new();
         p.crouch_held = true;
@@ -1205,4 +1205,66 @@ fn roll_passes_the_soldier_and_ends_facing_his_back() {
     assert!(!far.roll());
     let mut behind = Fight::new(Player::new(), Enemy::new([0.0, 0.0, -3.0]));
     assert!(!behind.roll());
+}
+
+#[test]
+fn crate_is_picked_up_carried_put_down_and_thrown() {
+    use super::{combat::Fight, enemy::{Enemy, State as ES}, player::{Player, State as PS}, terrain::Terrain};
+    let mut t = Terrain::sandbox();
+    let run = |f: &mut Fight, t: &mut Terrain, n: u32, fwd: bool| for _ in 0..n {
+        f.player.step_on(t, fwd, false);
+        f.carry_step(t);
+    };
+    let mut f = Fight::new({ let mut p = Player::new(); p.pos = [3.7, 0.0, 2.6]; p }, Enemy::new([-20.0, 0.0, 30.0]));
+    assert!(f.pick(&mut t), "crate in reach");
+    assert_eq!(f.player.world_action(), "PICK01");
+    run(&mut f, &mut t, 50, false);
+    assert_eq!(f.player.state, PS::Carry);
+    assert_eq!(f.player.world_action(), "STOP_K05");
+    assert!(t.colliders[8].max[1] < 0.0, "parked while carried");
+    assert!((f.crate_base(&t, 8)[1] - 1.7).abs() < 1e-3);
+    assert!(!f.pick(&mut t), "hands full");
+    f.player.walk = false;
+    run(&mut f, &mut t, 10, true);
+    assert_eq!(f.player.world_action(), "RUN_K05");
+    f.player.jump();
+    assert_eq!(f.player.state, PS::Carry, "no jumping with a load");
+    // put down
+    assert!(f.release_load(false));
+    run(&mut f, &mut t, 61, false);
+    assert_eq!(f.player.state, PS::Idle);
+    assert!(f.carry.load.is_none() && t.colliders[8].max[1] > 0.9, "crate back on the floor");
+    // pick again and throw at the soldier
+    f.enemy.pos = [f.player.pos[0] + 3.0 * f.player.heading.sin(), 0.0, f.player.pos[2] + 3.0 * f.player.heading.cos()];
+    f.player.pos = [t.crate_base(8)[0] - 0.8 * f.player.heading.sin(), 0.0, t.crate_base(8)[2] - 0.8 * f.player.heading.cos()];
+    assert!(f.pick(&mut t));
+    run(&mut f, &mut t, 50, false);
+    assert!(f.release_load(true));
+    for _ in 0..80 {
+        f.player.step_on(&t, false, false);
+        f.carry_step(&mut t);
+        f.step_enemy();
+    }
+    assert!(f.enemy.hp < crate::sim::data::ENEMY_HP || f.enemy.state != ES::Idle, "thrown crate hit him");
+    assert!(f.carry.load.is_none() && t.colliders[8].max[1] > 0.9, "crate landed");
+}
+
+#[test]
+fn hit_drops_the_load_and_the_dead_soldier_can_be_carried() {
+    use super::{combat::Fight, enemy::{Enemy, State as ES}, player::{Player, State as PS}, terrain::Terrain};
+    let mut t = Terrain::sandbox();
+    let mut e = Enemy::new([0.0, 0.0, 0.8]);
+    e.hit("HI_BS07", 10_000);
+    assert_eq!(e.state, ES::Dead);
+    let mut f = Fight::new(Player::new(), e);
+    assert!(f.pick(&mut t));
+    for _ in 0..50 {
+        f.player.step_on(&t, false, false);
+        f.carry_step(&mut t);
+    }
+    assert_eq!(f.player.state, PS::Carry);
+    assert!((f.enemy.pos[1] - 1.7).abs() < 1e-3, "body rides in the arms");
+    f.player.hit("HI_BS01");
+    f.carry_step(&mut t);
+    assert!(f.carry.load.is_none() && f.enemy.pos[1] < 0.5, "dropped on the floor");
 }

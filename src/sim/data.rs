@@ -123,3 +123,19 @@ pub const THROW_DAMAGE: i32 = 30;
 pub const ROLL_REACH: f32 = 4.0;
 pub const ROLL_CONE: f32 = 0.8;
 pub const ROLL_BEHIND: f32 = 1.0;
+
+// ESTIMATE: pick up, carry, put down and throw crates and the dead soldier (movement.mov 36-44 s; no pairing in the files).
+// PICK01 lifts, STOP_K05/RUN_K05 carry, PUT_K05 (60 f) sets down at frame PUT_FRAME, NAGE_K05 (40 f) throws at THROW_FRAME.
+// Reach is measured to the object's centre; the load rides HOLD_FWD ahead and HOLD_UP above the feet.
+pub const PICK_REACH: f32 = 1.6;
+pub const PICK_CONE: f32 = 0.9;
+pub const HOLD_FWD: f32 = 0.1;
+pub const HOLD_UP: f32 = 1.7;
+pub const PUT_FRAME: u32 = 30;
+pub const PUT_DIST: f32 = 0.9;
+pub const THROW_FRAME: u32 = 14;
+pub const THROW_SPEED: f32 = 8.0;
+pub const THROW_LIFT: f32 = 1.0;
+pub const THROWN_HIT_RADIUS: f32 = 0.8;
+pub const THROWN_DAMAGE: i32 = 25;
+pub const GRAVITY_MS2: f32 = 9.8;

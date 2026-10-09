@@ -40,6 +40,8 @@ pub enum State {
     Vault,
     /// KICK_J01 / KICK_JB01 / FLIP_B01 played in the air: gravity and momentum go on, FALL01 follows.
     AirAct,
+    /// STOP_K05 / RUN_K05 with a crate or body in the arms; only put-down and throw are open.
+    Carry,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -107,6 +109,8 @@ pub struct Player {
     air_heading: f32,
     /// Direction/modifier held with the attack button (set by `Input`); picks the attack, see `press_attack`.
     pub attack_mod: AttackMod,
+    /// A load is in the arms (PICK01 plays, then `State::Carry`); cleared by a hit or by the put/throw.
+    pub carrying: bool,
 }
 
 /// Modifier held with Square (docs/controls.md "Attack and move list").
@@ -130,7 +134,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -204,7 +208,7 @@ impl Player {
         if attack {
             self.press_attack();
         }
-        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch | State::Jump | State::Fall) {
+        if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch | State::Jump | State::Fall | State::Carry) {
             let d = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let max = TURN_RATE * super::DT;
@@ -271,9 +275,22 @@ impl Player {
             self.start(State::Idle, self.idle_clip);
         }
         if matches!(self.state, State::Hit | State::Special) && self.world.done() {
-            self.start(State::Idle, self.idle_clip);
+            if self.carrying && self.state == State::Special {
+                self.start(State::Carry, "STOP_K05");
+            } else {
+                self.start(State::Idle, self.idle_clip);
+            }
         }
         if matches!(self.state, State::Guard | State::GuardEnd | State::Dodge | State::Hit | State::Special) {
+            return self.advance();
+        }
+        if self.state == State::Carry {
+            let clip = if forward { "RUN_K05" } else { "STOP_K05" };
+            if self.world.action.name != clip {
+                self.start(State::Carry, clip);
+            } else if self.world.done() {
+                self.world = World::new(clip);
+            }
             return self.advance();
         }
         if self.state == State::Hug {
@@ -475,6 +492,7 @@ impl Player {
 
     /// Take a hit: interrupts any state and plays the given reaction (`HI_BS01`, `HI_US01`, ...) to its end.
     pub fn hit(&mut self, reaction: &str) {
+        self.carrying = false; // whatever he held is dropped (Fight notices)
         self.vy = 0.0;
         self.start(State::Hit, reaction);
     }
@@ -489,6 +507,22 @@ impl Player {
     pub fn start_special(&mut self, name: &str) {
         self.vy = 0.0;
         self.start(State::Special, name);
+    }
+
+    /// Reach for a load: PICK01 from free locomotion, then `State::Carry` once it ends.
+    pub fn begin_pick(&mut self) -> bool {
+        self.carrying = self.request(State::Special, "PICK01");
+        self.carrying
+    }
+
+    /// Put down or throw what is carried: play `clip` (PUT_K05 / NAGE_K05), then back to idle.
+    pub fn unload(&mut self, clip: &str) -> bool {
+        if self.state != State::Carry {
+            return false;
+        }
+        self.carrying = false;
+        self.start(State::Special, clip);
+        true
     }
 
     /// Start a dodge now from the guard stance too (the roll into the enemy is R1 + Forward + Cross, R1 is the guard).

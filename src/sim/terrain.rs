@@ -29,9 +29,30 @@ impl Collider {
 #[derive(Default)]
 pub struct Terrain {
     pub colliders: Vec<Collider>,
+    /// Indices into `colliders` of the movable crates (see `place_crate`).
+    pub crates: Vec<usize>,
 }
 
 impl Terrain {
+    /// Move crate collider `i` so its bottom centre is at `base`; a base below the floor parks it out of play (carried).
+    pub fn place_crate(&mut self, i: usize, base: [f32; 3]) {
+        let c = &mut self.colliders[i];
+        let size: [f32; 3] = std::array::from_fn(|k| c.max[k] - c.min[k]);
+        c.min = [base[0] - size[0] / 2.0, base[1], base[2] - size[2] / 2.0];
+        c.max = [base[0] + size[0] / 2.0, base[1] + size[1], base[2] + size[2] / 2.0];
+    }
+
+    /// Bottom centre of crate collider `i`.
+    pub fn crate_base(&self, i: usize) -> [f32; 3] {
+        let c = &self.colliders[i];
+        [(c.min[0] + c.max[0]) / 2.0, c.min[1], (c.min[2] + c.max[2]) / 2.0]
+    }
+
+    /// A point inside a solid (non-ramp) box: a thrown object stops here.
+    pub fn blocked(&self, p: [f32; 3]) -> bool {
+        self.colliders.iter().any(|b| !b.ramp && b.contains(p, 0.0) && p[1] >= b.min[1] && p[1] < b.max[1])
+    }
+
     pub fn ground_height(&self, p: [f32; 3]) -> f32 {
         self.colliders.iter().filter(|b| b.contains(p, 0.0))
             .map(|b| b.top(p[2])).filter(|&y| y <= p[1] + SUPPORT_EPS).fold(0.0, f32::max)
@@ -147,6 +168,6 @@ impl Terrain {
             b([3.2, 0.0, 3.0], [4.2, 1.0, 4.0]),
             b([2.6, 1.0, 3.0], [3.6, 2.0, 4.0]),
         ];
-        Self { colliders }
+        Self { crates: vec![7, 8, 9], colliders }
     }
 }

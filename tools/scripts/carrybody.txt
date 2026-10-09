@@ -1,0 +1,9 @@
+# kill the soldier in front of Kagetora, lift his body, carry it, throw it
+0 yaw 0
+0 at 0 0
+0 lock 0
+0 kill 0 1.0
+10 exec
+70 stick 0 1
+100 stick 0 0
+120 attack

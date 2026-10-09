@@ -1,0 +1,10 @@
+# lift the crate at (3.7, 3.5), carry it a few steps, put it down, lift it again, throw it at the soldier
+0 yaw 0
+0 at 3.7 2.4
+0 lock 0
+5 exec
+60 stick 0 1
+85 stick 0 0
+100 exec
+170 exec
+235 attack

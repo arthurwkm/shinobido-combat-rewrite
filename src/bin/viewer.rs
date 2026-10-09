@@ -31,6 +31,10 @@ impl Default for Sim {
 #[derive(Resource)]
 struct World(Terrain);
 
+/// A movable crate, drawn where the sim says (in the arms, in the air, or at rest).
+#[derive(Component)]
+struct CrateMesh(usize);
+
 #[derive(Resource, Default)]
 struct Pad(Input);
 
@@ -116,7 +120,7 @@ fn parse_shot() -> Option<Shot> {
 }
 
 /// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
-/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | at <x> <z> | yaw <deg>`, `#` comments),
+/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
 /// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
 #[derive(Resource)]
 struct Record {
@@ -162,6 +166,7 @@ fn record_step(mut rec: ResMut<Record>, mut pad: ResMut<Pad>, mut exec: ResMut<E
             (Some("crouch"), [b]) => i.crouch = *b != 0.0,
             (Some("dash"), [b]) => i.dash = *b != 0.0,
             (Some("at"), [x, z]) => { sim.0.player.pos[0] = *x; sim.0.player.pos[2] = *z; }
+            (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.hit("HI_BS07", 99_999); }
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("attack"), _) => i.attack = true,
             (Some("jump"), _) => i.jump = true,
@@ -220,7 +225,7 @@ fn main() {
         .add_systems(Update, (
             (record_step, tick).chain().run_if(resource_exists::<Record>),
             read_pad.run_if(|r: Option<Res<Record>>| r.is_none()),
-            orbit, draw, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
+            orbit, draw, move_crates, pose_bones, cue, draw_grid, update_hud, update_game_hud).chain())
         .run();
 }
 
@@ -275,11 +280,14 @@ fn spawn_terrain(commands: &mut Commands, meshes: &mut Assets<Mesh>, mats: &mut 
     let grey = mats.add(StandardMaterial { base_color: Color::srgb(0.45, 0.45, 0.47), perceptual_roughness: 0.9, ..default() });
     let mut block = |commands: &mut Commands, min: Vec3, max: Vec3, rot: Quat| {
         let size = max - min;
-        commands.spawn((Mesh3d(meshes.add(Cuboid::new(size.x, size.y, size.z))), MeshMaterial3d(grey.clone()), Transform::from_translation((min + max) / 2.0).with_rotation(rot)));
+        commands.spawn((Mesh3d(meshes.add(Cuboid::new(size.x, size.y, size.z))), MeshMaterial3d(grey.clone()), Transform::from_translation((min + max) / 2.0).with_rotation(rot))).id()
     };
-    for c in &terrain.colliders {
+    for (idx, c) in terrain.colliders.iter().enumerate() {
         let (min, max) = (Vec3::from(c.min), Vec3::from(c.max));
-        if !c.ramp {
+        if terrain.crates.contains(&idx) {
+            let e = block(commands, min, max, Quat::IDENTITY);
+            commands.entity(e).insert(CrateMesh(idx));
+        } else if !c.ramp {
             block(commands, min, max, Quat::IDENTITY);
             continue;
         }
@@ -344,9 +352,13 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
     i.stick = [stick.x, stick.y];
 }
 
-fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, world: Res<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
-    if std::mem::take(&mut exec.0) {
-        sim.0.grab(pad.0.lock);
+fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
+    // Triangle: put down what is carried, else grab/execute, else lift a crate or body; Square throws the load.
+    if std::mem::take(&mut exec.0) && !sim.0.release_load(pad.0.lock) && !sim.0.grab(pad.0.lock) {
+        sim.0.pick(&mut world.0);
+    }
+    if pad.0.attack && sim.0.release_load(true) {
+        pad.0.attack = false;
     }
     if sim.0.enemy.state == shinobido_combat_rewrite::sim::enemy::State::Held && std::mem::take(&mut pad.0.attack) {
         sim.0.mash();
@@ -356,6 +368,7 @@ fn tick(mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: Re
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();
+    sim.0.carry_step(&mut world.0);
     if sim.0.enemy.hp > 0 {
         let (pos, action) = (sim.0.player.pos, sim.0.player.world_action());
         aware.0.step(&mut sim.0.enemy, pos, action);
@@ -459,6 +472,13 @@ fn orbit(
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
     let (e, f) = cam.0.eye(sim.0.player.focus_pos());
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
+}
+
+fn move_crates(sim: Res<Sim>, world: Res<World>, mut q: Query<(&CrateMesh, &mut Transform)>) {
+    for (c, mut t) in &mut q {
+        let b = sim.0.crate_base(&world.0, c.0);
+        t.translation = Vec3::new(b[0], b[1] + 0.5, b[2]);
+    }
 }
 
 fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
