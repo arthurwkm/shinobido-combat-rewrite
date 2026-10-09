@@ -28,6 +28,10 @@ pub enum State {
     Hit,
     /// One-shot ninja action (SHEATH01, PICK01, THROW_A01/B01, DRINK01, NINJYUTU01, MAKIBISHI01); role per name is a hypothesis.
     Special,
+    /// KABE_U01: running up a tall wall (jump while running into it); height gain is ESTIMATE (data.rs).
+    WallRun,
+    /// TRI_J01 / KABE_E01: pushed off the wall, falling away from it with gravity.
+    WallKick,
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
@@ -42,6 +46,8 @@ const JUMP_V0: f32 = 155.0;
 const UNIT_M: f32 = 9.8 / 450.0;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
+/// KABE_U01 length in frames (extracted.rs).
+const ACTIONS_KABE_U_FRAMES: f32 = 36.0;
 
 /// Ground turn rate, rad/s (2.5 pi). From the executable's turn function 0x10bf80, default-state branch (0x10c1f4);
 /// other states use other rates (formats.md). Which branch applies to which action is not decoded: locomotion only.
@@ -123,7 +129,7 @@ impl Player {
             self.pos[2] += self.air_vel[1];
         }
         // Special clips (climbs) own the height through root motion.
-        let rooted = self.state == State::Special;
+        let rooted = matches!(self.state, State::Special | State::WallRun);
         if !jumping && !grounded && !rooted {
             self.vy += gravity(self.vy) * super::DT;
             self.pos[1] += self.vy * super::DT * UNIT_M;
@@ -189,6 +195,17 @@ impl Player {
         if self.state == State::Fall {
             if self.world.done() { self.start(State::Fall, "FALL01"); }
             return self.advance();
+        }
+        if self.state == State::WallRun {
+            self.pos[1] += super::data::WALL_RUN_RISE / ACTIONS_KABE_U_FRAMES;
+            if self.world.done() { self.wall_kick("KABE_E01"); } else { self.advance(); }
+            return;
+        }
+        if self.state == State::WallKick {
+            if self.world.done() { self.start(State::Fall, "FALL01"); } else { self.advance(); }
+            self.pos[0] += self.air_vel[0];
+            self.pos[2] += self.air_vel[1];
+            return;
         }
         if self.state == State::Land {
             if self.world.done() {
@@ -343,8 +360,30 @@ impl Player {
         self.request(State::Special, name);
     }
 
+    /// Jump. Running into a tall wall (wall_tall, facing it) starts the wall run instead; a second press kicks off.
     pub fn jump(&mut self) {
-        self.request(State::Jump, "JUMP01");
+        if self.state == State::WallRun {
+            return self.wall_kick("TRI_J01");
+        }
+        let facing = self.wall_normal.is_some_and(|n| -(self.heading.sin() * n[0] + self.heading.cos() * n[2]) > 0.7);
+        if self.state == State::Run && self.wall_tall && facing {
+            self.start(State::WallRun, "KABE_U01");
+        } else {
+            self.request(State::Jump, "JUMP01");
+        }
+    }
+
+    /// Leave the wall backwards (away from its normal) with the given clip.
+    fn wall_kick(&mut self, clip: &str) {
+        if let Some(n) = self.wall_normal {
+            self.heading = n[0].atan2(n[2]);
+            self.target_heading = self.heading;
+        }
+        let (s, c) = self.heading.sin_cos();
+        self.air_vel = [s * super::data::KICK_SPEED, c * super::data::KICK_SPEED];
+        self.vy = 0.0;
+        self.fall_from = self.pos[1];
+        self.start(State::WallKick, clip);
     }
 
     /// The one gate for player-chosen actions: free locomotion may start anything; any other state only what the

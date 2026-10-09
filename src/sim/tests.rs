@@ -912,3 +912,35 @@ fn hug_pad_sequence_survives_camera_pull_in() {
     }
     assert_eq!(p.state, State::Idle);
 }
+
+#[test]
+fn running_into_a_tall_wall_with_jump_runs_up_then_kicks_off() {
+    use crate::sim::{player::{Player, State}, terrain::Terrain};
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [-7.0, 0.0, 4.0];
+    for _ in 0..120 { p.step_on(&t, true, false); }
+    assert!(p.wall_normal.is_some(), "ran into the wall");
+    p.jump();
+    assert_eq!(p.world_action(), "KABE_U01");
+    for _ in 0..20 { p.step_on(&t, true, false); }
+    assert!(p.pos[1] > 1.0, "rising: {}", p.pos[1]);
+    p.jump(); // kick off
+    assert_eq!(p.world_action(), "TRI_J01");
+    let z = p.pos[2];
+    for _ in 0..200 { p.step_on(&t, false, false); }
+    assert!(p.pos[2] < z - 0.3, "pushed away from the wall");
+    assert!(p.pos[1] < 0.01 && !matches!(p.state, State::WallKick | State::Fall), "landed: {:?}", p.state);
+}
+
+#[test]
+fn wall_run_reaching_the_top_kicks_off_with_kabe_e() {
+    use crate::sim::{player::Player, terrain::Terrain};
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [-7.0, 0.0, 4.0];
+    for _ in 0..120 { p.step_on(&t, true, false); }
+    p.jump();
+    for _ in 0..37 { p.step_on(&t, true, false); }
+    assert_eq!(p.world_action(), "KABE_E01");
+}

@@ -1,0 +1,7 @@
+# Run +z into the tall wall at z=8, jump into the wall run, kick off with a second jump.
+0 at -7 3
+0 yaw 0
+0 stick 0 1
+100 jump
+118 jump
+150 stick 0 0

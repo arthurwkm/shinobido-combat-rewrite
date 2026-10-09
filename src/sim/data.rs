@@ -86,3 +86,8 @@ pub const STICK_WALK: f32 = 0.55;
 // ESTIMATE: least wall height (m) for a hug; direct entry/exit and contact-driven transitions
 // have no event windows in the set-05 hug clips. LOOK/BACK sequencing follows matching endpoint poses.
 pub const HUG_WALL_MIN: f32 = 2.0;
+
+// ESTIMATE: height (m) gained over KABE_U01 (36 f); the clip has no root Y and the launch impulse binding was not found (formats.md "Wall ascent and impulse").
+pub const WALL_RUN_RISE: f32 = 3.0;
+// ESTIMATE: horizontal speed (m/tick) away from the wall after TRI_J01 / KABE_E01.
+pub const KICK_SPEED: f32 = 0.05;
