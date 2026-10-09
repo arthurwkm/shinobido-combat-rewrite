@@ -221,6 +221,32 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   verdict). Every "differs" becomes a new item inserted above this one. Check this only after a full pass
   finds no gap.
 
+## Milestone 18 — Emulator A/B (owner, 2026-10-09: nightly result not as intended)
+Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`) and the viewer
+(`--record ... --script`), tiled with `tools/emucmp.py`, measured, fixed, and a row in `docs/emucompare.md`
+(action, script, measured game vs viewer, verdict). The emulator is the ground truth over clips and estimates.
+- [x] Harness: `pcsx2.py video` (screencapture of the game window while a script plays), `esc` key (PCSX2 pause
+  menu; it pauses on focus loss), F8 shot waits for the file to finish; `tools/emucmp.py` side-by-side tiles.
+  Evidence: `target/pcsx2/run.mov` (1694x1134, 60 fps, 7.7 s) and `target/cmp/emu_run.jpg` vs `target/rec/run_cmp`.
+- [ ] Test spots: save states in an open, lit, flat area (no enemy) and one with a single unaware soldier, in a
+  slot reserved for the agent; first run showed a dark cramped garden where distances can't be read.
+- [ ] Viewer `--empty` (no soldier): in `--solo` the soldier still closes in and hits within 2 s, so movement
+  records are polluted (run_cmp/run_solo, ticks 120–250 are hit reactions).
+- [ ] Time base: the disc is PAL (PCSX2: VPS 50, game FPS 25). Measure RUN01 cycle, STOP01 length and jump air
+  time in the emulator and check the 60 Hz assumption in `.nmt` playback, sim speeds and `compare.py`.
+- [ ] Locomotion A/B: walk, run, start, stop, turn on the spot, 180 turn, dash; speed (m/s from distance over
+  time against a known-size object), acceleration and stop slide.
+- [ ] Jumps A/B: jump, high jump, flips, landing; air time, apex, horizontal reach.
+- [ ] Camera A/B: distance, height, pitch, follow lag while running away/towards/sideways, recentre; first run
+  shows the game's camera low behind and lagging, the character shrinking as he runs ahead.
+- [ ] Mannequin read: the chest/waist cuboids read as a crate around the body (owner: "spawning inside an
+  object"); replace with capsules sized to the game's torso.
+- [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
+  unaware. A/B the first contact.
+- [ ] Wall/ledge/hug/crouch/carry A/B, one item each when the locomotion items are green.
+- [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
+- [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
+
 ## Requests
 (none open)
 Answered 2026-10-09 by the owner:
@@ -236,6 +262,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude (owner present): emulator A/B harness (pcsx2.py video/esc, emucmp.py); first run/stop/jump A/B; M18 plan.
 - 2026-10-09 Claude: above kill now dives (FALL01) before the pair; acceptance second pass finds no gap, Acceptance review checked.
 - 2026-10-09 Claude: several soldiers item closed (3 in the sandbox, per-soldier stealth, lock flick across them checked in the viewer).
 - 2026-10-09 Claude: executions item closed: back kill from the pad checked in the viewer (exec record vs stealth-kill clip); A/B/C/D variants and cue look stay ESTIMATE after three failed lookups.

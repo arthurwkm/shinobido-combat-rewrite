@@ -3,6 +3,7 @@
     python tools/pcsx2.py shot <name>             F8 screenshot -> target/pcsx2/<name>.png
     python tools/pcsx2.py load                    load the current save-state slot (F3)
     python tools/pcsx2.py play <script> [<name>]  timed pad script (below); frames go to target/pcsx2/<name>/
+    python tools/pcsx2.py video <script> [<name>] same, and records the game window to target/pcsx2/<name>.mov
 
 Script lines (`#` comments), times in 60 Hz frames from the start:
     <frame> down <button...>   hold         <frame> up <button...>   release
@@ -37,7 +38,7 @@ KEYS = {
     "l1": 12, "l2": 18, "r1": 14, "r2": 20, "l3": 19, "r3": 21,  # Q 1 E 3 2 4
     "lup": 13, "lright": 2, "ldown": 1, "lleft": 0,  # W D S A
     "rup": 17, "rright": 4, "rdown": 5, "rleft": 3,  # T H G F
-    "f1": 122, "f2": 120, "f3": 99, "f8": 100,
+    "f1": 122, "f2": 120, "f3": 99, "f8": 100, "esc": 53,  # Esc: PCSX2 pause menu / return to game
 }
 
 
@@ -73,7 +74,10 @@ def shot(p, dest):
         new = set(SNAPS.glob("*.png")) - before
         if new:
             src = max(new, key=lambda f: f.stat().st_mtime)
-            time.sleep(0.1)  # let the writer finish
+            size = -1
+            while src.stat().st_size != size:  # let the writer finish (0.1 s was not enough at 1365x1024)
+                size = src.stat().st_size
+                time.sleep(0.2)
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(src, dest)
             return dest
@@ -128,6 +132,23 @@ def play(p, script, name):
             key(p, a, False)
 
 
+def video(p, script, name):
+    """`play` while macOS `screencapture` records the PCSX2 game window (real time, the screen's frame rate)."""
+    w = next(w for w in Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID)
+             if w.get("kCGWindowOwnerName") == "PCSX2" and w.get("kCGWindowName", "").startswith("Shinobido"))
+    b = w["kCGWindowBounds"]
+    last = max(int(l.split()[0]) for l in Path(script).read_text().splitlines() if l.split("#")[0].split())
+    dest = OUT / f"{name}.mov"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.unlink(missing_ok=True)
+    rect = f"{int(b['X'])},{int(b['Y'])},{int(b['Width'])},{int(b['Height'])}"
+    rec = subprocess.Popen(["screencapture", "-x", "-V", str(last // 60 + 2), "-R", rect, str(dest)])
+    time.sleep(0.5)  # recorder start-up
+    play(p, script, name)
+    rec.wait()
+    print(dest)
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -140,6 +161,8 @@ def main():
         load(p)
     elif cmd == "play":
         play(p, arg, sys.argv[3] if len(sys.argv) > 3 else Path(arg).stem)
+    elif cmd == "video":
+        video(p, arg, sys.argv[3] if len(sys.argv) > 3 else Path(arg).stem)
     else:
         sys.exit(__doc__)
 
