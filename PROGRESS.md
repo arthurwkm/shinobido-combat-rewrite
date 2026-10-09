@@ -229,6 +229,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: executions item closed: back kill from the pad checked in the viewer (exec record vs stealth-kill clip); A/B/C/D variants and cue look stay ESTIMATE after three failed lookups.
 - 2026-10-09 Claude: lock-on vs strafe clip checked; `at` script command now snaps to the ground (spawn inside the slope froze the strafe, not a sim bug).
 - 2026-10-09 Claude (owner request): target switch moved from D-pad/mouse wheel to an Elden Ring-style flick (right stick, mouse, arrows); Shinobido has no switch.
 2026-10-09 Codex: repaired inherited execution-camera test's reversed side assertion; retained configured framing and tested elapsed-time equivalence/release. 74 tests pass, clippy/240-action comparison green; viewer builds with incremental compilation disabled after stale-symbol link failure. Reviewed inherited diff and script; no visual check or feature completion claimed. Runner must commit this health fix before new feature work.
