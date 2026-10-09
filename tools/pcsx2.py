@@ -36,7 +36,7 @@ KEYS = {
     "l1": 12, "l2": 18, "r1": 14, "r2": 20, "l3": 19, "r3": 21,  # Q 1 E 3 2 4
     "lup": 13, "lright": 2, "ldown": 1, "lleft": 0,  # W D S A
     "rup": 17, "rright": 4, "rdown": 5, "rleft": 3,  # T H G F
-    "f1": 122, "f2": 120, "f3": 99, "f8": 100, "esc": 53,  # Esc: PCSX2 pause menu / return to game
+    "f1": 122, "f2": 120, "f3": 99, "f8": 100, "esc": 53, "space": 49,  # Esc: pause menu; Space: TogglePause (PCSX2.ini)
 }
 
 
@@ -48,9 +48,18 @@ def pid():
 
 
 def front(p):
+    """Bring PCSX2 forward; it pauses on focus loss (PauseOnFocusLoss) and does not always resume, so if two
+    captures 0.25 s apart are identical (the game's idle always moves) toggle pause with Space."""
     app = AppKit.NSRunningApplication.runningApplicationWithProcessIdentifier_(p)
     app.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
     time.sleep(0.3)
+    a, b = OUT / "_a.png", OUT / "_b.png"
+    shot(p, a)
+    time.sleep(0.25)
+    shot(p, b)
+    if a.read_bytes() == b.read_bytes():
+        tap(p, "space")
+        time.sleep(0.3)
 
 
 def key(p, name, down):

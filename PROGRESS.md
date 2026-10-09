@@ -244,7 +244,9 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [x] Backward somersault A/B: simultaneous opposite stick + Cross starts FLIP_B01 through the cancel gate; type-9 frame 8 launches Y=67 (emulator-calibrated ESTIMATE)/backward 40, heading held; removed the in-air flip window. Evidence: `ground_backflip_on_cross_with_stick_back` (failed JUMP01 vs FLIP_B01 before fix), delayed flick checks at 2/6/12 ticks; `cargo test -q` → 80 passed, `cargo clippy -q --all-targets` → exit 0/no output, `.venv/bin/python tools/compare.py` → 240/240 actions within tolerance. `tools/scripts/emu/flip_viewer.txt` mirrors `flip.txt` middle case at tick 270. Headless measurement: 0.500 s airborne, z −1.827 m by Idle, within tightened 0.45–0.65 s/1.3–2.3 m bounds. Fixed AirAct feeding root motion back into next-tick momentum; horizontal launch remains 40 units/s. Next: record script and compare trajectory/pose; docs/emucompare.md records the headless match. (needs viewer check, for Claude) Viewer: `target/debug/viewer --record target/rec/flip --script tools/scripts/emu/flip_viewer.txt --solo --every 3 --ticks 330` beside `target/pcsx2/flip2.mov` (`target/cmp/flip_ab.jpg`): arch at tick 285, inverted 291–297, landing ~306 on both sides.
 - [x] Wall run A/B (`tools/scripts/emu/wallrun.txt`, `wallrun_viewer.txt`): run at a wall + Cross runs up and catches the
   ledge in both (~0.4 s game, ~0.3 s viewer). Evidence: `target/pcsx2/wallrun.mov`, `target/cmp/wallrun_viewer.jpg`.
-- [ ] Jumps A/B: falls/landing from height (LAND_A/B thresholds), ledge climb-up timing.
+- [x] Ledge climb-up A/B (`tools/scripts/emu/climb.txt`): Cross while hanging climbs, CLIMB06 timing within ~0.1–0.2 s
+  (`target/cmp/climb25.jpg`). `pcsx2.py` now unpauses PCSX2 (Space) when two captures are identical (PauseOnFocusLoss).
+- [ ] Falls A/B: drop from height (LAND_A/B thresholds).
 - [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
   4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
   yaw and pitch, lock with no target recentres; hug/exec/climb framings kept on top. Evidence: `cargo test -q` 78 passed
@@ -273,6 +275,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude: ledge climb A/B matches; pcsx2.py auto-unpauses after focus loss.
 - 2026-10-09 Claude: wall run to ledge hang A/B matches; no change.
 - 2026-10-09 Claude: backward somersault seen in the viewer beside the emulator; matches.
 - 2026-10-09 Codex: follow-up fixed root-motion feedback into AirAct momentum (also affected air kicks), calibrated FLIP_V0=67 ESTIMATE; tightened regression measures 0.500 s/1.827 m backward. 80 tests pass, clippy clean, compare 240/240; no viewer run or commit.

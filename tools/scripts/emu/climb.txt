@@ -1,0 +1,5 @@
+# While on a ledge: hold up, then Cross with up held.
+30 down lup
+120 tap cross
+200 up lup
+260 shot
