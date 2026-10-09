@@ -9,11 +9,13 @@ pub struct Camera {
     pub pitch: f32,
     /// 0 = normal framing, 1 = pulled in beside the wall (wall hug).
     pub pull: f32,
+    /// 0 = normal framing, 1 = close-up side cut of an execution.
+    pub cut: f32,
 }
 
 impl Default for Camera {
     fn default() -> Self {
-        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0 }
+        Camera { yaw: 0.0, pitch: CAM_PITCH, pull: 0.0, cut: 0.0 }
     }
 }
 
@@ -49,11 +51,22 @@ impl Camera {
         }
     }
 
+    /// Execution close-up: swing to the player's side (heading given) and come in; `None` eases back (yaw is kept).
+    pub fn follow_exec(&mut self, heading: Option<f32>, dt: f32) {
+        let blend = 1.0 - (-CAM_EXEC_RATE * dt.max(0.0)).exp();
+        self.cut += (if heading.is_some() { 1.0 } else { 0.0 } - self.cut) * blend;
+        if let Some(h) = heading {
+            self.yaw = wrap(self.yaw + wrap(h + CAM_EXEC_ANGLE - self.yaw) * blend);
+        }
+    }
+
     /// (eye, focus) in the world frame for a player at `pos`.
     pub fn eye(&self, pos: [f32; 3]) -> ([f32; 3], [f32; 3]) {
         let f = [pos[0], pos[1] + CAM_FOCUS_HEIGHT, pos[2]];
-        let (cp, sp) = (self.pitch.cos(), self.pitch.sin());
+        let pitch = self.pitch + (CAM_EXEC_PITCH - self.pitch) * self.cut;
+        let (cp, sp) = (pitch.cos(), pitch.sin());
         let dist = CAM_DIST + (CAM_HUG_DIST - CAM_DIST) * self.pull;
+        let dist = dist + (CAM_EXEC_DIST - dist) * self.cut;
         let e = [f[0] - self.yaw.sin() * cp * dist, f[1] + sp * dist, f[2] - self.yaw.cos() * cp * dist];
         (e, f)
     }
@@ -81,6 +94,25 @@ mod tests {
         for _ in 0..120 { b.follow_hug(None, DT); }
         assert!(b.pull < 0.001);
         assert_eq!(b.yaw, yaw, "release preserves manual orbit");
+    }
+
+    #[test]
+    fn execution_cut_comes_in_to_the_side_and_releases() {
+        let mut c = Camera::default();
+        for _ in 0..120 { c.follow_exec(Some(0.0), DT); }
+        let (e, f) = c.eye([0.0; 3]);
+        let d = ((e[0] - f[0]).powi(2) + (e[1] - f[1]).powi(2) + (e[2] - f[2]).powi(2)).sqrt();
+        assert!((d - CAM_EXEC_DIST).abs() < 1e-2, "close to the pair");
+        assert!((e[0] + CAM_EXEC_ANGLE.sin() * CAM_EXEC_PITCH.cos() * CAM_EXEC_DIST).abs() < 1e-2,
+            "side follows the camera yaw convention");
+        let mut slow = Camera::default();
+        for _ in 0..60 { slow.follow_exec(Some(0.0), 1.0 / 30.0); }
+        assert!((slow.cut - c.cut).abs() < 1e-5);
+        assert!(wrap(slow.yaw - c.yaw).abs() < 1e-5);
+        let yaw = c.yaw;
+        for _ in 0..120 { c.follow_exec(None, DT); }
+        assert!(c.cut < 0.001);
+        assert_eq!(c.yaw, yaw, "release preserves orbit");
     }
 
     #[test]

@@ -519,7 +519,9 @@ fn orbit(
         cam.0.follow_lock(sim.0.player.pos, t);
     }
     cam.0.follow_hug((sim.0.player.state == State::Hug).then_some(sim.0.player.heading), time.delta_secs());
-    let (e, f) = cam.0.eye(sim.0.player.focus_pos());
+    let p = &sim.0.player;
+    cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), time.delta_secs());
+    let (e, f) = cam.0.eye(p.focus_pos());
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
 }
 

@@ -73,6 +73,12 @@ pub const EXEC_DIST: f32 = 0.8;
 // orbit speed for mouse (rad per pixel) and right stick (rad/s), lock-on yaw follow rate (1/s).
 pub const CAM_DIST: f32 = 3.0; // ESTIMATE: closer and lower to match combat.mov framing (audit 2026-10-08)
 pub const CAM_HUG_DIST: f32 = 4.2; // ESTIMATE: movement.mov 38 s: player ~10% of frame height, camera farther than the 3 m follow, looking along the wall
+// ESTIMATE: execution close-up (combat.mov 46 s, 54-58 s show the pair large and seen from the side): distance, pitch,
+// side angle off the player's heading, blend rate.
+pub const CAM_EXEC_DIST: f32 = 2.4;
+pub const CAM_EXEC_PITCH: f32 = 0.2;
+pub const CAM_EXEC_ANGLE: f32 = 1.2;
+pub const CAM_EXEC_RATE: f32 = 6.0;
 pub const CAM_HUG_RATE: f32 = 4.0;
 // ESTIMATE: side view 60 degrees from the outward wall normal; awaiting movement 38 s comparison.
 pub const CAM_HUG_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
