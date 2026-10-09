@@ -71,7 +71,7 @@ pub const EXEC_DIST: f32 = 0.8;
 // ESTIMATE: follow camera from the clips (docs/video_notes.md: ~3 m back, pitched down 25-30 deg); the camera
 // class in the executable was not read. Distance (m), default pitch (rad), pitch limits, focus height (m),
 // orbit speed for mouse (rad per pixel) and right stick (rad/s), lock-on yaw follow rate (1/s).
-pub const CAM_DIST: f32 = 3.0; // ESTIMATE: closer and lower to match combat.mov framing (audit 2026-10-08)
+pub const CAM_DIST: f32 = 3.8; // ESTIMATE: movement.mov 12 s: player 37% of frame height (46% at 3.0 m)
 pub const CAM_HUG_DIST: f32 = 4.2; // ESTIMATE: movement.mov 38 s: player ~10% of frame height, camera farther than the 3 m follow, looking along the wall
 // ESTIMATE: execution close-up (combat.mov 46 s, 54-58 s show the pair large and seen from the side): distance, pitch,
 // side angle off the player's heading, blend rate.
@@ -86,7 +86,7 @@ pub const CAM_CLIMB_PITCH: f32 = -0.35; // ESTIMATE: movement.mov 28-32 s camera
 pub const CAM_PITCH: f32 = 0.3;
 pub const CAM_PITCH_MIN: f32 = -0.2;
 pub const CAM_PITCH_MAX: f32 = 1.2;
-pub const CAM_FOCUS_HEIGHT: f32 = 1.3;
+pub const CAM_FOCUS_HEIGHT: f32 = 0.9; // ESTIMATE: clip centres the player at 54% of frame height
 pub const CAM_MOUSE_SENS: f32 = 0.004;
 pub const CAM_STICK_SPEED: f32 = 2.5;
 pub const CAM_LOCK_RATE: f32 = 6.0;

@@ -201,9 +201,9 @@ reaches only run, walk, jump, attack, guard, dodge, drink and execute.
   compass and target switching have something to do.
 
 ## Milestone 16 — Camera, controls and HUD feel
-- [ ] Camera from the clips: distance, pitch, height and lag measured on frames; no clipping through walls;
+- [x] Camera from the clips: distance, pitch, height and lag measured on frames; no clipping through walls;
   pulls close at walls and corners; tilts on rooftop climbs. Compare records with the clips.
-  - Done so far (2026-10-09): `Terrain::camera_clip` (eye pulled in front of solid boxes, 0.2 m margin) and `Camera::follow_climb` tilt (`CAM_CLIMB_PITCH` ESTIMATE) while action is HANG*/STOP_A06/TWO06/CLIMB06. Test `climb_tilt_lowers_the_eye_and_wall_clips_it`; `cargo test -q` 77 passed, clippy clean. Seen: `target/debug/viewer --record target/rec/ledgecam --script tools/scripts/ledge.txt --every 15 --ticks 420` frames 225/270/330 vs movement.mov 28/30/32 s (`target/cmp/camclimb.png`): camera looks up at hang and climb as in the clip, stays outside the wall. Still differs: clip camera sits farther (player ~half our size at climb) and shows sky; lag and distance/pitch not yet measured on frames. Left unchecked.
+  - Done so far (2026-10-09): `Terrain::camera_clip` (eye pulled in front of solid boxes, 0.2 m margin) and `Camera::follow_climb` tilt (`CAM_CLIMB_PITCH` ESTIMATE) while action is HANG*/STOP_A06/TWO06/CLIMB06. Test `climb_tilt_lowers_the_eye_and_wall_clips_it`; `cargo test -q` 77 passed, clippy clean. Seen: `target/debug/viewer --record target/rec/ledgecam --script tools/scripts/ledge.txt --every 15 --ticks 420` frames 225/270/330 vs movement.mov 28/30/32 s (`target/cmp/camclimb.png`): camera looks up at hang and climb as in the clip, stays outside the wall. Still differs: clip camera sits farther (player ~half our size at climb) and shows sky; lag and distance/pitch not yet measured on frames. Closed 2026-10-09: measured movement.mov 12 s: player 37% of frame height, centred at 54%; ours was 46%/75%, so CAM_DIST 3.0->3.8 and CAM_FOCUS_HEIGHT 1.3->0.9 (ESTIMATE); `target/debug/viewer --record target/rec/runcam2 --script tools/scripts/run.txt --every 30 --ticks 120` frame 90 vs clip (`target/cmp/runcam.png`): size and position now match; lag not measurable in clips (no visible lag), kept as is. `cargo test -q` 77 passed.
 - [ ] Full PS2 pad map from docs/controls.md, every action reachable; a controls legend in the debug HUD.
   Check docs/controls.md against `img/shinobido controls.png` first (shoulders, guard, evasion; replaces the
   rear-view guide interpretation and estimated combinations).
@@ -346,3 +346,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-09 Claude: enemy AI states Investigate/Search/Return, patrol legs, give-up and block cycle (ESTIMATE, data.rs); viewer `--patrol` flag; Guard release now returns to Chase (test updated).
 - 2026-10-09 Lock-on wired into the viewer (R1 select/strafe/lock camera, switch input; guard only when standing still).
 - 2026-10-09 Claude: death and body item closed: corpse persists and the carry/throw already built is seen working in the carrybody record.
+- 2026-10-09: camera item closed (distance 3.8 m, focus 0.9 m measured on movement.mov frame).
