@@ -1,0 +1,6 @@
+# --one: wait five seconds behind the unaware soldier, then run toward him and stop.
+# No actor repositioning: exercise the normal spawn and perception path.
+0 stick 0 0
+300 stick 0 1
+420 stick 0 0
+720 stick 0 0

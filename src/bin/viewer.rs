@@ -24,30 +24,62 @@ struct Sim(Fight);
 
 impl Default for Sim {
     fn default() -> Self {
-        // Soldier 6 m ahead, facing the player (position ESTIMATE).
+        Self::new(&std::env::args().collect::<Vec<_>>())
+    }
+}
+
+impl Sim {
+    fn new(args: &[String]) -> Self {
+        // Sandbox placement (ESTIMATE): soldier 6 m ahead, looking away so first contact is player-driven.
         let mut enemy = Enemy::new([0.0, 0.0, 6.0]);
-        enemy.heading = std::f32::consts::PI;
         // `--patrol`: an unaware soldier pacing along x off to the side, to watch the stealth AI.
-        if std::env::args().any(|a| a == "--patrol") {
+        if args.iter().any(|a| a == "--patrol") {
             enemy = Enemy::new([-6.0, 0.0, 8.0]);
             enemy.heading = std::f32::consts::FRAC_PI_2;
             enemy.patrol();
         }
-        let args: Vec<String> = std::env::args().collect();
         // `--solo`: Kagetora alone, for movement tests. The sim always holds one soldier, so he idles out of sight and hearing.
         if args.iter().any(|a| a == "--solo") {
             enemy = Enemy::new([0.0, 0.0, -1000.0]);
         }
         let mut fight = Fight::new(Player::default(), enemy);
-        // More soldiers of the same type, watching from the sides (positions ESTIMATE); `--one`, `--solo` or `--patrol` keeps one.
+        // More soldiers of the same type, also looking away (positions ESTIMATE); `--one`, `--solo` or `--patrol` keeps one.
         if !args.iter().any(|a| a == "--one" || a == "--solo" || a == "--patrol") {
             for (x, z) in [(5.0, 8.0), (-5.0, 9.0)] {
-                let mut e = Enemy::new([x, 0.0, z]);
-                e.heading = (-x).atan2(-z); // facing the player's start
-                fight.others.push(e);
+                fight.others.push(Enemy::new([x, 0.0, z]));
             }
         }
         Sim(fight)
+    }
+}
+
+#[test]
+fn sandbox_soldiers_wait_until_the_player_is_noticed() {
+    let terrain = Terrain::sandbox();
+    for args in [vec![], vec!["--one".to_string()]] {
+        let mut f = Sim::new(&args).0;
+        let posts: Vec<_> = f.enemies().map(|e| e.pos).collect();
+        assert_eq!(posts.len(), if args.is_empty() { 3 } else { 1 });
+        for _ in 0..600 {
+            f.step(false, false);
+            assert_eq!(f.stealth_step(&terrain), 0.0);
+            for (e, post) in f.enemies().zip(&posts) {
+                assert_eq!(e.state, EnemyState::Idle);
+                assert_eq!(e.pos, *post);
+            }
+        }
+        assert_eq!(f.player_hp, data::PLAYER_HP);
+
+        // Step into the first soldier's view; the normal perception path must still start combat.
+        f.player.pos = [0.0, 0.0, 8.0];
+        let mut noticed = false;
+        for _ in 0..600 {
+            f.step(false, false);
+            f.stealth_step(&terrain);
+            noticed |= f.enemy.stealth.level() == Alert::Alerted;
+        }
+        assert!(noticed);
+        assert!(f.player_hp < data::PLAYER_HP);
     }
 }
 

@@ -7,6 +7,7 @@ The emulator is the ground truth over the clips and estimates. Test spot: open g
 
 | Action | Script | Game (emulator) | Viewer | Verdict |
 |---|---|---|---|---|
+| Soldier first contact | `tools/scripts/first_contact.txt` (viewer only; game script pending a soldier encounter) | Owner reports soldiers start unaware; no measured first-contact capture yet | Headless startup regression: default/`--one` soldiers remain Idle, meter 0 and player unharmed for 600 ticks; moving into view permits alert and damage. Spawn headings now face away; detection constants unchanged | pending viewer and emulator checks; not a match claim |
 | Standing jump | `jump` | airborne 18 frames at 25 fps = 0.72 s; fast rise ~0.16 s, ~0.3 s hang, fast fall; feet ~1.5 m up | before: apex 0.57 m, ~1.0 s. After `JUMP_V0` 120 (exe 0x604a28) and `UNIT_M` 0.84/9.5: apex 1.49 m, lands at the same script tick (84) | matches (timing, height); camera differs: the game's rises with him |
 | Camera | `loco` | Shinobido's own camera | the reference project's camera (owner decision: not Shinobido's) | not compared by design |
 | Running jump | `loco` (570–720) | airborne 18 frames at 25 fps like the standing jump, run speed carried; running again ~2 game frames after touchdown | before: LAND01 (26 f) always played out. Now a held stick leaves LAND01 from its type-5 event frame 2; RUN01 at the same tick (690) | matches |

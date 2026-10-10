@@ -1,3 +1,4 @@
 # flee from the soldier: run away, dash
+0 soldier 0 6 180
 0 stick 0 -1
 30 dash 1

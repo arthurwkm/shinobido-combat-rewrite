@@ -252,7 +252,7 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [x] Dash front flip A/B: Circle held + Cross while dashing plays JUMP_D05 → LAND_D05 (owner: "running and pressing jump while holding the dash"); test `dash_jump_is_a_front_flip_like_the_emulator`; viewer `target/rec/frontflip` beside `target/pcsx2/frontflip.mov` (`target/cmp/frontflip_ab.jpg`), timing within ~0.1 s.
 - [x] Tall wall A/B: run-up (KABE_U01) → cling (KABE_E01, 0.88 s, new State::Cling) → mid-cling Cross second jump (TRI_A01) catches the edge; Cross during the run-up no longer kicks off (emulator). TRI_J01 kick-off kept on cling + stick away (ESTIMATE, not seen). Evidence: test `tall_wall_run_up_clings_and_a_mid_cling_jump_reaches_the_ledge`, `target/pcsx2/tallwall3.mov`, `target/cmp/tallwall_viewer.jpg`.
 - [x] Off a ledge A/B: stick away + Cross while hanging kicks off backwards (TRI_J01, ESTIMATE motion); R1/Circle/stick alone do nothing in the game. Test `hanging_with_the_stick_away_and_jump_kicks_off_the_wall`, `target/cmp/ledgedrop_viewer.jpg`.
-- [ ] Every remaining `todo` row of `docs/movelist.md` (the complete move list) gets an emulator A/B.
+- [ ] Every remaining `todo` row of `docs/movelist.md` (the complete move list) gets an emulator A/B. (needs emulator check, for Claude)
 - [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
   4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
   yaw and pitch, lock with no target recentres; hug/exec/climb framings kept on top. Evidence: `cargo test -q` 78 passed
@@ -261,8 +261,11 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   (`target/cmp/cam_ref.jpg`): same follow and vertical lag; differs: the reference frames its taller dummy fight closer.
 - Mannequin: owner decision 2026-10-09, the player model is fine as is.
 - [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
-  unaware. A/B the first contact.
-- [ ] Wall/ledge/hug/crouch/carry A/B, one item each when the locomotion items are green.
+  unaware. A/B the first contact. (needs viewer check, for Claude) (needs emulator check, for Claude)
+  - Codex 2026-10-10: startup was Idle already, but all three soldiers faced the player's spawn inside sight range (meter +0.0125 on tick 1). Keep the sandbox positions and face the stationary soldiers away; perception and attack rules unchanged. Spawn layout remains ESTIMATE, not a recovered game parameter. `Sim::new(args)` lets the headless regression exercise the real default/`--one` setup without changing process arguments. Regression failed before the heading fix, then passed: 600 ticks idle with meter 0/no damage, then entering view leads to alert and damage. Existing `exec`, `hit`, `react`, `react2`, `lock`, `roll`, `grab`, `flee` scripts explicitly restore their frontal encounter setup.
+  - Next in Claude: `target/debug/viewer --record target/rec/first_contact --script tools/scripts/first_contact.txt --one --every 30 --ticks 750`; repeat without `--one` for the default three-soldier setup. Five seconds idle, then pad-driven approach; compare first notice/attack against a real soldier encounter in PCSX2 (or combat clip if the open-area save has no soldier). Fill the pending row in `docs/emucompare.md`; no live recording or measurement was made by Codex.
+  - Validation: `cargo test -q` → 110 library tests + 1 viewer startup test passed, 0 failed; `cargo clippy -q --all-targets` and `cargo build -q --bin viewer` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Diff reviewed; no staging/commit (runner owns it).
+- [ ] Wall/ledge/hug/crouch/carry A/B, one item each when the locomotion items are green. (needs emulator check, for Claude)
 - [x] Crouch attacks from the attacks video: the video's shoulder icon is R1 = crouch, not lock-on. R1 + Square → FUTO27
   (rising uppercut, its cancel → AT_D01 downward strike), Back + Square → KICK27 (somersault kick), R1 + Back + Square →
   SOCCER01 (low kick); lock-on no longer picks attacks. Matched by `target/cmp/kicks_grid.jpg` (video 20.5/21.75/26 s vs
@@ -276,8 +279,8 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [x] Attacks video, chains and air strike: Square ×2, F+Square ×2 plays AT_A01 → AT_C01 → AT_DA01 → AT_CA01 with early
   presses (test `early_presses_play_the_four_hit_chain_from_the_attacks_video`); Square in the air stays KICK_J01, which matches
   the video's tucked downward strike (`target/cmp/air_grid.jpg`; AT02 is a dive roll, AT_SA05 a thrust).
-- [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
-- [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
+- [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc. (needs emulator check, for Claude)
+- [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills. (needs emulator check, for Claude)
 
 - [x] Smoothness (owner 2026-10-10: "clunky compared to the game"): clips cross-fade over 6 frames (`pose::Fade`, the most
   common blend length in the transition events) instead of snapping; characters and camera are drawn between sim ticks by
@@ -309,7 +312,7 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   - Validation: `cargo test -q` → `test result: ok. 110 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`; `cargo clippy -q --all-targets` → exit 0, no output/warnings; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Output saved in `target/logs/bugfix-sweep-{test,clippy,compare}.log`; `git diff --check` clean. Next: Claude records the affected pad sequences, checks pose/trajectory and combat feel, and adds emulator comparisons before checking this item.
 - [ ] Acceptance review 2 (emulator): when every other M18 item and every `docs/movelist.md` row is done, play each
   move in PCSX2 and the viewer once more (Loop step 9), fill `docs/acceptance.md` again, turn every gap into an item
-  above this one. Check this only after a full pass finds no gap.
+  above this one. Check this only after a full pass finds no gap. (needs emulator check, for Claude)
 
 ## Requests
 (none open)
@@ -326,6 +329,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 (Codex): soldier startup now faces away so idle play stays unaware; regression red→green, 110 library + 1 viewer tests pass, clippy/build clean, compare 240/240. Preserved frontal script setups; first-contact viewer script and pending A/B row added. All remaining M18 work needs viewer/emulator checks; left unchecked for Claude. Runner commits.
 - 2026-10-10 Codex: bugfix/responsiveness sweep; authored recovery masks, input intent, wall momentum/contact, carry/projectile/combat height, execution interruption, lock validation, camera pitch and elevated sight fixed with regressions; retained fall6 landing evidence; viewer/emulator checks pending, no commit.
 - 2026-10-10 Claude: four-hit chain and air strike checked against the attacks video.
 - 2026-10-10 Claude: attack press held until the chain window; sword stays drawn 3 s (clunky chains fixed).

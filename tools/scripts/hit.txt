@@ -1,3 +1,4 @@
+0 soldier 0 6 180
 0 stick 0 1
 55 stick 0 0
 70 attack

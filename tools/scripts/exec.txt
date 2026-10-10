@@ -1,4 +1,5 @@
 # unaware soldier faces -z; stand behind him (z 7.1) and press Triangle: back kill, close-up camera cut
+0 soldier 0 6 180
 0 stick 0 0
 2 at 0 7.1
 6 exec
