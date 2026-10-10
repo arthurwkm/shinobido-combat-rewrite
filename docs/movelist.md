@@ -28,7 +28,7 @@ This file is the working list: every move, its input, the motion it plays, and i
 | Ledge climb-up | Cross while hanging | matches |
 | Crouch walk-off ledge catch | R1 held, walk off an edge | matches |
 | Drop from ledge | R1 while hanging | todo |
-| Fall / landing from height | Walk off without R1 | todo (recording interrupted) |
+| Fall / landing from height | Walk off without R1 | matches (~2 m drop) |
 | Crouch / crouch walk | R1 held | partly (seen in edge grab) |
 | Wall hug, corner peek | R1 into a wall | todo |
 | Roll / evade | todo: input per owner's table ("R1 + Forward + Cross") needs re-check now R1 is crouch | todo |

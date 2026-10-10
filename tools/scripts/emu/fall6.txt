@@ -1,0 +1,4 @@
+# On a ~2 m block (overhead camera): run right off the side edge, release, watch the landing from the side.
+10 down lright
+50 up lright
+200 shot

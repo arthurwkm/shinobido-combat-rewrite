@@ -1,0 +1,4 @@
+# Viewer copy of fall6: stand on the 2 m stacked crate, run right off the edge, release, watch the landing.
+5 at 3.1 3.5
+10 stick 1 0
+30 stick 0 0

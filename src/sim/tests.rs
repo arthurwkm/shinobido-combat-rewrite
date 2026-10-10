@@ -1506,6 +1506,30 @@ fn running_jump_lands_straight_back_into_the_run() {
 }
 
 #[test]
+fn two_metre_drop_matches_the_emulator() {
+    // PCSX2 fall6/fall4 (docs/emucompare.md): off a ~2 m block he falls ~10 game frames (0.4 s), lands in a deep
+    // torso-forward crouch and is back in the ready stance ~0.28 s later; a held stick runs on ~2-3 game frames after touchdown.
+    use super::{terrain::{Collider, Terrain}, player::{Player, State}};
+    let clips = crate::sim::pose::Clips::parse(&std::fs::read("extracted/anim/clips.bin").unwrap()).unwrap();
+    let terrain = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)], ..Default::default() };
+    let mut p = Player::new();
+    p.pos = [0.0, 2.0, 2.05]; // just past the edge: a straight 2 m drop
+    let mut air = 0;
+    while p.state != State::Land { p.step_on(&terrain, false, false); air += 1; }
+    assert!((19..=29).contains(&air), "airborne {air} ticks");
+    let clip = p.world_action();
+    let hips = |f| clips.row(clip, f).unwrap()[1];
+    let stand = clips.row("STOP01", 0).unwrap()[1];
+    assert!(hips(2) < stand - 0.3, "deep crouch at touchdown: {} vs {stand}", hips(2));
+    assert!((hips(17) - stand).abs() < 0.1, "ready stance by 0.28 s: {} vs {stand}", hips(17));
+    let mut p = Player::new();
+    p.pos = [0.0, 2.0, 1.9];
+    while p.state != State::Land { p.step_on(&terrain, true, false); }
+    for _ in 0..7 { p.step_on(&terrain, true, false); }
+    assert_eq!(p.state, State::Run, "held stick runs on out of the landing");
+}
+
+#[test]
 fn ledge_pose_hand_heights() {
     use crate::sim::pose::{Clips, Skeleton};
     let skel = Skeleton::parse(&std::fs::read("extracted/anim/skeleton.bin").unwrap()).unwrap();

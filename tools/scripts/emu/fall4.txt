@@ -1,0 +1,6 @@
+# Wall-run up the block on screen-left, climb, keep the stick held: run across and off the far edge, land running.
+10 down lleft
+30 tap cross
+100 tap cross
+330 up lleft
+400 shot
