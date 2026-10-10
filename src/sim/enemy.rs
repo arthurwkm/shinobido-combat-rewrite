@@ -42,6 +42,8 @@ pub struct Enemy {
     pub guard_held: bool,
     /// World position (m); the root motion moves it along `heading`.
     pub pos: [f32; 3],
+    /// Falling velocity in game units/s, using the shared actor gravity update.
+    vy: f32,
     /// Yaw in radians; forward is (sin h, cos h) in x/z.
     pub heading: f32,
     /// Frames spent in `Held` and presses made meanwhile.
@@ -68,7 +70,7 @@ pub struct Enemy {
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0, landed: false, stealth: Stealth::default() }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, vy: 0.0, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0, landed: false, stealth: Stealth::default() }
     }
 
     pub fn action(&self) -> &'static str {
@@ -154,7 +156,29 @@ impl Enemy {
         self.world = World::new(clip);
     }
 
-    /// Advance one 60 Hz frame; `target` is the player's position (x/z used).
+    /// Root motion with wall collision, ramp support and gravity; held pairs own their placement.
+    pub fn step_on(&mut self, terrain: &super::terrain::Terrain, target: [f32; 3]) {
+        let before = self.pos;
+        let grounded = (before[1] - terrain.ground_height(before)).abs() <= data::SUPPORT_EPS;
+        self.step(target);
+        if self.state == State::Held {
+            self.vy = 0.0;
+            return;
+        }
+        if grounded {
+            self.vy = 0.0;
+        } else {
+            self.vy += super::player::gravity(self.vy) * DT;
+            self.pos[1] += self.vy * DT * super::player::UNIT_M;
+        }
+        self.pos = terrain.move_body(before, self.pos, grounded).0;
+        if (self.pos[1] - terrain.ground_height(self.pos)).abs() <= data::SUPPORT_EPS {
+            self.vy = 0.0;
+        }
+    }
+
+    /// Advance animation/AI one 60 Hz frame without terrain (also used for carried bodies).
+    /// `target` is the player's position (x/z used).
     pub fn step(&mut self, target: [f32; 3]) {
         let (dx, dz) = (target[0] - self.pos[0], target[2] - self.pos[2]);
         let dist = dx.hypot(dz);

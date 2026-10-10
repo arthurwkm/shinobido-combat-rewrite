@@ -53,12 +53,25 @@ impl Terrain {
         self.colliders.iter().any(|b| !b.ramp && b.contains(p, 0.0) && p[1] >= b.min[1] && p[1] < b.max[1])
     }
 
-    /// Eye-height line between two points is not cut by a solid box (sampled every 0.25 m).
+    /// Eye-height segment between two points misses every solid box, including thin walls.
     pub fn sight_clear(&self, a: [f32; 3], b: [f32; 3]) -> bool {
-        let n = ((0..3).map(|i| (b[i] - a[i]).powi(2)).sum::<f32>().sqrt() / 0.25).ceil() as i32;
-        (1..n).all(|i| {
-            let t = i as f32 / n as f32;
-            !self.blocked([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + 1.5, a[2] + (b[2] - a[2]) * t])
+        self.colliders.iter().filter(|c| !c.ramp).all(|c| {
+            let mut near = 0.0_f32;
+            let mut far = 1.0_f32;
+            for axis in 0..3 {
+                let start = a[axis] + if axis == 1 { 1.5 } else { 0.0 };
+                let delta = b[axis] - a[axis];
+                if delta == 0.0 {
+                    if start < c.min[axis] || start >= c.max[axis] { return true; }
+                } else {
+                    let enter = (c.min[axis] - start) / delta;
+                    let leave = (c.max[axis] - start) / delta;
+                    near = near.max(enter.min(leave));
+                    far = far.min(enter.max(leave));
+                    if near >= far { return true; }
+                }
+            }
+            false
         })
     }
 

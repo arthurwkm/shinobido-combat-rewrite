@@ -48,7 +48,7 @@ pub enum State {
 }
 
 /// Gravity update from the executable (0x1102b0, formats.md), in game units.
-fn gravity(vy: f32) -> f32 {
+pub(super) fn gravity(vy: f32) -> f32 {
     let m = vy.abs();
     if m > 15.0 { -450.0 } else { -100.0 - 0.4 * m }
 }
@@ -71,7 +71,7 @@ const SHEATH_DELAY: u32 = 180;
 const CLING_JUMP_MIN: u32 = 12;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
-const UNIT_M: f32 = 0.84 / 9.5;
+pub(super) const UNIT_M: f32 = 0.84 / 9.5;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
 /// KABE_U01 length in frames (extracted.rs).

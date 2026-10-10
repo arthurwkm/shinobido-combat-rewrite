@@ -1,0 +1,17 @@
+# Viewer copy of atkA.txt (taps are a press on the tick).
+60 attack
+300 attack
+316 attack
+540 attack
+556 stick 0 1
+558 attack
+570 stick 0 0
+780 stick 0 -1
+780 attack
+792 stick 0 0
+1020 attack
+1040 attack
+1058 stick 0 1
+1060 attack
+1080 attack
+1092 stick 0 0

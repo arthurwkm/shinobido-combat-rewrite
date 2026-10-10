@@ -1,0 +1,6 @@
+# --one: wounded soldier chases toward the player across a crate; he must stop south of z=2.7.
+# The low crate leaves him visible to the camera. Unit tests also cover a tall wall.
+0 at 2.3 5.5
+0 wound 2.3 1.5 0
+0 yaw 180
+600 stick 0 0

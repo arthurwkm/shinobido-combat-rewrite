@@ -34,7 +34,7 @@ impl Sim {
         let mut enemy = Enemy::new([0.0, 0.0, 6.0]);
         // `--patrol`: an unaware soldier pacing along x off to the side, to watch the stealth AI.
         if args.iter().any(|a| a == "--patrol") {
-            enemy = Enemy::new([-6.0, 0.0, 8.0]);
+            enemy = Enemy::new([-6.0, 0.0, 7.5]);
             enemy.heading = std::f32::consts::FRAC_PI_2;
             enemy.patrol();
         }
@@ -61,7 +61,8 @@ fn sandbox_soldiers_wait_until_the_player_is_noticed() {
         let posts: Vec<_> = f.enemies().map(|e| e.pos).collect();
         assert_eq!(posts.len(), if args.is_empty() { 3 } else { 1 });
         for _ in 0..600 {
-            f.step(false, false);
+            f.player.step_on(&terrain, false, false);
+            f.step_enemy_on(&terrain);
             assert_eq!(f.stealth_step(&terrain), 0.0);
             for (e, post) in f.enemies().zip(&posts) {
                 assert_eq!(e.state, EnemyState::Idle);
@@ -74,13 +75,25 @@ fn sandbox_soldiers_wait_until_the_player_is_noticed() {
         f.player.pos = [0.0, 0.0, 8.0];
         let mut noticed = false;
         for _ in 0..600 {
-            f.step(false, false);
+            f.player.step_on(&terrain, false, false);
+            f.step_enemy_on(&terrain);
             f.stealth_step(&terrain);
             noticed |= f.enemy.stealth.level() == Alert::Alerted;
         }
         assert!(noticed);
         assert!(f.player_hp < data::PLAYER_HP);
     }
+}
+
+#[test]
+fn sandbox_patrol_starts_clear_of_the_wall_and_can_walk() {
+    let terrain = Terrain::sandbox();
+    let mut f = Sim::new(&["--patrol".to_string()]).0;
+    let start = f.enemy.pos;
+    assert!(!terrain.blocked(start));
+    for _ in 0..120 { f.step_enemy_on(&terrain); }
+    assert!(f.enemy.pos[0] > start[0] + 1.0, "patrol must not be pinned inside the wall");
+    assert_eq!(f.enemy.pos[1], 0.0);
 }
 
 #[derive(Resource)]
@@ -217,6 +230,8 @@ struct Record {
     every: u32,
     ticks: u32,
     tick: u32,
+    /// Last traced player action: each change prints `trace <tick> <action>` (A/B timelines).
+    last: &'static str,
 }
 
 fn parse_record() -> Option<Record> {
@@ -239,6 +254,7 @@ fn parse_record() -> Option<Record> {
         every: val("--every").and_then(|v| v.parse().ok()).unwrap_or(6),
         ticks: val("--ticks").and_then(|v| v.parse().ok()).unwrap_or(last + 30),
         tick: 0,
+        last: "",
     })
 }
 
@@ -255,9 +271,9 @@ fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>,
             (Some("crouch"), [b]) => i.crouch = *b != 0.0,
             (Some("dash"), [b]) => i.dash = *b != 0.0,
             (Some("at"), [x, z]) => { sim.0.player.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; }
-            (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.hit("HI_BS07", 99_999); }
-            (Some("soldier"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.heading = h.to_radians(); }
-            (Some("wound"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.heading = h.to_radians(); e.hit("HI_BS07", data::ENEMY_HP - 10); }
+            (Some("kill"), [x, z]) => { let e = &mut sim.0.enemy; e.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; e.hit("HI_BS07", 99_999); }
+            (Some("soldier"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; e.heading = h.to_radians(); }
+            (Some("wound"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, world.0.ground_height([*x, 50.0, *z]), *z]; e.heading = h.to_radians(); e.hit("HI_BS07", data::ENEMY_HP - 10); }
             (Some("rise"), [dy]) => sim.0.player.pos[1] += dy,
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
             (Some("face"), [d]) => { let p = &mut sim.0.player; p.heading = d.to_radians(); p.target_heading = p.heading; }
@@ -271,6 +287,11 @@ fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>,
             (Some("clip"), _) => if let Some(n) = w.next() { if !sim.0.player.request(State::Special, n) { eprintln!("script: clip {n} refused"); } },
             _ => eprintln!("script: bad line `{cmd}`"),
         }
+    }
+    let a = sim.0.player.world_action();
+    if a != rec.last {
+        eprintln!("trace {t} {a}");
+        rec.last = a;
     }
     if t > 0 && t.is_multiple_of(rec.every) {
         commands.spawn(Screenshot::primary_window()).observe(save_to_disk(format!("{}/{t:05}.png", rec.dir)));
@@ -509,7 +530,7 @@ fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, ca
         pad.0.jump = false;
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
-    sim.0.step_enemy();
+    sim.0.step_enemy_on(&world.0);
     sim.0.carry_step(&mut world.0);
     aware.0.meter = sim.0.stealth_step(&world.0); // the eye icon shows the most aware soldier
     let level = aware.0.level();

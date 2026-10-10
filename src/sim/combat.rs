@@ -55,14 +55,23 @@ impl Fight {
 
     /// The enemy half of a frame, for callers that drive the player themselves (the viewer's `Input::apply`).
     pub fn step_enemy(&mut self) {
+        self.step_enemy_on(&super::terrain::Terrain::default());
+    }
+
+    /// Advance soldiers against the same terrain used by the player.
+    pub fn step_enemy_on(&mut self, terrain: &super::terrain::Terrain) {
         self.rolling();
         self.land_dive();
-        self.for_each(|f, _| {
+        self.for_each(|f, i| {
             f.caltrops();
-            f.enemy.step(f.player.pos);
+            if f.carry.load == Some(carry::Load::Body(i)) {
+                f.enemy.step(f.player.pos);
+            } else {
+                f.enemy.step_on(terrain, f.player.pos);
+            }
             f.hold();
-            f.separate();
-            f.resolve();
+            f.separate(terrain);
+            f.resolve(terrain);
         });
     }
 
@@ -114,7 +123,7 @@ impl Fight {
     }
 
     /// Push the two apart (half each) until their bodies no longer overlap; execution pairs stay put.
-    fn separate(&mut self) {
+    fn separate(&mut self, terrain: &super::terrain::Terrain) {
         let (p, e) = (&mut self.player, &mut self.enemy);
         if e.state == EnemyState::Dead || (p.pos[1] - e.pos[1]).abs() >= data::BODY_HEIGHT
             || p.state == State::Special || self.roll.is_some() || matches!(self.carry.load, Some(carry::Load::Body(_))) {
@@ -128,10 +137,13 @@ impl Fight {
         }
         let (nx, nz) = if d > 1e-4 { (dx / d, dz / d) } else { (0.0, 1.0) };
         let push = (min - d) / 2.0;
+        let (pp, ep) = (p.pos, e.pos);
         p.pos[0] -= nx * push;
         p.pos[2] -= nz * push;
         e.pos[0] += nx * push;
         e.pos[2] += nz * push;
+        p.pos = terrain.move_body(pp, p.pos, (pp[1] - terrain.ground_height(pp)).abs() <= data::SUPPORT_EPS).0;
+        e.pos = terrain.move_body(ep, e.pos, (ep[1] - terrain.ground_height(ep)).abs() <= data::SUPPORT_EPS).0;
     }
 
     /// R1 + Forward + Cross: roll (`data::ROLL_CLIP`) through the soldier ahead and come up behind him, facing his back.
@@ -276,10 +288,11 @@ impl Fight {
         e.heading = p.heading + std::f32::consts::PI;
     }
 
-    fn resolve(&mut self) {
+    fn resolve(&mut self, terrain: &super::terrain::Terrain) {
         let (p, e) = (&mut self.player, &mut self.enemy);
         if p.attack_active() {
-            if !self.player_landed && e.state != EnemyState::Dead && in_front(p.pos, p.heading, e.pos) {
+            if !self.player_landed && e.state != EnemyState::Dead && in_front(p.pos, p.heading, e.pos)
+                && terrain.sight_clear(p.pos, e.pos) {
                 self.player_landed = true;
                 let dmg = hit_damage(p.attack_arg().unwrap_or(0), data::PLAYER_POWER, 0.0);
                 let behind = !in_cone(e.heading, p.pos[0] - e.pos[0], p.pos[2] - e.pos[2], std::f32::consts::FRAC_PI_2);
@@ -289,7 +302,7 @@ impl Fight {
             self.player_landed = false;
         }
         if e.attack_active() {
-            if !e.landed && in_front(e.pos, e.heading, p.pos) {
+            if !e.landed && in_front(e.pos, e.heading, p.pos) && terrain.sight_clear(e.pos, p.pos) {
                 e.landed = true;
                 let guarding = matches!(p.state, State::Guard) && in_front(p.pos, p.heading, e.pos);
                 if !guarding && self.player_hp > 0 {

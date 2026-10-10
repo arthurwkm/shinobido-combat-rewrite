@@ -297,6 +297,11 @@ Reached from the actor-bit1 consumer (events 29/30). Actor `+0x314` is vertical 
   float at 0x604a28, below) under this gravity is airborne 0.76 s with a ~0.3 s hang; PCSX2 shows 0.72 s and the same hang.
   With 1 game unit = 0.84/9.5 m (model units, hips 9.5 vs 0.84 m) the apex is 1.49 m, matching the emulator (~1.5 m at the feet).
   So game world units are model units, and gravity is 450 u/s^2 = 39.8 m/s^2 above |vy| 15.
+- **Hypothesis (soldier integration, 2026-10-10):** the same actor gravity update and model-unit scale apply to
+  I_BUSHI. `Enemy::step_on` reuses the player's decoded update; no new acceleration was guessed. Wall/ramp collision
+  uses the existing ESTIMATE body bounds in `data.rs`. Headless checks cover roof departure and corpse landing on a
+  platform; soldier falling poses and timing still need a live comparison. Held pairs and carried/thrown bodies keep
+  their existing placement owner instead of receiving a second gravity update.
 
 ### Turn function 0x10bf80 (found 2026-10-08)
 

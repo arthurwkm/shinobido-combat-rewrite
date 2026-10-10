@@ -1,0 +1,20 @@
+# Attacks A/B, standing (castle bridge, camera behind): Square; Square x2; Square then Forward + Square;
+# Back + Square pressed together; Square x2, Forward + Square x2 at a steady 20-frame rhythm.
+30 shot
+60 tap square
+300 tap square
+316 tap square
+540 tap square
+556 down lup
+558 tap square
+570 up lup
+780 down ldown
+780 tap square
+792 up ldown
+1020 tap square
+1040 tap square
+1058 down lup
+1060 tap square
+1080 tap square
+1092 up lup
+1380 shot

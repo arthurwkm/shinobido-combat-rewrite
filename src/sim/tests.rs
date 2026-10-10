@@ -1958,3 +1958,143 @@ fn invalid_walk_clip_falls_back_to_forward_walk() {
     p.step(true, false);
     assert_eq!((p.state, p.world_action()), (State::Walk, "WALK_F02"));
 }
+
+#[test]
+fn soldiers_collide_with_walls_and_follow_slopes() {
+    use super::{combat::Fight, data, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
+    let wall = Terrain { colliders: vec![Collider::new([-4.0, 0.0, 2.0], [4.0, 4.0, 3.0], false)], crates: vec![] };
+    let mut p = Player::new();
+    p.pos = [0.0, 0.0, 8.0];
+    let mut f = Fight::new(p, Enemy::new([0.0; 3]));
+    f.others.push(Enemy::new([2.0, 0.0, 0.0]));
+    f.for_each(|f, _| f.enemy.alert());
+    for _ in 0..300 { f.step_enemy_on(&wall); }
+    for e in f.enemies() {
+        assert!(e.pos[2] <= 2.0 - data::BODY_RADIUS, "soldier crossed wall: {:?}", e.pos);
+        assert!(e.pos[2] > 1.0, "soldier must approach the wall");
+    }
+
+    let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 2.0, 8.0], true)], crates: vec![] };
+    for (start, target) in [([0.0, 0.0, -1.0], [0.0, 2.0, 7.0]), ([0.0, 1.75, 7.0], [0.0, 0.0, -1.0])] {
+        let mut p = Player::new();
+        p.pos = target;
+        let mut f = Fight::new(p, Enemy::new(start));
+        f.enemy.heading = if start[2] > target[2] { std::f32::consts::PI } else { 0.0 };
+        f.enemy.alert();
+        for _ in 0..100 {
+            f.step_enemy_on(&ramp);
+            let pos = f.enemy.pos;
+            assert!((pos[1] - (pos[2] / 4.0).clamp(0.0, 2.0)).abs() < 0.001, "ramp support: {pos:?}");
+        }
+        assert!((f.enemy.pos[2] - start[2]).abs() > 1.0, "soldier must travel along the slope");
+    }
+}
+
+#[test]
+fn soldiers_fall_off_roofs_and_corpses_land_on_platforms() {
+    use super::{combat::Fight, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
+    let t = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)], crates: vec![] };
+    let mut p = Player::new();
+    p.pos = [0.0, 0.0, 8.0];
+    let mut f = Fight::new(p, Enemy::new([0.0, 2.0, 1.5]));
+    f.enemy.alert();
+    let mut falling = false;
+    for _ in 0..200 {
+        f.step_enemy_on(&t);
+        falling |= f.enemy.pos[2] > 2.0 && f.enemy.pos[1] > 0.0 && f.enemy.pos[1] < 2.0;
+    }
+    assert!(falling, "roof departure must fall through intermediate heights");
+    assert_eq!(f.enemy.pos[1], 0.0);
+
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 5.0, 0.0]));
+    f.enemy.hit("HI_BS07", 9999);
+    for _ in 0..120 { f.step_enemy_on(&t); }
+    assert_eq!(f.enemy.pos[1], 2.0, "corpse must land on the crossed roof");
+}
+
+#[test]
+fn separation_cannot_push_characters_into_walls() {
+    use super::{combat::Fight, data, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
+    let t = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.42], [2.0, 4.0, 1.0], false)], crates: vec![] };
+    for (pz, ez) in [(0.0, 0.1), (0.1, 0.0)] {
+        let mut p = Player::new();
+        p.pos[2] = pz;
+        let mut f = Fight::new(p, Enemy::new([0.0, 0.0, ez]));
+        for _ in 0..60 {
+            f.step_enemy_on(&t);
+            for pos in [f.player.pos, f.enemy.pos] {
+                assert!(pos[2] <= 0.42 - data::BODY_RADIUS, "separation pushed into wall: {pos:?}");
+            }
+        }
+        assert!((f.player.pos[2] - f.enemy.pos[2]).abs() > 0.59);
+    }
+}
+
+#[test]
+fn carried_and_thrown_bodies_keep_the_carry_trajectory() {
+    use super::{combat::Fight, data, enemy::Enemy, player::Player, terrain::Terrain};
+    let mut t = Terrain::default();
+    let mut f = Fight::new(Player::new(), Enemy::new([20.0, 0.0, 20.0]));
+    let mut body = Enemy::new([0.0, 0.0, 0.8]);
+    body.hit("HI_BS07", 9999);
+    f.others.push(body);
+    assert!(f.pick(&mut t));
+    for _ in 0..80 {
+        f.player.step_on(&t, false, false);
+        f.step_enemy_on(&t);
+        f.carry_step(&mut t);
+    }
+    assert_eq!(f.others[0].pos[1], data::HOLD_UP);
+    assert!(f.release_load(true));
+    let mut flying = false;
+    for _ in 0..120 {
+        f.player.step_on(&t, false, false);
+        let y = f.others[0].pos[1];
+        let carried = f.carry.load.is_some();
+        f.step_enemy_on(&t);
+        if carried {
+            assert_eq!(f.others[0].pos[1], y, "only carry_step may integrate a carried or thrown body");
+        }
+        f.carry_step(&mut t);
+        flying |= f.others[0].pos[2] > 1.0 && f.others[0].pos[1] > 0.0;
+    }
+    assert!(flying);
+    assert!(f.carry.load.is_none());
+    assert_eq!(f.others[0].pos[1], 0.0);
+}
+
+#[test]
+fn a_solid_wall_blocks_melee_in_both_directions() {
+    use super::{combat::Fight, data, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
+    for wall in [true, false] {
+        let t = Terrain { colliders: if wall { vec![Collider::new([-2.0, 0.0, 0.65], [2.0, 4.0, 0.75], false)] } else { vec![] }, crates: vec![] };
+        for player_attacks in [true, false] {
+            let mut f = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 1.4]));
+            f.enemy.heading = std::f32::consts::PI;
+            if !player_attacks { f.enemy.alert(); }
+            for tick in 0..120 {
+                f.player.step_on(&t, false, player_attacks && tick == 0);
+                f.step_enemy_on(&t);
+            }
+            if wall {
+                assert_eq!(f.enemy.hp, data::ENEMY_HP, "player must not hit through the wall");
+                assert_eq!(f.player_hp, data::PLAYER_HP, "enemy must not hit through the wall");
+            } else if player_attacks {
+                assert!(f.enemy.hp < data::ENEMY_HP, "same swing must hit without the wall");
+            } else {
+                assert!(f.player_hp < data::PLAYER_HP, "same enemy swing must hit without the wall");
+            }
+        }
+    }
+}
+
+#[test]
+fn sight_segments_cannot_skip_thin_walls() {
+    use super::terrain::{Collider, Terrain};
+    let t = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 0.1], [1.0, 4.0, 0.11], false)], crates: vec![] };
+    assert!(!t.sight_clear([0.0; 3], [0.0, 0.0, 1.0]));
+    assert!(!t.sight_clear([0.0, 0.0, 1.0], [0.0; 3]));
+    assert!(t.sight_clear([2.0, 0.0, 0.0], [2.0, 0.0, 1.0]), "parallel ray outside wall");
+    assert!(t.sight_clear([0.0, 3.0, 0.0], [0.0, 3.0, 1.0]), "ray above wall");
+    assert!(t.sight_clear([0.0, 0.0, 1.0], [0.0, 0.0, 2.0]), "wall behind the segment");
+}
