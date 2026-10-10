@@ -1,0 +1,5 @@
+# Hanging from a ledge: hold stick down, then Cross.
+30 down ldown
+50 tap cross
+90 up ldown
+200 shot

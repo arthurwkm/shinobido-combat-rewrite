@@ -648,6 +648,12 @@ impl Player {
     /// Jump. Running into a tall wall (wall_tall, facing it) starts the wall run instead; a second press kicks off.
     pub fn jump(&mut self) {
         if self.state == State::Hang {
+            // Emulator (tools/scripts/emu/ledgedrop.txt): stick away from the wall + Cross jumps off backwards.
+            let back = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+            if back.abs() > super::data::AIR_BACK_ANGLE {
+                self.wall_normal = Some([-self.heading.sin(), 0.0, -self.heading.cos()]);
+                return self.wall_kick("TRI_J01"); // ESTIMATE: motion not identified; TRI_J01 is the wall kick-off
+            }
             return self.start(State::Climb, "CLIMB06");
         }
         if self.state == State::WallRun {

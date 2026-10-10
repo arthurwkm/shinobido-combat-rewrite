@@ -1,0 +1,10 @@
+# Viewer copy of ledgedrop.txt: get onto the 6 m wall's edge (tallwall_viewer), then stick back + Jump.
+0 at -7 5
+0 yaw 0
+20 stick 0 1
+70 jump
+150 jump
+200 stick 0 0
+240 stick 0 -1
+250 jump
+262 stick 0 0

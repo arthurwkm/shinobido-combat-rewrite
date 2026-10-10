@@ -27,7 +27,7 @@ This file is the working list: every move, its input, the motion it plays, and i
 | Ledge hang, shimmy | Catch a ledge; stick left/right | matches |
 | Ledge climb-up | Cross while hanging | matches |
 | Crouch walk-off ledge catch | R1 held, walk off an edge | matches |
-| Drop from ledge | R1 while hanging | todo |
+| Off a ledge | Stick away + Cross while hanging (kicks off backwards); R1 does nothing in the game | matches |
 | Fall / landing from height | Walk off without R1 | matches (~2 m drop) |
 | Crouch / crouch walk | R1 held | partly (seen in edge grab) |
 | Wall hug, corner peek | R1 into a wall | todo |

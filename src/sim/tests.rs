@@ -1608,3 +1608,21 @@ fn dash_jump_is_a_front_flip_like_the_emulator() {
     for _ in 0..25 { p.step(true, false); }
     assert_eq!(p.state, State::Run, "dashes on out of LAND_D05");
 }
+
+#[test]
+fn hanging_with_the_stick_away_and_jump_kicks_off_the_wall() {
+    // Emulator ledgedrop.txt: hanging, stick down (away from the wall) + Cross jumps off backwards and lands below.
+    use crate::sim::{player::{Player, State}, terrain::{Collider, Terrain}};
+    let t = Terrain { colliders: vec![Collider::new([-10.0, 0.0, 8.0], [10.0, 5.0, 9.0], false)], ..Default::default() };
+    let mut p = Player::new();
+    p.pos = [0.0, 0.0, 4.0];
+    for _ in 0..120 { p.step_on(&t, true, false); }
+    p.jump();
+    while p.state != State::Hang { p.step_on(&t, true, false); }
+    let z = p.pos[2];
+    p.target_heading = std::f32::consts::PI;
+    p.jump();
+    assert_eq!(p.world_action(), "TRI_J01");
+    for _ in 0..200 { p.step_on(&t, false, false); }
+    assert!(p.pos[2] < z - 0.5 && p.pos[1] < 0.01, "jumped off and landed: {:?}", p.pos);
+}

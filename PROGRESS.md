@@ -251,6 +251,7 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [x] Falls A/B: ~2 m drop matches (`tools/scripts/emu/fall6.txt`, `target/cmp/fall6.jpg`; test `two_metre_drop_matches_the_emulator`). Higher drops (LAND_A/B thresholds) not yet compared.
 - [x] Dash front flip A/B: Circle held + Cross while dashing plays JUMP_D05 → LAND_D05 (owner: "running and pressing jump while holding the dash"); test `dash_jump_is_a_front_flip_like_the_emulator`; viewer `target/rec/frontflip` beside `target/pcsx2/frontflip.mov` (`target/cmp/frontflip_ab.jpg`), timing within ~0.1 s.
 - [x] Tall wall A/B: run-up (KABE_U01) → cling (KABE_E01, 0.88 s, new State::Cling) → mid-cling Cross second jump (TRI_A01) catches the edge; Cross during the run-up no longer kicks off (emulator). TRI_J01 kick-off kept on cling + stick away (ESTIMATE, not seen). Evidence: test `tall_wall_run_up_clings_and_a_mid_cling_jump_reaches_the_ledge`, `target/pcsx2/tallwall3.mov`, `target/cmp/tallwall_viewer.jpg`.
+- [x] Off a ledge A/B: stick away + Cross while hanging kicks off backwards (TRI_J01, ESTIMATE motion); R1/Circle/stick alone do nothing in the game. Test `hanging_with_the_stick_away_and_jump_kicks_off_the_wall`, `target/cmp/ledgedrop_viewer.jpg`.
 - [ ] Every remaining `todo` row of `docs/movelist.md` (the complete move list) gets an emulator A/B.
 - [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
   4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
@@ -288,6 +289,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Claude: ledge kick-off from the emulator (stick away + Cross). Owner action suggested: PCSX2 PauseOnFocusLoss=false.
 - 2026-10-10 Claude: animation cross-fade + render interpolation for smoothness (owner: clunky).
 - 2026-10-10 Claude: tall wall run-up/cling/second jump from the emulator; KABE_E01 is a cling, not a kick-off.
 - 2026-10-10 Claude: dash front flip (JUMP_D05/LAND_D05) from the emulator; DASH_FLIP_V0 76 ESTIMATE.
