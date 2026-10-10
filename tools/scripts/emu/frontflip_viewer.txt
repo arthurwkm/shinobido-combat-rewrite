@@ -1,0 +1,6 @@
+# Viewer copy of frontflip.txt: dash forward, Cross while dashing, release after landing.
+20 dash 1
+20 stick 0 1
+80 jump
+170 stick 0 0
+170 dash 0

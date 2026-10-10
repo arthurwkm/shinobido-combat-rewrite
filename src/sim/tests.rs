@@ -1575,3 +1575,25 @@ fn stop_mannequin_matches_model_height() {
     assert!((j[24][1] - 0.1338388).abs() < 1e-5, "rest offsets must not be rescaled");
     assert!((top - 1.5688106).abs() < 0.03, "STOP01 crown {top}");
 }
+
+#[test]
+fn dash_jump_is_a_front_flip_like_the_emulator() {
+    // PCSX2 frontflip.txt: Circle held + Cross while dashing flips forward, ~14 game frames (0.56 s) airborne,
+    // carries the dash speed, lands in LAND_D05 and dashes on with the stick held.
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.run_clip = "RUN_D05";
+    for _ in 0..40 { p.step(true, false); }
+    assert_eq!(p.state, State::Run);
+    let z0 = p.pos[2];
+    p.jump();
+    assert_eq!(p.world_action(), "JUMP_D05");
+    let mut air = 0;
+    while p.state != State::Land { p.step(true, false); if p.pos[1] > 0.0 { air += 1; } }
+    let secs = air as f32 * super::DT;
+    assert!((0.45..0.7).contains(&secs), "airborne {secs} s");
+    assert_eq!(p.world_action(), "LAND_D05");
+    assert!(p.pos[2] - z0 > 2.5, "dash momentum carried: {}", p.pos[2] - z0);
+    for _ in 0..25 { p.step(true, false); }
+    assert_eq!(p.state, State::Run, "dashes on out of LAND_D05");
+}

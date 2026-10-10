@@ -1,0 +1,5 @@
+# Dash (Circle held) along the path, then Cross while still dashing: front flip. Release after landing.
+20 down lup circle
+80 tap cross
+170 up lup circle
+230 shot

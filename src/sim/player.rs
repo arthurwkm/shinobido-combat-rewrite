@@ -56,6 +56,9 @@ const JUMP_V0: f32 = 120.0;
 /// ESTIMATE calibrated to flip.txt: airborne ~13 frames at 25 fps. Type-9 arg 1.0 cannot scale
 /// the 120 impulse to this value; the flip's own impulse initializer was not found.
 const FLIP_V0: f32 = 67.0;
+/// ESTIMATE calibrated to tools/scripts/emu/frontflip.txt: the dash front flip (JUMP_D05, Circle held + Cross) is
+/// airborne ~14 game frames (0.56 s); its type-9 event is at frame 0 (arg 1.02), the impulse value itself not found.
+const DASH_FLIP_V0: f32 = 76.0;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
 const UNIT_M: f32 = 0.84 / 9.5;
@@ -169,15 +172,20 @@ impl Player {
         self.try_grab(terrain);
         if self.state == State::Hang { return; }
         self.step_action(forward, attack);
-        let flip_event = (self.state == State::AirAct && self.world.action.name == "FLIP_B01")
+        // Ground-started air actions take off at their type-9 (impulse) event: the back somersault pushes backwards,
+        // the dash front flip keeps the dash momentum.
+        let name = self.world.action.name;
+        let flip_event = (self.state == State::AirAct && matches!(name, "FLIP_B01" | "JUMP_D05"))
             .then(|| self.world.action.events.iter().find(|e| e.1 == 9).map(|e| e.0 as u32)).flatten();
         let flip_wait = flip_event.is_some_and(|f| self.world.frame < f);
-        let flip_launch = flip_event == Some(self.world.frame);
-        if flip_launch {
+        let flip_launch = flip_event.is_some_and(|f| self.world.frame >= f) && grounded && self.vy <= 0.0;
+        if flip_launch && name == "FLIP_B01" {
             self.vy = FLIP_V0;
             let (s, c) = self.air_heading.sin_cos();
             let speed = 40.0 * UNIT_M * super::DT;
             self.air_vel = [-s * speed, -c * speed];
+        } else if flip_launch {
+            self.vy = DASH_FLIP_V0;
         }
         let jumping = self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
         if grounded && self.crouch_held && matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch)
@@ -225,7 +233,8 @@ impl Player {
             self.vy = 0.0;
             if jumping || !grounded {
                 let drop = if matches!(self.state, State::Fall | State::AirAct) { self.fall_from - pos[1] } else { 0.0 };
-                let clip = if drop >= super::data::LAND_A_DROP { "LAND_A01" } else if drop >= super::data::LAND_B_DROP { "LAND_B01" } else { "LAND01" };
+                let clip = if drop >= super::data::LAND_A_DROP { "LAND_A01" } else if drop >= super::data::LAND_B_DROP { "LAND_B01" }
+                    else if self.world.action.name == "JUMP_D05" { "LAND_D05" } else { "LAND01" };
                 self.start(State::Land, clip);
             }
         }
@@ -294,7 +303,11 @@ impl Player {
         if self.state == State::Land {
             // A held stick runs on out of the landing from LAND01's type-5 event (frame 2), as in the emulator
             // (tools/scripts/emu/loco.txt: running again ~2 game frames after touchdown).
-            if self.world.done() || (forward && self.world.frame >= LAND_RUN_FRAME) {
+            // LAND_D05 (dash front flip) rolls on until its own type-5 event (frame 14).
+            let run_on = if self.world.action.name == "LAND_D05" {
+                self.world.action.events.iter().find(|e| e.1 == 5).map_or(LAND_RUN_FRAME, |e| e.0 as u32)
+            } else { LAND_RUN_FRAME };
+            if self.world.done() || (forward && self.world.frame >= run_on) {
                 self.start(State::Idle, self.idle_clip);
             }
             return self.advance();
@@ -632,6 +645,13 @@ impl Player {
         let facing = self.wall_normal.is_some_and(|n| -(self.heading.sin() * n[0] + self.heading.cos() * n[2]) > 0.7);
         if self.state == State::Run && self.wall_tall && facing {
             self.start(State::WallRun, "KABE_U01");
+        } else if self.state == State::Run && self.run_clip == "RUN_D05" {
+            // Dashing (Circle held) + Cross: the front flip (emulator, tools/scripts/emu/frontflip.txt).
+            if self.request(State::AirAct, "JUMP_D05") {
+                self.air_heading = self.heading;
+                self.fall_from = self.pos[1];
+                self.vy = 0.0;
+            }
         } else {
             if self.request(State::Jump, "JUMP01") {
                 self.air_heading = self.heading;
