@@ -33,6 +33,10 @@ pub enum State {
     Search,
     /// WALK_A07 back to the post, then Patrol or Idle.
     Return,
+    /// Ran off a ledge while chasing: FALL07 held with the run's momentum until he lands.
+    Fall,
+    /// LAND07 once, then Chase.
+    Land,
 }
 
 pub struct Enemy {
@@ -44,6 +48,8 @@ pub struct Enemy {
     pub pos: [f32; 3],
     /// Falling velocity in game units/s, using the shared actor gravity update.
     vy: f32,
+    /// Horizontal metres per frame carried through a `Fall` (the last grounded frame's run, as the player's FALL01).
+    air: [f32; 2],
     /// Yaw in radians; forward is (sin h, cos h) in x/z.
     pub heading: f32,
     /// Frames spent in `Held` and presses made meanwhile.
@@ -57,6 +63,8 @@ pub struct Enemy {
     route: [[f32; 3]; 2],
     leg: usize,
     patrols: bool,
+    /// Waypoint round the box that stopped him (`Terrain::detour`), steered to before his goal; cleared on arrival.
+    detour: Option<[f32; 3]>,
     /// Frames the target has been out of `LOSE_RANGE` while chasing.
     lost: u32,
     /// Frames of guard left to hold before dropping the block on his own.
@@ -70,7 +78,7 @@ pub struct Enemy {
 
 impl Enemy {
     pub fn new(pos: [f32; 3]) -> Self {
-        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, vy: 0.0, heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, lost: 0, guard_left: 0, swings: 0, landed: false, stealth: Stealth::default() }
+        Enemy { world: World::new("STOP07"), state: State::Idle, hp: data::ENEMY_HP, guard_held: false, pos, vy: 0.0, air: [0.0; 2], heading: 0.0, held_for: 0, mashes: 0, slow: 1.0, lead: pos, route: [pos; 2], leg: 1, patrols: false, detour: None, lost: 0, guard_left: 0, swings: 0, landed: false, stealth: Stealth::default() }
     }
 
     pub fn action(&self) -> &'static str {
@@ -154,6 +162,18 @@ impl Enemy {
     fn start(&mut self, state: State, clip: &str) {
         self.state = state;
         self.world = World::new(clip);
+        self.detour = None;
+    }
+
+    /// Where the current state walks to; `target` is the player's position.
+    fn goal(&self, target: [f32; 3]) -> Option<[f32; 3]> {
+        match self.state {
+            State::Chase | State::Alert => Some(target),
+            State::Investigate => Some(self.lead),
+            State::Return => Some(self.route[0]),
+            State::Patrol => Some(self.route[self.leg]),
+            _ => None,
+        }
     }
 
     /// Root motion with wall collision, ramp support and gravity; held pairs own their placement.
@@ -161,6 +181,10 @@ impl Enemy {
         let before = self.pos;
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= data::SUPPORT_EPS;
         self.step(target);
+        if self.state == State::Fall {
+            self.pos[0] += self.air[0];
+            self.pos[2] += self.air[1];
+        }
         if self.state == State::Held {
             self.vy = 0.0;
             return;
@@ -171,9 +195,17 @@ impl Enemy {
             self.vy += super::player::gravity(self.vy) * DT;
             self.pos[1] += self.vy * DT * super::player::UNIT_M;
         }
-        self.pos = terrain.move_body(before, self.pos, grounded).0;
+        let (pos, wall, _) = terrain.move_body(before, self.pos, grounded);
+        self.pos = pos;
+        if let (Some(n), Some(g)) = (wall, self.goal(target)) {
+            self.detour = terrain.detour(pos, n, g).or(self.detour);
+        }
         if (self.pos[1] - terrain.ground_height(self.pos)).abs() <= data::SUPPORT_EPS {
             self.vy = 0.0;
+            if self.state == State::Fall { self.start(State::Land, "LAND07"); }
+        } else if self.state == State::Chase {
+            self.air = [pos[0] - before[0], pos[2] - before[2]];
+            self.start(State::Fall, "FALL07");
         }
     }
 
@@ -182,19 +214,14 @@ impl Enemy {
     pub fn step(&mut self, target: [f32; 3]) {
         let (dx, dz) = (target[0] - self.pos[0], target[2] - self.pos[2]);
         let dist = dx.hypot(dz);
-        let goal = match self.state {
-            State::Chase | State::Alert => Some(target),
-            State::Investigate => Some(self.lead),
-            State::Return => Some(self.route[0]),
-            State::Patrol => Some(self.route[self.leg]),
-            _ => None,
-        };
-        if let Some(g) = goal {
+        if let Some(g) = self.goal(target) {
+            let g = self.detour.unwrap_or(g);
             let (gx, gz) = (g[0] - self.pos[0], g[2] - self.pos[2]);
             let d = (gx.atan2(gz) - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
             let max = super::player::TURN_RATE * DT;
             self.heading += d.clamp(-max, max);
-            if gx.hypot(gz) < data::ARRIVE {
+            // Reaching a detour waypoint only clears it; the state's own goal is next.
+            if gx.hypot(gz) < data::ARRIVE && self.detour.take().is_none() {
                 match self.state {
                     State::Investigate => self.start(State::Search, "SEARCH07"),
                     State::Return if self.patrols => self.start(State::Patrol, "WALK_A07"),
@@ -221,7 +248,7 @@ impl Enemy {
             State::Alert if done => self.start(State::Chase, "RUN07"),
             State::Held if done => self.world = World::new("GU_B07"),
             State::Down if done => self.start(State::GetUp, "UP_FR07"),
-            State::GetUp if done => self.start(State::Chase, "RUN07"),
+            State::GetUp | State::Land if done => self.start(State::Chase, "RUN07"),
             State::Hit if done && self.world.action.name == "HI_F07" => self.start(State::GetUp, "UP_BA07"),
             State::Hit | State::Attack if done => self.start(State::Chase, "RUN07"),
             State::Search if done => self.start(State::Return, "WALK_A07"),
@@ -234,7 +261,7 @@ impl Enemy {
                 self.swings += 1;
                 self.start(State::Attack, data::ENEMY_ATTACK_CLIPS[self.swings % data::ENEMY_ATTACK_CLIPS.len()]);
             }
-            State::Idle | State::Patrol | State::Chase | State::Investigate | State::Return if done => self.world = World::new(self.world.action.name),
+            State::Idle | State::Patrol | State::Chase | State::Investigate | State::Return | State::Fall if done => self.world = World::new(self.world.action.name),
             State::Idle | State::Chase if self.guard_held => self.start(State::Guard, "GU_A07"),
             State::Guard if !self.guard_held && self.guard_left == 0 => self.start(State::Chase, "RUN07"),
             State::Guard if done => self.start(State::Guard, "GU_B07"),

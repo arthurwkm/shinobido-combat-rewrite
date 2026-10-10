@@ -341,7 +341,7 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   - Reviewed player/input/combat/carry/items/enemy/lockon/camera/terrain/viewer. TRI_A01's `f32::from_bits` is correct (type-9 float scaling); HALT01 already resumes immediately. No blanket start() resets: Jump/Fall/AirAct need carried velocity and Hang needs its latch. No new jump buffer or turn-rate tuning without emulator evidence; controller word +0x180 remains unresolved (mask 0x8 is not assumed to grant arbitrary attacks).
   - Remaining concerns: soldiers still lack terrain collision/gravity in their viewer update; item effects are immediate and caltrops lack height; rooted Special clips assume valid grounded/pair placement. These require separate mechanics work and viewer/emulator checks. No viewer/PCSX2 run or commit by Codex.
   - Validation: `cargo test -q` → `test result: ok. 110 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`; `cargo clippy -q --all-targets` → exit 0, no output/warnings; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Output saved in `target/logs/bugfix-sweep-{test,clippy,compare}.log`; `git diff --check` clean. Next: Claude records the affected pad sequences, checks pose/trajectory and combat feel, and adds emulator comparisons before checking this item.
-- [ ] Soldier terrain: walls/crates stop movement, ramps support the feet, roof departures and corpses fall onto the next surface. (needs viewer check, for Claude)
+- [x] Soldier terrain: walls/crates stop movement, ramps support the feet, roof departures and corpses fall onto the next surface.
   - Codex 2026-10-10: promoted the terrain gap recorded in the responsiveness sweep to an explicit item. `Enemy::step_on`
     uses shared swept body collision and the extracted actor gravity/unit scale; `Fight::step_enemy_on` and the viewer
     apply it to every soldier. Separation also respects terrain. Held pairs and carried/thrown bodies retain their
@@ -366,6 +366,20 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
     `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Logs:
     `target/logs/soldier-terrain-{test,clippy,build,compare}.log`. Own diff reviewed, `git diff --check` clean.
     Existing uncommitted action tracing and `emu/atkA*.txt` preserved. No stage/commit (runner owns it).
+  - Viewer check (Claude 2026-10-10): `target/debug/viewer --record target/rec/soldier_wall --script tools/scripts/soldier_wall.txt --one --every 15 --ticks 630`
+    (and `soldier_slope`, `soldier_roof`). Two differences seen and fixed: (1) the soldier ran RUN07 in place against the crate
+    for 10 s; a blocked soldier now detours past the nearer end of the box (`Terrain::detour`, `DETOUR_MARGIN` 0.6 m ESTIMATE),
+    not when the goal is on top of the box (he would circle it); `target/rec/soldier_wall3`: round the crate at 75-105, hits at 112.
+    (2) off the roof he ran in mid-air: set 07 does have FALL07 (2 f held pose) and LAND07 (40 f), now extracted; a chasing soldier
+    off a ledge holds FALL07 with the run's momentum, LAND07 on landing, then chases (`target/rec/soldier_roof3` 145-175, script
+    now turns the camera back to the roof). Slope feet on the ramp (`soldier_slope`); back kill 0.5 m from the tall wall keeps
+    the pair out of it (`tools/scripts/exec_wall.txt`, `target/cmp/exec_wall.jpg`); replays `carrybody_t`, `react2_t`, `exec_t`,
+    `patrol_t` unchanged. Tests: `soldiers_collide_with_walls_and_follow_slopes` (failed before: stuck at z 1.69; the on-top
+    case failed without the guard: circled to x -1.5), `soldiers_fall_off_roofs_and_corpses_land_on_platforms` (failed before:
+    RUN07 in the air). `cargo test -q` 117 + 2 passed, clippy clean, compare 242/242. No soldier at an obstacle or ledge in the
+    emulator spot or clips: `docs/emucompare.md` row is viewer-only.
+- [ ] Soldier below Kagetora on a roof: no way round, he runs RUN07 in place at the wall. Find what the game's soldier does
+  (castle-bridge save has soldiers: stand on something he can't climb) and match it. (needs emulator check, for Claude)
 - [ ] Acceptance review 2 (emulator): when every other M18 item and every `docs/movelist.md` row is done, play each
   move in PCSX2 and the viewer once more (Loop step 9), fill `docs/acceptance.md` again, turn every gap into an item
   above this one. Check this only after a full pass finds no gap. (needs emulator check, for Claude)
@@ -386,6 +400,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 (Claude): soldier terrain viewer-checked; fixed running in place at obstacles (box-end detour, ESTIMATE) and mid-air RUN07 off ledges (set 07's FALL07/LAND07 extracted); new item for a soldier below a player on a roof.
 - 2026-10-10 (Codex): soldier terrain gap implemented using shared collision/gravity; fixed separation and melee through walls plus thin-wall sight sampling, with failing regressions first; 117 library + 2 viewer tests, clippy/build and compare 240/240 green. Replay scripts and pending A/B row added; item unchecked for Claude's live checks, runner commits.
 - 2026-10-10 (Codex): soldier startup now faces away so idle play stays unaware; regression red→green, 110 library + 1 viewer tests pass, clippy/build clean, compare 240/240. Preserved frontal script setups; first-contact viewer script and pending A/B row added. All remaining M18 work needs viewer/emulator checks; left unchecked for Claude. Runner commits.
 - 2026-10-10 Codex: bugfix/responsiveness sweep; authored recovery masks, input intent, wall momentum/contact, carry/projectile/combat height, execution interruption, lock validation, camera pitch and elevated sight fixed with regressions; retained fall6 landing evidence; viewer/emulator checks pending, no commit.

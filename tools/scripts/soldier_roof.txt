@@ -1,4 +1,5 @@
-# --one: run off the roof after being seen; the soldier follows and must fall to the floor.
+# --one: run off the roof after being seen; the soldier follows and must fall to the floor (FALL07, LAND07).
+# The camera turns back to the roof at 120 to watch him come down.
 0 at 10 13
 0 soldier 10 10 0
 0 yaw 0
@@ -6,4 +7,5 @@
 60 dash 1
 100 stick 0 0
 100 dash 0
+120 yaw 180
 600 stick 0 0

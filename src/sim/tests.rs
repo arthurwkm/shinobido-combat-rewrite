@@ -1968,11 +1968,26 @@ fn soldiers_collide_with_walls_and_follow_slopes() {
     let mut f = Fight::new(p, Enemy::new([0.0; 3]));
     f.others.push(Enemy::new([2.0, 0.0, 0.0]));
     f.for_each(|f, _| f.enemy.alert());
-    for _ in 0..300 { f.step_enemy_on(&wall); }
-    for e in f.enemies() {
-        assert!(e.pos[2] <= 2.0 - data::BODY_RADIUS, "soldier crossed wall: {:?}", e.pos);
-        assert!(e.pos[2] > 1.0, "soldier must approach the wall");
+    for _ in 0..600 {
+        f.step_enemy_on(&wall);
+        for e in f.enemies() {
+            let inside = e.pos[0].abs() < 4.0 + data::BODY_RADIUS - 0.01 && (e.pos[2] - 2.5).abs() < 0.5 + data::BODY_RADIUS - 0.01;
+            assert!(!inside, "soldier crossed wall: {:?}", e.pos);
+        }
     }
+    // Head-on against the wall he goes round its nearer end instead of running in place (viewer soldier_wall).
+    for e in f.enemies() {
+        let d = (e.pos[0] - 0.0).hypot(e.pos[2] - 8.0);
+        assert!(d < data::ENEMY_ATTACK_RANGE + 0.5, "soldier must get round the wall to the player: {:?}", e.pos);
+    }
+    // With the player on top of the box there is no way round: he stays on his side instead of circling it.
+    let block = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 2.0], [1.0, 2.0, 8.0], false)], crates: vec![] };
+    let mut p = Player::new();
+    p.pos = [0.0, 2.0, 5.0];
+    let mut f = Fight::new(p, Enemy::new([0.0; 3]));
+    f.enemy.alert();
+    for _ in 0..600 { f.step_enemy_on(&block); }
+    assert!(f.enemy.pos[2] < 2.0 && f.enemy.pos[0].abs() < 1.0, "soldier must not circle the box: {:?}", f.enemy.pos);
 
     let ramp = Terrain { colliders: vec![Collider::new([-2.0, 0.0, 0.0], [2.0, 2.0, 8.0], true)], crates: vec![] };
     for (start, target) in [([0.0, 0.0, -1.0], [0.0, 2.0, 7.0]), ([0.0, 1.75, 7.0], [0.0, 0.0, -1.0])] {
@@ -1992,19 +2007,30 @@ fn soldiers_collide_with_walls_and_follow_slopes() {
 
 #[test]
 fn soldiers_fall_off_roofs_and_corpses_land_on_platforms() {
-    use super::{combat::Fight, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
+    use super::{combat::Fight, data, enemy::Enemy, player::Player, terrain::{Collider, Terrain}};
     let t = Terrain { colliders: vec![Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false)], crates: vec![] };
     let mut p = Player::new();
     p.pos = [0.0, 0.0, 8.0];
     let mut f = Fight::new(p, Enemy::new([0.0, 2.0, 1.5]));
     f.enemy.alert();
     let mut falling = false;
+    let mut clips = vec![];
+    let mut landed_z = 0.0;
     for _ in 0..200 {
         f.step_enemy_on(&t);
-        falling |= f.enemy.pos[2] > 2.0 && f.enemy.pos[1] > 0.0 && f.enemy.pos[1] < 2.0;
+        let mid_air = f.enemy.pos[1] > 0.0 && f.enemy.pos[1] < 2.0;
+        falling |= f.enemy.pos[2] > 2.0 && mid_air;
+        if mid_air { assert_eq!(f.enemy.action(), "FALL07", "set 07's fall pose in the air"); }
+        if clips.last() != Some(&f.enemy.action()) {
+            clips.push(f.enemy.action());
+            if f.enemy.action() == "LAND07" { landed_z = f.enemy.pos[2]; }
+        }
     }
     assert!(falling, "roof departure must fall through intermediate heights");
     assert_eq!(f.enemy.pos[1], 0.0);
+    assert!(clips.windows(3).any(|w| w == ["FALL07", "LAND07", "RUN07"]), "fall, land, chase on: {clips:?}");
+    // The run carries him out from the wall instead of dropping down its face.
+    assert!(landed_z > 2.0 + data::BODY_RADIUS + 0.3, "fall keeps the run's momentum: landed at z {landed_z}");
 
     let mut f = Fight::new(Player::new(), Enemy::new([0.0, 5.0, 0.0]));
     f.enemy.hit("HI_BS07", 9999);

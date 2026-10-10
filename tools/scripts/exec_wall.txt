@@ -1,0 +1,7 @@
+# --one: back kill with the unaware soldier facing the tall wall, 0.5 m from it: the pair must stay out of the wall
+0 soldier -7 7.2 0
+0 stick 0 0
+0 yaw 0
+2 at -7 6.1
+2 face 0
+6 exec

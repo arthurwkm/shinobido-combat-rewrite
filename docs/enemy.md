@@ -22,6 +22,7 @@ Pick (decision, partly hypothesis): **I_BUSHI** with motion **set `07`**.
 | guard | GU_A07 10, GU_B07 70, GU_Y07 25 |
 | hit | HI_*07 (parallel to player HI_*01, e.g. HI_BS07 50) |
 | death | DIE_A07 156, DIE_B07 168 |
+| fall / land | FALL07 2 (held pose, no root motion), LAND07 40 (root 0.2 m forward); used when a chasing soldier runs off a ledge (2026-10-10). LAND_A07 52 (1.35 m forward) unused |
 | execution victim | KI_HI*07 (e.g. KI_HIBS07 100) |
 | attack | **ESTIMATE**: BLADE07 111 (sword slash by name); no `AT_*07` exists. Alternatives from set `19`: AT_A19 90, AT_B19 75, AT_CA19 |
 

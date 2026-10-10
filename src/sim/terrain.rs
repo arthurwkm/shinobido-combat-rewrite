@@ -1,5 +1,5 @@
 //! Shared engine-free terrain geometry. Metres, Y up; ramps rise along +Z.
-use super::data::{BODY_HEIGHT, BODY_RADIUS, COLLISION_STEP, SUPPORT_EPS};
+use super::data::{BODY_HEIGHT, BODY_RADIUS, COLLISION_STEP, DETOUR_MARGIN, SUPPORT_EPS};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Collider {
@@ -126,6 +126,21 @@ impl Terrain {
     pub fn wall_behind(&self, p: [f32; 3], n: [f32; 3], min_h: f32) -> bool {
         let probe = [p[0] - n[0] * (BODY_RADIUS + 0.05), p[1], p[2] - n[2] * (BODY_RADIUS + 0.05)];
         self.colliders.iter().any(|b| !b.ramp && b.contains(probe, 0.0) && b.min[1] <= p[1] + SUPPORT_EPS && b.max[1] >= p[1] + min_h)
+    }
+
+    /// Waypoint along the face (normal `n`) that stopped a body at `p`, past whichever end of that box makes the
+    /// shorter way to `goal`.
+    // ponytail: one box at a time, no navmesh; boxes touching each other can still trap a soldier.
+    pub fn detour(&self, p: [f32; 3], n: [f32; 3], goal: [f32; 3]) -> Option<[f32; 3]> {
+        let probe = [p[0] - n[0] * 0.05, p[1], p[2] - n[2] * 0.05];
+        let b = self.colliders.iter().find(|b| b.contains(probe, BODY_RADIUS) && p[1] + BODY_HEIGHT > b.min[1] && p[1] < b.top(probe[2]) - SUPPORT_EPS)?;
+        if b.contains(goal, 0.0) { return None; } // On top of it: no way round, he would circle it forever.
+        let t = if n[0] != 0.0 { 2 } else { 0 };
+        let cost = |e: f32| (p[t] - e).abs() + (goal[t] - e).abs();
+        let (lo, hi) = (b.min[t] - BODY_RADIUS - DETOUR_MARGIN, b.max[t] + BODY_RADIUS + DETOUR_MARGIN);
+        let mut w = p;
+        w[t] = if cost(hi) < cost(lo) { hi } else { lo };
+        Some(w)
     }
 
     /// Resolve a feet-centred upright body; small swept steps prevent tunnelling and allow wall sliding.

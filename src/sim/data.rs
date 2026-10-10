@@ -188,6 +188,9 @@ pub const NINJYUTU_CONE: f32 = 0.8;
 // ESTIMATE: AI\battle tables are not decoded to behaviour; patrol leg length (m), arrival radius (m).
 pub const PATROL_LEN: f32 = 5.0;
 pub const ARRIVE: f32 = 0.5;
+// ESTIMATE: a blocked soldier detours to this far (m) past the end of the box in his way (game soldiers path round
+// obstacles; its navigation data is not decoded). Over ARRIVE so he is clear of the box when he turns back.
+pub const DETOUR_MARGIN: f32 = 0.6;
 // ESTIMATE: chase is abandoned after GIVE_UP frames (5 s) with the player beyond LOSE_RANGE (m).
 pub const LOSE_RANGE: f32 = 15.0;
 pub const GIVE_UP: u32 = 300;
