@@ -30,7 +30,7 @@ This file is the working list: every move, its input, the motion it plays, and i
 | Off a ledge | Stick away + Cross while hanging (kicks off backwards); R1 does nothing in the game | matches |
 | Fall / landing from height | Walk off without R1 | matches (~2 m drop) |
 | Crouch / crouch walk | R1 held | partly (seen in edge grab) |
-| Wall hug, corner peek | R1 into a wall | todo |
+| Wall hug, corner peek | R1 into or beside a tall wall; sideways stick slides; R1 release lets go | hug matches; corner peek todo (no wall end at the PCSX2 test spot) |
 | Roll / evade | todo: input per owner's table ("R1 + Forward + Cross") needs re-check now R1 is crouch | todo |
 | Attacks and chains | Square, Forward/Back + Square, air Square, dash Square (owner's table) | todo |
 | Lock-on, strafe, guard | L1 | todo |

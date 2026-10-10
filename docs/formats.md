@@ -625,6 +625,11 @@ counting with root motion). 66-track clips (set-05 modes) are exported too: trac
   wall entry uses STOP_H05, release exits to idle/crouch, and the outward-facing heading
   is retained. Camera easing/side angle also awaits viewer validation. LOOK tracks hold
   27 frames versus 26 header frames; use the existing extracted-track duration.
+- **Confirmed in PCSX2 (2026-10-10, `tools/scripts/emu/hug2-5.txt`, `docs/emucompare.md`):** R1 beside a tall wall
+  hugs with or without a push into it; while hugging only a sideways stick slides (into/away/45-degree diagonal do
+  nothing, the stick away does not let go); R1 release lets go and turns him along the wall toward the last slide; the
+  game's hug camera faces the wall. The "movement.mov 38 s hug" used for the old 60-degree side camera is a crouch walk
+  along a wall, not a hug. Slide cone `HUG_SLIDE_SIN` 0.8 stays ESTIMATE (keyboard sticks give only 0/45 degrees).
 
 
 ### Wall ascent and impulse — bounded lookup (2026-10-08)

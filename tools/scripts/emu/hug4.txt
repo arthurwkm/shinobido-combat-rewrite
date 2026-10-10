@@ -1,0 +1,11 @@
+# Beside the yard wall, camera facing it: push into the wall (up), R1 while pushing, release the stick,
+# then stick left, then right; release R1. Same as hug2 from a square camera.
+20 down lup
+80 down r1
+140 up lup
+200 down lleft
+380 up lleft
+420 down lright
+600 up lright
+660 up r1
+720 shot

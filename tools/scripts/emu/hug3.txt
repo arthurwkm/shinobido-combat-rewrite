@@ -1,0 +1,13 @@
+# Standing beside the yard wall facing along it (camera looks at the wall). R1 alone; R1 + stick left, right;
+# then R1 + stick into the wall (up) + left together; release all.
+20 down r1
+120 down lleft
+240 up lleft
+280 down lright
+400 up lright
+440 down lup
+500 down lleft
+620 up lleft
+640 up lup
+700 up r1
+760 shot

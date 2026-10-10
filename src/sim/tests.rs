@@ -858,11 +858,44 @@ fn wall_hug_enters_slides_peeks_and_leaves() {
     for _ in 0..400 { p.step_on(&t, true, false); }
     assert!(p.pos[0] < -3.5, "stops at the wall end (x=-4): {}", p.pos[0]);
     assert_eq!(p.world_action(), "STOPLR05");
-    p.target_heading = p.heading; // stick away from the wall
-    p.step_on(&t, true, false);
+    p.crouch_held = false;
+    p.step_on(&t, false, false);
+    assert_eq!(p.state, State::Idle, "releasing R1 leaves");
+}
+
+#[test]
+fn hug_rules_from_the_emulator() {
+    // PCSX2 (tools/scripts/emu/hug2-5.txt, yard wall): R1 beside a wall hugs without pushing; while hugging the stick
+    // into, away from, or diagonally into the wall does nothing; only a sideways stick slides; releasing R1 turns him
+    // along the wall toward the last slide. Crouch-walking alongside a wall stays a crouch (movement.mov 37-39 s).
+    use super::player::{Player, State};
+    use super::terrain::Terrain;
+    use std::f32::consts::{FRAC_PI_2, FRAC_PI_4, PI};
+    let t = Terrain::sandbox();
+    let mut p = Player::new();
+    p.pos = [-7.0, 0.0, 8.0 - super::data::BODY_RADIUS];
+    p.heading = FRAC_PI_2;
+    p.target_heading = FRAC_PI_2;
+    p.crouch_held = true;
+    for _ in 0..30 { p.step_on(&t, true, false); }
+    assert_eq!(p.state, State::Crouch, "crouch-walking along the wall does not hug");
+    p.target_heading = p.heading;
+    p.step_on(&t, false, false);
+    assert_eq!(p.state, State::Hug, "R1 beside the wall hugs");
+    assert!((p.heading.abs() - PI).abs() < 1e-3, "back to the wall: {}", p.heading);
+    let x0 = p.pos[0];
+    for (dir, what) in [(0.0, "into"), (PI, "away"), (FRAC_PI_4, "diagonal into"), (PI - FRAC_PI_4, "diagonal away")] {
+        for _ in 0..60 { p.target_heading = dir; p.step_on(&t, true, false); }
+        assert_eq!(p.state, State::Hug, "stick {what} keeps the hug");
+        assert!((p.pos[0] - x0).abs() < 1e-4, "stick {what} does not slide: {}", p.pos[0] - x0);
+    }
+    for _ in 0..60 { p.target_heading = FRAC_PI_2; p.step_on(&t, true, false); }
+    assert!(p.pos[0] > x0 + 0.5, "sideways slides");
+    p.crouch_held = false;
+    p.target_heading = p.heading;
+    p.step_on(&t, false, false);
     assert_eq!(p.state, State::Idle);
-    for _ in 0..90 { p.step_on(&t, false, false); }
-    assert_eq!(p.state, State::Crouch, "crouch is still held after leaving");
+    assert!((p.heading - FRAC_PI_2).abs() < 1e-3, "faces along the wall, the way he slid: {}", p.heading);
 }
 
 #[test]
@@ -928,8 +961,8 @@ fn hug_pad_sequence_survives_camera_pull_in() {
         match tick {
             1 => input.stick = [0.0, 1.0],
             100 | 600 | 760 => input.stick = [0.0; 2],
-            160 => input.stick = [-0.5, 0.8660254],
-            650 => input.stick = [0.5, -0.8660254],
+            160 => input.stick = [-1.0, 0.0],
+            650 => input.stick = [1.0, 0.0],
             800 => input.crouch = false,
             _ => {}
         }

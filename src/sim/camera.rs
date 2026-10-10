@@ -100,17 +100,14 @@ impl Camera {
         next
     }
 
-    /// Pull in beside the wall; heading points away from it. `dt` is elapsed render time.
+    /// Swing round to face the wall and the player on it (PCSX2 hug3-5: the game's hug view is square-on, so the
+    /// sideways stick slides); heading points away from the wall. `dt` is elapsed render time.
     pub fn follow_hug(&mut self, heading: Option<f32>, dt: f32) {
         let blend = ease(CAM_HUG_RATE, dt);
         let want = if heading.is_some() { 1.0 } else { 0.0 };
         self.pull += (want - self.pull) * blend;
         if let Some(heading) = heading {
-            let centre = heading + std::f32::consts::PI;
-            let left = wrap(centre - CAM_HUG_ANGLE - self.yaw);
-            let right = wrap(centre + CAM_HUG_ANGLE - self.yaw);
-            let delta = if left.abs() <= right.abs() { left } else { right };
-            self.yaw = wrap(self.yaw + delta * blend);
+            self.yaw = wrap(self.yaw + wrap(heading + std::f32::consts::PI - self.yaw) * blend);
         }
     }
 
@@ -159,7 +156,7 @@ mod tests {
         assert!(wrap(a.yaw - b.yaw).abs() < 1e-5);
         let (eye, focus) = b.eye([0.0; 3]);
         assert!(eye[2] > focus[2], "wall is behind the outward-facing player");
-        assert!(eye[0].abs() > 0.5, "view is beside the wall");
+        assert!(wrap(b.yaw - std::f32::consts::PI).abs() < 0.1, "turns square-on to the wall, as in PCSX2: {}", b.yaw);
         let yaw = b.yaw;
         for _ in 0..120 { b.follow_hug(None, DT); }
         assert!(b.pull < 0.001);

@@ -1,12 +1,12 @@
-# Crouch into z=8, then move along +x with the pulled-in camera settled at yaw +60.
+# Crouch into z=8, then slide along +x with the stick sideways (the hug camera faces the wall, as in PCSX2).
 0 at -8 6
 0 yaw 1
 0 crouch 1
 1 stick 0 1
 100 stick 0 0
-160 stick -0.5 0.8660254
+160 stick -1 0
 600 stick 0 0
 # Return from the right corner and reverse to show the other lateral clip.
-650 stick 0.5 -0.8660254
+650 stick 1 0
 760 stick 0 0
 800 crouch 0

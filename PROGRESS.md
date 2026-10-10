@@ -272,6 +272,18 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   - Next in Claude: `target/debug/viewer --record target/rec/first_contact --script tools/scripts/first_contact.txt --one --every 30 --ticks 750`; repeat without `--one` for the default three-soldier setup. Five seconds idle, then pad-driven approach; compare first notice/attack against a real soldier encounter in PCSX2 (or combat clip if the open-area save has no soldier). Fill the pending row in `docs/emucompare.md`; no live recording or measurement was made by Codex.
   - Validation: `cargo test -q` → 110 library tests + 1 viewer startup test passed, 0 failed; `cargo clippy -q --all-targets` and `cargo build -q --bin viewer` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Diff reviewed; no staging/commit (runner owns it).
 - [ ] Wall/ledge/hug/crouch/carry A/B, one item each when the locomotion items are green. (needs emulator check, for Claude)
+- [x] Wall hug A/B (`tools/scripts/emu/hug2-5.txt`, viewer `hug5_viewer.txt`): PCSX2 shows R1 beside a tall wall hugs without a
+  push; only a sideways stick slides (into/away/diagonal do nothing, away no longer lets go); R1 release turns him along the
+  wall toward the last slide; the game's hug camera faces the wall square-on (the old 60-degree side view came from a
+  misread clip: movement.mov 37-39 s is a crouch walk along a wall, which still does not hug). Evidence: test
+  `hug_rules_from_the_emulator` (failed before: "R1 beside the wall hugs"), `cargo test -q` 111 passed;
+  `target/debug/viewer --record target/rec/hug5 --script tools/scripts/emu/hug5_viewer.txt --solo --every 10 --ticks 680`
+  beside `target/pcsx2/hug5.mov` (`target/cmp/hug5_ab.jpg`, `hug5_pose.jpg`): same hug/slide/no-slide/exit at ticks
+  60-640; push-in path `target/rec/hug_push`. Still differs: corner peek not compared (no wall end at the test spot,
+  Request below); the game's camera first looks out from the wall on an R1-only hug (reference camera kept). New viewer
+  script command `face <deg>`. Emulator note: after this run PCSX2 was found in the game's Edit Garden mode (not from a
+  script key); the current save slot (F3) is the Theatre menu, so the next slot (F2, F3) was loaded: a castle mission on a
+  red bridge with the ki compass (`target/pcsx2/slot1/00300.png`), useful for soldier/stealth A/B.
 - [x] Crouch attacks from the attacks video: the video's shoulder icon is R1 = crouch, not lock-on. R1 + Square → FUTO27
   (rising uppercut, its cancel → AT_D01 downward strike), Back + Square → KICK27 (somersault kick), R1 + Back + Square →
   SOCCER01 (low kick); lock-on no longer picks attacks. Matched by `target/cmp/kicks_grid.jpg` (video 20.5/21.75/26 s vs
@@ -321,7 +333,8 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   above this one. Check this only after a full pass finds no gap. (needs emulator check, for Claude)
 
 ## Requests
-(none open)
+- A save state in the training garden next to a free-standing wall end (for the corner peek A/B and open-ground moves);
+  PCSX2's current slot is the Theatre menu and the next one a castle mission (2026-10-10).
 Answered 2026-10-09 by the owner:
 - Lock-on in use and guard: `videos/shinobido lock in strafe fight.mov` and `videos/shinobido lock in lock off
   stealth kill from above.mov` (M15 lock-on item).
@@ -486,3 +499,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-09 (Claude): executions front and above seen from the pad (execfront/execabove records, script commands wound/rise); no dive approach, pairs ESTIMATE.
 - 2026-10-10 (Claude): crouch walk-off ledge grab A/B checked in the viewer beside edgegrab.mov; fixed a held stick cutting the TWO06 catch on frame 0 (shimmy now waits for its cancel frame 9); flip row's viewer evidence recorded.
 - 2026-10-10 (Claude): soldier first contact checked (no soldiers in the PCSX2 yard, so vs stealth/lock clips): start unaware, sneak stays unaware, run-up alerts in 1-2 s; eye icon fixed from a teal block to the clips' grey/red `<O>` in an olive box with a red meter bar.
+- 2026-10-10 (Claude): wall hug A/B in PCSX2 (hug2-5): R1 beside a wall hugs, only a sideways stick slides (cone ESTIMATE), R1 release turns along the wall, hug camera square-on; the old side camera came from a misread clip. PCSX2 found in Edit Garden; loaded the next save slot (castle mission). Decision: corner peek left todo with a Request rather than navigating the mission.

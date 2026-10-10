@@ -1,0 +1,11 @@
+# Facing the yard's stone wall a few metres ahead: run into it, then hold R1 (hide) still pushing,
+# release the stick, then stick left (slide), right, release; R1 up.
+20 down lup
+150 down r1
+240 up lup
+300 down lleft
+420 up lleft
+460 down lright
+640 up lright
+700 up r1
+760 shot

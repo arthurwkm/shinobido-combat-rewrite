@@ -1,0 +1,15 @@
+# Viewer copy of hug5.txt: beside the tall wall (z 8..8.5) facing along it (+x), camera looking along the wall.
+# R1 alone; + stick right; down; up; left; release R1.
+0 at -8 7.7
+0 face 90
+0 yaw 120
+20 crouch 1
+110 stick 1 0
+170 stick 0 0
+200 stick 0 -1
+320 stick 0 0
+350 stick 0 1
+470 stick 0 0
+500 stick -1 0
+560 stick 0 0
+600 crouch 0

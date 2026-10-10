@@ -1,0 +1,4 @@
+# Orbit the camera (right stick right) to survey the surroundings.
+20 down rright
+380 up rright
+420 shot

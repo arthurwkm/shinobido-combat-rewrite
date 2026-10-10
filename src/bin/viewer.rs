@@ -260,6 +260,7 @@ fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>,
             (Some("wound"), [x, z, h]) => { let e = &mut sim.0.enemy; e.pos = [*x, 0.0, *z]; e.heading = h.to_radians(); e.hit("HI_BS07", data::ENEMY_HP - 10); }
             (Some("rise"), [dy]) => sim.0.player.pos[1] += dy,
             (Some("yaw"), [d]) => cam.0.yaw = d.to_radians(),
+            (Some("face"), [d]) => { let p = &mut sim.0.player; p.heading = d.to_radians(); p.target_heading = p.heading; }
             (Some("attack"), _) => i.attack = true,
             (Some("switch"), [d]) => i.switch = *d as i8,
             (Some("jump"), _) => i.jump = true,

@@ -75,7 +75,7 @@ pub const EXEC_DIST: f32 = 0.8;
 // Shinobido's). Distance (m), focus height (m), default/lock-on pitch (rad, + looks down), pitch limits, mouse (rad per
 // pixel) and stick (rad/s) speeds as [yaw, pitch], stick deadzone, ease rates (1/s), idle drift.
 pub const CAM_DIST: f32 = 4.3;
-pub const CAM_HUG_DIST: f32 = 4.2; // ESTIMATE: movement.mov 38 s: player ~10% of frame height, camera farther than the 3 m follow, looking along the wall
+pub const CAM_HUG_DIST: f32 = 4.2; // ESTIMATE: PCSX2 hug3-5 frame him about as large as the follow camera
 // ESTIMATE: execution close-up (combat.mov 46 s, 54-58 s show the pair large and seen from the side): distance, pitch,
 // side angle off the player's heading, blend rate.
 pub const CAM_EXEC_DIST: f32 = 2.4;
@@ -83,8 +83,6 @@ pub const CAM_EXEC_PITCH: f32 = 0.2;
 pub const CAM_EXEC_ANGLE: f32 = 1.2;
 pub const CAM_EXEC_RATE: f32 = 6.0;
 pub const CAM_HUG_RATE: f32 = 4.0;
-// ESTIMATE: side view 60 degrees from the outward wall normal; awaiting movement 38 s comparison.
-pub const CAM_HUG_ANGLE: f32 = std::f32::consts::FRAC_PI_3;
 pub const CAM_CLIMB_PITCH: f32 = -0.35; // ESTIMATE: movement.mov 28-32 s camera looks up at the rooftop edge
 pub const CAM_PITCH: f32 = 0.25;
 pub const CAM_LOCK_PITCH: f32 = 0.24;
@@ -116,6 +114,9 @@ pub const STICK_WALK: f32 = 0.55;
 // ESTIMATE: least wall height (m) for a hug; direct entry/exit and contact-driven transitions
 // have no event windows in the set-05 hug clips. LOOK/BACK sequencing follows matching endpoint poses.
 pub const HUG_WALL_MIN: f32 = 2.0;
+// ESTIMATE: least |sin| of the stick's angle off the outward wall normal that slides along a hug. PCSX2 (hug3-5): a
+// sideways stick slides; a 45-degree diagonal into the wall, or a sideways stick under a ~45-50 degree oblique camera, does not.
+pub const HUG_SLIDE_SIN: f32 = 0.8;
 
 // ESTIMATE: height (m) gained over KABE_U01 (36 f); the clip has no root Y and the launch impulse binding was not found (formats.md "Wall ascent and impulse").
 pub const WALL_RUN_RISE: f32 = 3.0;

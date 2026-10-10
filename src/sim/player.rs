@@ -109,6 +109,8 @@ pub struct Player {
     pub wall_normal: Option<[f32; 3]>,
     /// The wall in contact (or behind, while hugging) is at least `HUG_WALL_MIN` tall.
     wall_tall: bool,
+    /// Outward normal of a tall wall the body stands against (crouch held, stick neutral): R1 there hugs (PCSX2 hug3/hug5).
+    wall_beside: Option<[f32; 3]>,
     /// Sign of the side-step that reached a wall end (0 when none): peeking blocks further movement that way.
     hug_edge: f32,
     hug_dir: f32,
@@ -160,7 +162,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0, queued_attack: None, calm: 0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, wall_beside: None, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0, queued_attack: None, calm: 0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -176,6 +178,10 @@ impl Player {
             Some(n) => terrain.wall_behind(before, n, super::data::HUG_WALL_MIN),
             None => false,
         };
+        self.wall_beside = (self.crouch_held && !forward && self.state != State::Hug).then(|| {
+            [[0.0, 0.0, -1.0], [0.0, 0.0, 1.0], [-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]].into_iter()
+                .find(|&n| terrain.wall_behind(before, n, super::data::HUG_WALL_MIN))
+        }).flatten();
         let grounded = (before[1] - terrain.ground_height(before)).abs() <= super::data::SUPPORT_EPS;
         if grounded { self.grab_lock = false; }
         self.vault_top = terrain.ledge(before, [sh, ch], super::data::VAULT_MAX)
@@ -385,15 +391,17 @@ impl Player {
             }
             return self.advance();
         }
-        if let (true, true, true, Some(n)) = (self.crouch_held, forward, self.wall_tall, self.wall_normal) {
-            let (s, c) = self.target_heading.sin_cos();
-            if -(s * n[0] + c * n[2]) > 0.7 {
-                self.heading = n[0].atan2(n[2]);
-                self.hug_edge = 0.0;
-                self.hug_dir = 0.0;
-                self.start(State::Hug, "STOP_H05");
-                return self.advance();
-            }
+        let (s, c) = self.target_heading.sin_cos();
+        let wall = match (self.crouch_held, forward, self.wall_tall, self.wall_normal) {
+            (true, true, true, Some(n)) if -(s * n[0] + c * n[2]) > 0.7 => Some(n),
+            _ => self.wall_beside,
+        };
+        if let Some(n) = wall {
+            self.heading = n[0].atan2(n[2]);
+            self.hug_edge = 0.0;
+            self.hug_dir = 0.0;
+            self.start(State::Hug, "STOP_H05");
+            return self.advance();
         }
         if self.crouch_held && !self.guard_held {
             let clip = if forward { "WALK_F05" } else { "STOP_S05" };
@@ -518,10 +526,13 @@ impl Player {
     /// Set-05 lateral root motion; a wall end plays LOOK then holds the peek until the stick returns.
     fn step_hug(&mut self, forward: bool) {
         let name = self.world.action.name;
-        let d = self.target_heading - self.heading;
-        let (side, away) = if forward { (d.sin(), d.cos() > 0.7) } else { (0.0, false) };
-        let side = if side.abs() > 0.5 { side.signum() } else { 0.0 };
-        if !self.crouch_held || away {
+        let side = if forward { (self.target_heading - self.heading).sin() } else { 0.0 };
+        let side = if side.abs() > super::data::HUG_SLIDE_SIN { side.signum() } else { 0.0 };
+        // Only R1 lets go (the stick away does nothing in PCSX2); he turns along the wall toward the last slide,
+        // his right if none (hug2-5; hug_dir > 0 is his left).
+        if !self.crouch_held {
+            self.heading += if self.hug_dir > 0.0 { std::f32::consts::FRAC_PI_2 } else { -std::f32::consts::FRAC_PI_2 };
+            self.target_heading = self.heading;
             self.start(State::Idle, self.idle_clip);
             return self.advance();
         }

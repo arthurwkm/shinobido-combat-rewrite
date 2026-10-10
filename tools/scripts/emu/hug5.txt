@@ -1,0 +1,14 @@
+# Beside the right-hand yard wall near the inside corner, camera looking along the wall into the corner.
+# R1 alone; + stick right (into the wall); stick down (along it, toward the camera); stick up (along it, to the corner);
+# stick left (away from the wall); release.
+20 down r1
+110 down lright
+170 up lright
+200 down ldown
+320 up ldown
+350 down lup
+470 up lup
+500 down lleft
+560 up lleft
+600 up r1
+680 shot

@@ -1,0 +1,4 @@
+# Select the next save-state slot (F2, never F1 = save) and load it (F3); shot to see where it lands.
+10 tap f2
+60 load
+300 shot
