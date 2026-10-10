@@ -1,0 +1,8 @@
+# Viewer copy of tallwall3.txt on the sandbox's 6 m wall (face z=8): run in, Cross on contact, Cross mid-cling.
+0 at -7 5
+0 yaw 0
+20 stick 0 1
+70 jump
+80 jump
+150 jump
+260 stick 0 0

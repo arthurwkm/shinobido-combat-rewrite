@@ -1,0 +1,6 @@
+# Owner placed Kagetora ~1.5 m from a tall stone wall: run into it, Cross on contact, Cross again while on the wall.
+20 down lup
+60 tap cross
+84 tap cross
+200 up lup
+300 shot

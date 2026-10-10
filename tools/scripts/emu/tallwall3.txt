@@ -1,0 +1,8 @@
+# From against the wall: back off ~2 m, run in, Cross on contact, Cross again ~0.6 s later (mid-cling).
+20 down ldown
+60 up ldown
+70 down lup
+112 tap cross
+150 tap cross
+230 up lup
+330 shot

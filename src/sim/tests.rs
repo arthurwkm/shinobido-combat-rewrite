@@ -944,35 +944,46 @@ fn hug_pad_sequence_survives_camera_pull_in() {
 }
 
 #[test]
-fn running_into_a_tall_wall_with_jump_runs_up_then_kicks_off() {
-    use crate::sim::{player::{Player, State}, terrain::Terrain};
-    let t = Terrain::sandbox();
-    let mut p = Player::new();
-    p.pos = [-7.0, 0.0, 4.0];
-    for _ in 0..120 { p.step_on(&t, true, false); }
-    assert!(p.wall_normal.is_some(), "ran into the wall");
+fn tall_wall_run_up_clings_and_a_mid_cling_jump_reaches_the_ledge() {
+    // Emulator (tools/scripts/emu/tallwall*.txt): Cross into a tall wall runs up it; Cross during the run-up does
+    // nothing; at the top he clings ~0.88 s and drops; Cross mid-cling jumps again and catches the top edge.
+    use crate::sim::{player::{Player, State}, terrain::{Collider, Terrain}};
+    let wall = |h: f32| Terrain { colliders: vec![Collider::new([-10.0, 0.0, 8.0], [10.0, h, 9.0], false)], ..Default::default() };
+    let run_in = |t: &Terrain| {
+        let mut p = Player::new();
+        p.pos = [0.0, 0.0, 4.0];
+        for _ in 0..120 { p.step_on(t, true, false); }
+        assert!(p.wall_normal.is_some(), "ran into the wall");
+        p.jump();
+        assert_eq!(p.world_action(), "KABE_U01");
+        p
+    };
+    // Too tall to reach: run-up, cling, drop.
+    let t = wall(8.0);
+    let mut p = run_in(&t);
+    for _ in 0..10 { p.step_on(&t, true, false); }
     p.jump();
-    assert_eq!(p.world_action(), "KABE_U01");
-    for _ in 0..20 { p.step_on(&t, true, false); }
-    assert!(p.pos[1] > 1.0, "rising: {}", p.pos[1]);
-    p.jump(); // kick off
-    assert_eq!(p.world_action(), "TRI_J01");
-    let z = p.pos[2];
+    assert_eq!(p.world_action(), "KABE_U01", "Cross during the run-up does nothing");
+    while p.state == State::WallRun { p.step_on(&t, true, false); }
+    assert_eq!((p.state, p.world_action()), (State::Cling, "KABE_E01"));
+    let top = p.pos[1];
+    let mut cling = 0;
+    while p.state == State::Cling { p.step_on(&t, false, false); cling += 1; }
+    assert!((45..=60).contains(&cling), "clings ~0.88 s: {cling} ticks");
+    assert!(p.pos[1] <= top + 1e-4, "no rise while clinging");
     for _ in 0..200 { p.step_on(&t, false, false); }
-    assert!(p.pos[2] < z - 0.3, "pushed away from the wall");
-    assert!(p.pos[1] < 0.01 && !matches!(p.state, State::WallKick | State::Fall), "landed: {:?}", p.state);
-}
-
-#[test]
-fn wall_run_reaching_the_top_kicks_off_with_kabe_e() {
-    use crate::sim::{player::Player, terrain::Terrain};
-    let t = Terrain::sandbox();
-    let mut p = Player::new();
-    p.pos = [-7.0, 0.0, 4.0];
-    for _ in 0..120 { p.step_on(&t, true, false); }
+    assert!(p.pos[1] < 0.01, "dropped to the ground");
+    // A ledge within reach of the second jump: mid-cling Cross catches it.
+    let t = wall(5.7); // above the run-up's reach (hands ~4.9 m), within the second jump's
+    let mut p = run_in(&t);
+    while p.state == State::WallRun { p.step_on(&t, true, false); }
     p.jump();
-    for _ in 0..37 { p.step_on(&t, true, false); }
-    assert_eq!(p.world_action(), "KABE_E01");
+    assert_eq!(p.state, State::Cling, "too early in the cling");
+    for _ in 0..20 { p.step_on(&t, true, false); }
+    p.jump();
+    assert_eq!(p.world_action(), "TRI_A01");
+    for _ in 0..60 { p.step_on(&t, true, false); if p.state == State::Hang { break; } }
+    assert_eq!(p.state, State::Hang, "caught the top edge at {:?}", p.pos);
 }
 
 #[test]

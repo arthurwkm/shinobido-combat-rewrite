@@ -23,7 +23,7 @@ This file is the working list: every move, its input, the motion it plays, and i
 | Dash front flip | Cross while dashing (Circle held): JUMP_D05 / LAND_D05 | matches |
 | Backward somersault | Cross with the stick pulled back, pressed together | matches |
 | Wall run to ledge | Run at a wall, Cross on contact | matches |
-| **Wall grab / double jump on a tall wall** | Run at a wall too tall to top, Cross, then Cross again on the wall | **todo**: KABE_U01 / TRI_J01 / KABE_E01 in the sim; not compared |
+| Wall grab / double jump on a tall wall | Run at a wall too tall to top + Cross (run-up, cling), Cross again mid-cling (second jump, catches the edge) | matches |
 | Ledge hang, shimmy | Catch a ledge; stick left/right | matches |
 | Ledge climb-up | Cross while hanging | matches |
 | Crouch walk-off ledge catch | R1 held, walk off an edge | matches |

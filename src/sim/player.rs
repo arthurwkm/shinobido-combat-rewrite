@@ -30,8 +30,11 @@ pub enum State {
     Special,
     /// KABE_U01: running up a tall wall (jump while running into it); height gain is ESTIMATE (data.rs).
     WallRun,
-    /// TRI_J01 / KABE_E01: pushed off the wall, falling away from it with gravity.
+    /// TRI_J01: pushed off the wall, falling away from it with gravity.
     WallKick,
+    /// KABE_E01 at the top of the run-up: clinging to the wall (no gravity) for CLING_TICKS, then dropping.
+    /// Jump mid-cling is the second jump up the wall (TRI_A01); with the stick away from the wall, a kick-off (TRI_J01).
+    Cling,
     /// TWO06 catch, then STOP_A06 / HANG_L06 / HANG_R06 hanging from a ledge (jump climbs, crouch drops).
     Hang,
     /// CLIMB06 onto the ledge top.
@@ -59,6 +62,10 @@ const FLIP_V0: f32 = 67.0;
 /// ESTIMATE calibrated to tools/scripts/emu/frontflip.txt: the dash front flip (JUMP_D05, Circle held + Cross) is
 /// airborne ~14 game frames (0.56 s); its type-9 event is at frame 0 (arg 1.02), the impulse value itself not found.
 const DASH_FLIP_V0: f32 = 76.0;
+/// Emulator (tools/scripts/emu/tallwall2.txt): after the run-up he clings ~22 game frames (0.88 s), then drops.
+const CLING_TICKS: u32 = 53;
+/// ESTIMATE: Cross at the very start of the cling was ignored, mid-cling (~0.4 s in) it jumped (tallwall.txt vs tallwall3.txt).
+const CLING_JUMP_MIN: u32 = 12;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
 const UNIT_M: f32 = 0.84 / 9.5;
@@ -121,6 +128,8 @@ pub struct Player {
     pub attack_mod: AttackMod,
     /// A load is in the arms (PICK01 plays, then `State::Carry`); cleared by a hit or by the put/throw.
     pub carrying: bool,
+    /// Ticks spent clinging to the wall (State::Cling).
+    pub cling: u32,
 }
 
 /// Modifier held with Square (docs/controls.md "Attack and move list").
@@ -144,7 +153,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -175,15 +184,20 @@ impl Player {
         // Ground-started air actions take off at their type-9 (impulse) event: the back somersault pushes backwards,
         // the dash front flip keeps the dash momentum.
         let name = self.world.action.name;
-        let flip_event = (self.state == State::AirAct && matches!(name, "FLIP_B01" | "JUMP_D05"))
-            .then(|| self.world.action.events.iter().find(|e| e.1 == 9).map(|e| e.0 as u32)).flatten();
+        let impulse = (self.state == State::AirAct && matches!(name, "FLIP_B01" | "JUMP_D05" | "TRI_A01"))
+            .then(|| self.world.action.events.iter().find(|e| e.1 == 9)).flatten();
+        let flip_event = impulse.map(|e| e.0 as u32);
         let flip_wait = flip_event.is_some_and(|f| self.world.frame < f);
-        let flip_launch = flip_event.is_some_and(|f| self.world.frame >= f) && grounded && self.vy <= 0.0;
+        // The wall jump starts in the air (from the cling): it launches once, on its event frame.
+        let flip_launch = flip_event.is_some_and(|f| if name == "TRI_A01" { self.world.frame == f } else { self.world.frame >= f && grounded && self.vy <= 0.0 });
         if flip_launch && name == "FLIP_B01" {
             self.vy = FLIP_V0;
             let (s, c) = self.air_heading.sin_cos();
             let speed = 40.0 * UNIT_M * super::DT;
             self.air_vel = [-s * speed, -c * speed];
+        } else if flip_launch && name == "TRI_A01" {
+            // ESTIMATE: the event's float arg (0.83) scales the 120 launch; the emulator only shows it reaching the ledge.
+            self.vy = JUMP_V0 * impulse.map_or(1.0, |e| f32::from_bits(e.2));
         } else if flip_launch {
             self.vy = DASH_FLIP_V0;
         }
@@ -216,7 +230,7 @@ impl Player {
             self.pos[2] += self.air_vel[1];
         }
         // Special clips (climbs) own the height through root motion.
-        let rooted = flip_wait || matches!(self.state, State::Special | State::WallRun);
+        let rooted = flip_wait || matches!(self.state, State::Special | State::WallRun | State::Cling);
         if !jumping && (!grounded || flip_launch) && !rooted {
             self.vy += gravity(self.vy) * super::DT;
             self.pos[1] += self.vy * super::DT * UNIT_M;
@@ -291,7 +305,17 @@ impl Player {
         }
         if self.state == State::WallRun {
             self.pos[1] += super::data::WALL_RUN_RISE / ACTIONS_KABE_U_FRAMES;
-            if self.world.done() { self.wall_kick("KABE_E01"); } else { self.advance(); }
+            if self.world.done() {
+                self.cling = 0;
+                self.vy = 0.0;
+                self.fall_from = self.pos[1];
+                self.start(State::Cling, "KABE_E01");
+            } else { self.advance(); }
+            return;
+        }
+        if self.state == State::Cling {
+            self.cling += 1;
+            if self.cling >= CLING_TICKS { self.start(State::Fall, "FALL01"); } else { self.advance(); }
             return;
         }
         if self.state == State::WallKick {
@@ -396,12 +420,15 @@ impl Player {
     /// Catch a ledge in reach while rising or falling (Jump after take-off, Fall): TWO06, body hung below the top.
     fn try_grab(&mut self, terrain: &super::terrain::Terrain) {
         use super::data::{HANG_MIN, LEDGE_GRAB_DIST, LEDGE_REACH};
-        let airborne = matches!(self.state, State::Fall | State::WallRun) || self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME;
+        let airborne = matches!(self.state, State::Fall | State::WallRun) || self.state == State::Jump && self.world.frame >= TAKEOFF_FRAME
+            || self.state == State::AirAct && self.world.action.name == "TRI_A01";
         if !airborne || self.grab_lock || self.crouch_held { return; }
         let (s, c) = self.heading.sin_cos();
         let Some(top) = terrain.ledge(self.pos, [s, c], LEDGE_REACH) else { return };
         let dy = top[1] - self.pos[1];
-        if dy < HANG_MIN || (top[0] - self.pos[0]).hypot(top[2] - self.pos[2]) > LEDGE_GRAB_DIST { return; }
+        // The cling (KABE_E01) leans 0.65 m back off the wall; the second jump still catches the edge (emulator, tallwall3.txt).
+        let reach = if self.world.action.name == "TRI_A01" { LEDGE_GRAB_DIST + 0.65 } else { LEDGE_GRAB_DIST };
+        if dy < HANG_MIN || (top[0] - self.pos[0]).hypot(top[2] - self.pos[2]) > reach { return; }
         self.hang_at(terrain, top, self.heading);
     }
 
@@ -624,7 +651,16 @@ impl Player {
             return self.start(State::Climb, "CLIMB06");
         }
         if self.state == State::WallRun {
-            return self.wall_kick("TRI_J01");
+            return; // emulator: Cross during the run-up does nothing (tools/scripts/emu/tallwall2.txt)
+        }
+        if self.state == State::Cling {
+            if self.cling < CLING_JUMP_MIN { return; }
+            let away = self.wall_normal.is_some_and(|n| n[0] * self.target_heading.sin() + n[2] * self.target_heading.cos() > 0.7);
+            if away { return self.wall_kick("TRI_J01"); }
+            self.fall_from = self.pos[1];
+            self.air_vel = [0.0; 2];
+            self.start(State::AirAct, "TRI_A01");
+            return;
         }
         let back = (self.target_heading - self.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch)

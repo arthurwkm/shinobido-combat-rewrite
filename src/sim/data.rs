@@ -119,7 +119,7 @@ pub const HUG_WALL_MIN: f32 = 2.0;
 
 // ESTIMATE: height (m) gained over KABE_U01 (36 f); the clip has no root Y and the launch impulse binding was not found (formats.md "Wall ascent and impulse").
 pub const WALL_RUN_RISE: f32 = 3.0;
-// ESTIMATE: horizontal speed (m/tick) away from the wall after TRI_J01 / KABE_E01.
+// ESTIMATE: horizontal speed (m/tick) away from the wall after TRI_J01 (cling + stick away + Cross).
 pub const KICK_SPEED: f32 = 0.05;
 
 // ESTIMATE: ledge catch window. The hands reach the top while it is HANG_MIN..LEDGE_REACH above the feet, within
