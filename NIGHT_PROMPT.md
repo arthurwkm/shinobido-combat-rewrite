@@ -10,6 +10,11 @@ too, with a test. Commit each green step with `PROGRESS.md` updated in the same 
 without stopping to report progress. When the item is checked off, add one Log line, commit and exit:
 the runner starts the next feature in a fresh session. Never exit with uncommitted work (Codex: the runner commits for you).
 
+Play the real game. PCSX2 is open with Shinobido loaded; `tools/pcsx2.py video` plays a pad script and records
+it (AGENTS.md "Emulator A/B"). Every movement and combat action is compared with the running game, side by side
+with the viewer (`tools/emucmp.py`), and gets a row in `docs/emucompare.md`; `docs/movelist.md` lists every move
+and which are still `todo`. If you are Claude, items tagged `(needs emulator check, for Claude)` come first.
+
 See your work. You can run the viewer unattended: `target/debug/viewer --shot ...` or `--record ...` as a
 plain command (no pipes, redirects, `&&`, `cd`). Any item that changes what the viewer shows or how it
 plays is checked by looking at the result next to frames of the same action in `videos/`. Write what you

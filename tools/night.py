@@ -106,10 +106,11 @@ USAGE = {"claude": claude_usage, "codex": codex_usage}
 def run(worker, prompt, seen):
     """Run one worker turn; kill it if its usage crosses a limit. Returns (rc, killed)."""
     if worker == "claude":
-        cmd = [CLAUDE, "-p", prompt, "--model", "sonnet", "--permission-mode", "auto", "--settings",
+        cmd = [CLAUDE, "-p", prompt, "--model", "opus", "--effort", "xhigh", "--permission-mode", "auto", "--settings",
                "./night-settings.json", "--output-format", "stream-json", "--verbose", "--max-turns", "300"]
     else:
-        cmd = ["codex", "exec", "--json", "-C", str(ROOT), "-s", "workspace-write", prompt]
+        cmd = ["codex", "exec", "--json", "-C", str(ROOT), "-s", "workspace-write",
+               "-c", 'model_reasoning_effort="high"', prompt]
     p = subprocess.Popen(cmd, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True)
     done, killed = threading.Event(), []

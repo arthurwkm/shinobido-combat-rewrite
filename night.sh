@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Overnight session, unattended. Keeps the Mac and display awake (AC power, lid open; display for viewer shots) while tools/night.py runs
-# Claude (Sonnet) until its 5h usage is near full, then Codex, then waits for a reset.
+# Claude (Opus, xhigh effort) until its 5h usage is near full, then Codex, then waits for a reset.
 # Thresholds and rules: tools/night.py. Logs: target/logs/night-<date>.log
 #
 #   ./night.sh            run until 07:00

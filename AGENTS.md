@@ -46,7 +46,9 @@ uses it. Treat these as not done, whatever the checkbox says:
 - a feature never seen working in the viewer (built and unit-tested is not enough);
 - a look that differs visibly from the clips or the reference viewer (wrong pose, wrong camera, missing HUD
   element, a mannequin whose pose doesn't read like the clip) without a recorded reason;
-- an `ESTIMATE` that could still be read from the files or the executable but wasn't tried three times.
+- an `ESTIMATE` that could still be read from the files or the executable but wasn't tried three times;
+- a player action with no row in `docs/emucompare.md` (not compared with the running game in PCSX2), or a row
+  whose verdict is "differs" with no fix and no recorded reason.
 When the checklist and the spirit disagree, follow the spirit and add the missing work as items.
 
 Reference design (read-only, never edit): `/Users/arthursantos/arthurwkm_workspace/ELDEN-RING-Combat-Rewrite`.
@@ -66,18 +68,56 @@ What is known about it is in `docs/formats.md`; read it before any format work a
    (e.g. run speed, gravity, cancel rules, sight range). Find it by searching for the float constant, or for code
    that references a known string/file name, with `rabbitizer`/`spimdisasm` (installed in `.venv`).
    Disassemble only the functions you need; write findings to `docs/formats.md` with addresses.
-3. **Gameplay videos in `videos/`** (owner-supplied: `shinobido movement/combat/stealth.mov`, 60 fps), for
-   what only shows on screen: which animation plays for an input, camera behaviour, effects, HUD. Read
-   frames with `ffmpeg` into `target/` and look at small tiles; never commit videos or frames.
-   The emulator (owner's PCSX2 at `~/Downloads/PCSX2-v2.6.3.app`).
-4. **`ESTIMATE`** in `src/sim/data.rs`, with a one-line reason.
+3. **The running game in PCSX2** (the owner leaves it open with Shinobido loaded in an open area): the ground
+   truth for anything you can play — which input does what, timings, heights, distances. See "Emulator A/B" below.
+4. **Gameplay videos in `videos/`** (owner-supplied, 60 fps: `shinobido movement/combat/stealth.mov`,
+   `shinobido all attacks.mp4` with on-screen button icons, `shinobido lock in strafe fight.mov`,
+   `shinobido lock in lock off stealth kill from above.mov`, `shinobido run jump.mov`), for what you cannot
+   reproduce in PCSX2 (soldier fights, kills, the HUD in play). Read frames with `ffmpeg` into `target/` and look
+   at small tiles; never commit videos or frames.
+5. **`ESTIMATE`** in `src/sim/data.rs`, with a one-line reason.
 
 Not allowed: whole-program decompilation, splat/matching-decomp projects, m2c, decoding `ACQ.BIN`,
 movies (`PAL/`), sound (`SOUND/`), or the script VM.
 
-There is no measured ground truth from the running game. Confirm a format hypothesis by consistency
-across many files instead (e.g. header length equals keyframe duration, left/right variants mirror,
-values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with how) or hypothesis.
+Confirm a format hypothesis by consistency across many files (e.g. header length equals keyframe duration,
+left/right variants mirror, values land on 1/60 s), and where it shows in play, by an emulator A/B. Mark each
+statement in `docs/formats.md` confirmed (with how) or hypothesis. Worked example (2026-10-09): the jump's
+launch 120.0 (exe) with 1 game unit = 0.84/9.5 m predicted 0.76 s air / 1.49 m apex; PCSX2 showed 0.72 s / ~1.5 m.
+
+## Emulator A/B (the main check for movement and combat)
+Every player action is checked against the real game: the same pad script in PCSX2 and in the viewer, frames
+side by side, measured, fixed, and a row in `docs/emucompare.md`. `docs/movelist.md` is the complete move list
+with each move's status; every `todo` row needs an A/B. Tools (all run unattended; `tools/pcsx2.py` is excluded
+from the sandbox in `night-settings.json`):
+- `.venv/bin/python tools/pcsx2.py video <script> <name>` plays a timed pad script in PCSX2 (key events to the
+  owner's bindings) while `screencapture` records the game window to `target/pcsx2/<name>.mov` (60 fps capture;
+  the PAL game renders 25 fps). Also `shot <name>` (window capture) and `play <script>`.
+  Script lines: `<frame> down|up|tap <buttons>`, `<frame> shot`, `<frame> load`; frames are 60 Hz from the start;
+  buttons `square cross circle triangle l1 l2 r1 r2 l3 r3 start select up down left right lup ldown lleft lright
+  rup rdown rleft rright space esc`. Keyboard sticks are full tilt only (no walk). The recording lasts until 2 s
+  after the last line: end a script with a late `shot` line to record longer.
+- PCSX2 pauses when it loses focus; the tool brings it forward and taps Space when two captures are identical.
+  Never tap `esc` in a script (pause menu). If a recording shows another app or a frozen frame, re-run it.
+- Positions: there is no reset, Kagetora stays where the last script left him. Take a `shot` first to see
+  where he is; plan scripts that work from there (open grass field with a hut, stone walls, a roof to climb).
+  Never save over the owner's save-state slots.
+- `.venv/bin/python tools/emucmp.py <game.mov> <viewer rec dir> <out.jpg> <tick>...` tiles game vs viewer at the
+  same script ticks (viewer: `target/debug/viewer --record target/rec/<name> --script <file> --solo --every <n>`).
+  For timing, sample the game video at 25 fps (`ffmpeg -vf fps=25,...,drawtext=text='%{n}'`) and count frames.
+- Scripts live in `tools/scripts/emu/<name>.txt` (PCSX2) and `<name>_viewer.txt` (viewer copy), committed.
+- Input facts found so far (keep them): R1 is hide/crouch and L1 is lock-on/block (front view of
+  `img/shinobido controls.png`, confirmed in PCSX2 and by the PAL controls listing); the backward somersault is
+  Cross pressed together with the stick pulled back; crouch-walking off an edge catches the ledge; Cross while
+  hanging climbs. The owner's attack table in `docs/controls.md` writes some combos with "R1": re-check each in
+  PCSX2 before trusting it.
+
+## Owner decisions (do not revisit)
+- Camera: the reference project's camera (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's.
+- Target switch: Elden Ring's sideways flick (Shinobido has none).
+- Time base: keep 60 Hz although the disc is PAL (25 fps game).
+- Mannequins: primitive shapes on the game skeleton at Kagetora's model height (1.57 m); no textured meshes.
+- Viewer modes: `--solo` (Kagetora alone, for movement A/B), `--one` (one soldier), `--patrol`.
 
 ## Disk
 - Read from the ISO by offset (`tools/iso.py`, `tools/volume.py`); never extract the whole disc.
@@ -86,6 +126,8 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 
 ## Done means
 - `cargo test -q` passes and `.venv/bin/python tools/compare.py` reports every extracted action within tolerance.
+- Movement and combat items: an emulator A/B row in `docs/emucompare.md` with the scripts, what was measured on
+  both sides, and a verdict; the item's `docs/movelist.md` row set to matches.
 - Viewer items: `cargo build -q --bin viewer` succeeds and `cargo clippy -q --all-targets` is clean.
 - **Seen working.** Every item that changes what the viewer shows or how it plays is checked in the
   viewer, unattended, with no owner needed (tested 2026-10-08: Apple M1 GPU found under
@@ -96,8 +138,8 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
   - Run them as plain commands: no pipes, `&&`, `;`, `cd`, `2>&1` or redirects. Only that exact form runs
     outside the sandbox; any other form fails with "Unable to find a GPU". Never run the viewer without
     `--shot` or `--record`, because it then never exits.
-  - Compare the result with frames of the same action in the Shinobido clips (ffmpeg into `target/`) and
-    with `videos/eldenring viewer.mp4`: put them side by side in one image and look at it.
+  - Compare the result with the same action in PCSX2 (Emulator A/B above) or, where it can't be played there,
+    frames of the Shinobido clips, and with `videos/eldenring viewer.mp4`: side by side in one image, and look at it.
   - Write in the item's evidence the shot or record name, the clip timestamp, and what still differs.
     Fix the differences, or record why they stay.
   - An item whose result was not seen may not be checked. "Unverified" is never a done state.
@@ -144,7 +186,7 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - Never edit agent configuration: `.claude/`, `.codex/`, `night-settings.json`, `night.sh` unless when explicitly prompted to,
   `NIGHT_PROMPT.md`, `CLAUDE.md`, `AGENTS.md`, or anything in the home folder.
 - Network: crates.io and PyPI for this project's dependencies; web search and docs only to research
-  PS2, RenderWare or Acquire file formats. No accounts, payments, sign-ups, uploads or unrelated sites.
+  PS2, RenderWare or Acquire file formats, and Shinobido's controls and move lists (cite sources in `docs/`). No accounts, payments, sign-ups, uploads or unrelated sites.
 - Game-derived output (extracted files, tables, assets, listings, video frames) lives in `extracted/`,
   `target/` or the generated paths in `.gitignore` and is never committed. Code and format documentation
   are committed; documentation describes layouts and may quote a few bytes or values, never whole tables.
@@ -164,9 +206,10 @@ values land on 1/60 s). Mark each statement in `docs/formats.md` confirmed (with
 - `tools/night.py` alternates the two workers by usage: Claude until its 5-hour window is near full, then Codex,
   then it waits for a reset. You are one of them; do not hand work to the other yourself.
 - Codex does not commit or stage (read-only git is fine): the runner commits its work when `cargo test -q` passes. Claude commits as in the Loop.
-- Codex's sandbox has no GPU, so Codex cannot run the viewer. When an item's last step is the viewer check,
-  Codex leaves it unchecked, appends `(needs viewer check, for Claude)` to its line, and moves on to the
-  next item it can do. Claude does those checks first in its next session.
+- Codex's sandbox has no GPU and no screen, so Codex can run neither the viewer nor PCSX2. When an item needs
+  either, Codex does the code and tests, leaves it unchecked, appends `(needs viewer check, for Claude)` or
+  `(needs emulator check, for Claude)` to its line, and moves on to the next item it can do. Claude does those
+  checks first in its next session. Claude spends its window on what only it can do: emulator A/B and viewer checks.
 - Both workers keep `PROGRESS.md` current: the next worker starts from it with no other memory.
 - Either worker may do the long, token-heavy work (format surveys, executable lookups), split into bounded steps
   that each leave the suite green; finishing a step is not a reason to stop (see Loop step 6).

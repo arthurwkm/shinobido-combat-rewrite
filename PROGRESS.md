@@ -265,6 +265,10 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
 - [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
 
+- [ ] Acceptance review 2 (emulator): when every other M18 item and every `docs/movelist.md` row is done, play each
+  move in PCSX2 and the viewer once more (Loop step 9), fill `docs/acceptance.md` again, turn every gap into an item
+  above this one. Check this only after a full pass finds no gap.
+
 ## Requests
 (none open)
 Answered 2026-10-09 by the owner:
@@ -280,6 +284,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-09 Claude (owner): night workers Opus xhigh / Codex high effort; AGENTS.md gains Emulator A/B and owner decisions; M18 ends in Acceptance review 2.
 - 2026-10-09 Claude: mannequin head = 0.11 m sphere at the model's head-bounds centre (stature from the model, 1.57 m); seen in viewer.
 - 2026-10-09 Codex: measured Kagetora at 1.568811 m, retained verified bone lengths/scale, replaced neck-centred sphere with model-bound head box; STOP01 top 1.541869 m, hang reach rechecked at 1.84 m, 83 tests/clippy/240 comparisons green; viewer shape and existing foot contact pending Claude.
 - 2026-10-09 Claude: hang hands on the edge seen in viewer; docs/movelist.md (no complete list online; psxdatacenter confirms R1 crouch, L1 block).
