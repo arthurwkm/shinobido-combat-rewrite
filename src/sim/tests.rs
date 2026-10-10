@@ -1644,3 +1644,21 @@ fn square_pressed_early_in_a_slash_is_held_until_the_chain_window() {
     while p.world_action() == "AT_A01" && p.world_frame() < 30 { p.step(false, false); }
     assert_eq!(p.world_action(), "AT_C01");
 }
+
+#[test]
+fn early_presses_play_the_four_hit_chain_from_the_attacks_video() {
+    // Attacks video 7.5-13.5 s: Square, Square, Forward+Square, Forward+Square -> AT_A01, AT_C01, AT_DA01, AT_CA01,
+    // each press made early in the previous hit (held until its chain window).
+    use super::player::{AttackMod, Player};
+    let mut p = Player::new();
+    let mut seen = vec![p.world_action()];
+    let presses = [(0, AttackMod::Plain), (6, AttackMod::Plain), (40, AttackMod::Forward), (75, AttackMod::Forward)];
+    for t in 0..260 {
+        let press = presses.iter().find(|x| x.0 == t);
+        if let Some(&(_, m)) = press { p.attack_mod = m; }
+        p.step(false, press.is_some());
+        if seen.last() != Some(&p.world_action()) { seen.push(p.world_action()); }
+    }
+    let chain: Vec<_> = seen.into_iter().filter(|a| a.starts_with("AT_")).collect();
+    assert_eq!(chain, ["AT_A01", "AT_C01", "AT_DA01", "AT_CA01"]);
+}

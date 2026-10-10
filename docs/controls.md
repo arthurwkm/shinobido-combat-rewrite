@@ -49,10 +49,10 @@ each row plays is still to be matched (motion names are not evidence of inputs).
 | Square ×2 | Double Slash |
 | Square ×3, wait 1 s, R1 + Triangle | Double Slash to Kick to Power Slash |
 | Square ×2, Forward + Square, R1 + Triangle | Double Slash to Jumping Strike to Power Slash |
-| Square ×2, Forward + Square ×2 | Double Slash, Jumping Strike to Power Slash (PAL only) |
+| Square ×2, Forward + Square ×2 | Double Slash, Jumping Strike to Power Slash (PAL only): AT_A01 → AT_C01 → AT_DA01 → AT_CA01 by the cancel data; presses may come early (held until each window) |
 | Square ×2, Forward + Square, Square ×2 | Double Slash, Jumping Strike, Slash to Kick (PAL only) |
 | Back + Square | Kick (KICK27 somersault kick; attacks video 20.5 s) |
-| Square in the air | Downward Strike |
+| Square in the air | Downward Strike (KICK_J01: tucked, sword straight down; video 29.4 s; AT02/AT_SA05 ruled out) |
 | Square while dashing (Circle held) | Leap forward and slash |
 | Square near a downed enemy | Low Kick |
 | R1 + Back + Square | Low Kick (SOCCER01; video 26 s) |

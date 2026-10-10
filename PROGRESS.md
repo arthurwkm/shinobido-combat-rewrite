@@ -273,6 +273,9 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   stays drawn 3 s (SHEATH_DELAY, ESTIMATE) instead of sheathing the moment the attack ends. Evidence: tests
   `square_pressed_early_in_a_slash_is_held_until_the_chain_window`, updated sheath test; `target/cmp/double_ab.jpg`:
   AT_A01 horizontal → AT_C01 raised diagonal like the video, ~1.4 s vs 1.6 s, ends in STOP02.
+- [x] Attacks video, chains and air strike: Square ×2, F+Square ×2 plays AT_A01 → AT_C01 → AT_DA01 → AT_CA01 with early
+  presses (test `early_presses_play_the_four_hit_chain_from_the_attacks_video`); Square in the air stays KICK_J01, which matches
+  the video's tucked downward strike (`target/cmp/air_grid.jpg`; AT02 is a dive roll, AT_SA05 a thrust).
 - [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
 - [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
 
@@ -299,6 +302,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Claude: four-hit chain and air strike checked against the attacks video.
 - 2026-10-10 Claude: attack press held until the chain window; sword stays drawn 3 s (clunky chains fixed).
 - 2026-10-10 Claude: crouch attacks matched to the attacks video (FUTO27/KICK27/SOCCER01); viewer `clip` script command.
 - 2026-10-10 Claude: ledge kick-off from the emulator (stick away + Cross). Owner action suggested: PCSX2 PauseOnFocusLoss=false.
