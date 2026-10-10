@@ -62,6 +62,7 @@ each row plays is still to be matched (motion names are not evidence of inputs).
 | R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind |
 | Triangle | Grab the enemy; mash Square / Triangle for a chance at a forced stealth kill (easiest from behind or on a low-HP enemy) |
 | Cross with the stick pulled back (pressed together; a flick after Cross is a plain jump) | Backward somersault |
+| Cross while dashing (Circle held) | Front flip (JUMP_D05 into LAND_D05; emulator 2026-10-10) |
 
 ## Context actions for the sandbox — ESTIMATE
 
