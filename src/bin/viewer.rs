@@ -176,7 +176,7 @@ fn parse_shot() -> Option<Shot> {
 }
 
 /// `--record <dir> --script <file> [--every <n>] [--ticks <n>]`: one sim tick per rendered frame, pad driven by the
-/// script (`<tick> stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | itemnext | switch <-1|1> | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
+/// script (`<tick> clip <motion> | stick <x> <y> | lock <0|1> | crouch <0|1> | attack | jump | item | itemnext | switch <-1|1> | exec | at <x> <z> | kill <x> <z> (corpse there) | yaw <deg>`, `#` comments),
 /// a frame saved every n ticks as `<dir>/<tick>.png`, exits after `ticks` (default: last script tick + 30).
 #[derive(Resource)]
 struct Record {
@@ -234,6 +234,8 @@ fn record_step(world: Res<World>, mut rec: ResMut<Record>, mut pad: ResMut<Pad>,
             (Some("item"), _) => i.item = true,
             (Some("itemnext"), _) => i.item_next = true,
             (Some("exec"), _) => exec.0 = true,
+            // Debug: play any motion on the player from idle (to compare clips with the videos).
+            (Some("clip"), _) => if let Some(n) = w.next() { if !sim.0.player.request(State::Special, n) { eprintln!("script: clip {n} refused"); } },
             _ => eprintln!("script: bad line `{cmd}`"),
         }
     }

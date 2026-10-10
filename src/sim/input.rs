@@ -53,8 +53,10 @@ impl Input {
         // ESTIMATE: Forward/Back are the stick within 60 degrees of / opposite to the current heading.
         let rel = (p.target_heading - p.heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         p.attack_mod = match () {
+            // R1 is hide/crouch: R1 + Square is the rising uppercut, R1 + Back + Square the low kick (attacks video).
+            _ if moving && rel.abs() > 2.0 && self.crouch => AttackMod::CrouchBack,
             _ if moving && rel.abs() > 2.0 => AttackMod::Back,
-            _ if self.lock => AttackMod::Lock,
+            _ if self.crouch => AttackMod::Crouch,
             _ if self.dash && moving => AttackMod::Dash,
             _ if moving && rel.abs() < 1.05 => AttackMod::Forward,
             _ => AttackMod::Plain,
@@ -64,9 +66,6 @@ impl Input {
             p.dodge(dir);
         } else if self.jump {
             p.jump();
-        }
-        if strafe {
-            p.attack_mod = AttackMod::Lock;
         }
         p.step_on(terrain, moving, self.attack);
         self.attack = false;

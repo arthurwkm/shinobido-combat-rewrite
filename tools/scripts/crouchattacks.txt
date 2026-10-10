@@ -1,0 +1,17 @@
+# Attacks video rows: R1 + Square (FUTO27), R1 + Square x2 (FUTO27 -> AT_D01), Back + Square (KICK27), R1 + Back + Square (SOCCER01).
+0 yaw 30
+10 crouch 1
+12 attack
+40 crouch 0
+150 crouch 1
+152 attack
+205 attack
+240 crouch 0
+380 stick 0 -1
+384 attack
+386 stick 0 0
+500 crouch 1
+502 stick 0 -1
+502 attack
+508 stick 0 0
+520 crouch 0

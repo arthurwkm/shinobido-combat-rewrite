@@ -263,6 +263,11 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
   unaware. A/B the first contact.
 - [ ] Wall/ledge/hug/crouch/carry A/B, one item each when the locomotion items are green.
+- [x] Crouch attacks from the attacks video: the video's shoulder icon is R1 = crouch, not lock-on. R1 + Square → FUTO27
+  (rising uppercut, its cancel → AT_D01 downward strike), Back + Square → KICK27 (somersault kick), R1 + Back + Square →
+  SOCCER01 (low kick); lock-on no longer picks attacks. Matched by `target/cmp/kicks_grid.jpg` (video 20.5/21.75/26 s vs
+  clips via the new viewer script command `clip <motion>`); tests updated + `crouched_back_and_square_together_is_the_low_kick`;
+  viewer `tools/scripts/crouchattacks.txt` readout shows FUTO27, FUTO27→AT_D01, KICK27, SOCCER01.
 - [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
 - [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
 
@@ -289,6 +294,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Claude: crouch attacks matched to the attacks video (FUTO27/KICK27/SOCCER01); viewer `clip` script command.
 - 2026-10-10 Claude: ledge kick-off from the emulator (stick away + Cross). Owner action suggested: PCSX2 PauseOnFocusLoss=false.
 - 2026-10-10 Claude: animation cross-fade + render interpolation for smoothness (owner: clunky).
 - 2026-10-10 Claude: tall wall run-up/cling/second jump from the emulator; KABE_E01 is a cling, not a kick-off.

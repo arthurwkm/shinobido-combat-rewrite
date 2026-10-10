@@ -1161,8 +1161,9 @@ fn attack_modifiers_pick_kick_uppercut_dash_and_power_slash() {
     };
     assert_eq!(first(AttackMod::Plain, "RUN01"), (State::Attack, "AT_A01"));
     assert_eq!(first(AttackMod::Forward, "RUN01"), (State::Attack, "AT_A01"));
-    assert_eq!(first(AttackMod::Back, "RUN01"), (State::Attack, "SOCCER01"));
-    assert_eq!(first(AttackMod::Lock, "RUN01"), (State::Attack, "AT_E01"));
+    assert_eq!(first(AttackMod::Back, "RUN01"), (State::Attack, "KICK27"));
+    assert_eq!(first(AttackMod::Crouch, "RUN01"), (State::Attack, "FUTO27"));
+    assert_eq!(first(AttackMod::CrouchBack, "RUN01"), (State::Attack, "SOCCER01"));
     assert_eq!(first(AttackMod::Dash, "RUN_D05"), (State::Attack, "AT_DASH05"));
     // forward press inside AT_A01's window chains to the power slash AT_CA01
     let mut p = Player::new();
@@ -1171,18 +1172,6 @@ fn attack_modifiers_pick_kick_uppercut_dash_and_power_slash() {
     p.attack_mod = AttackMod::Forward;
     p.step(false, true);
     assert_eq!(p.world_action(), "AT_CA01");
-}
-
-#[test]
-fn square_from_the_guard_stance_with_r1_held_throws_the_uppercut() {
-    use super::player::{AttackMod, Player, State};
-    let mut p = Player::new();
-    p.guard_held = true;
-    p.step(false, false);
-    assert_eq!(p.state, State::Guard);
-    p.attack_mod = AttackMod::Lock;
-    p.step(false, true);
-    assert_eq!((p.state, p.world_action()), (State::Attack, "AT_E01"));
 }
 
 #[test]
@@ -1200,7 +1189,7 @@ fn chain_targets_follow_the_modifier_jumping_strike_and_27_kicks() {
         p.world_action()
     };
     assert_eq!(at_c(AttackMod::Forward, 19), "AT_DA01");
-    assert_eq!(at_c(AttackMod::Lock, 21), "FUTO27");
+    assert_eq!(at_c(AttackMod::Crouch, 21), "FUTO27");
     assert_eq!(at_c(AttackMod::Plain, 17), "AT_D01");
 }
 
@@ -1223,15 +1212,15 @@ fn square_in_a_wall_hug_plays_the_h_attack() {
 
 #[test]
 fn second_square_with_r1_follows_the_uppercut_with_the_downward_strike() {
+    // Attacks video 24 s: R1 + Square x2. FUTO27's own cancel opens AT_D01 at frames 50-54.
     use super::player::{Player, State, AttackMod};
     let mut p = Player::new();
-    p.attack_mod = AttackMod::Lock;
+    p.attack_mod = AttackMod::Crouch;
     p.step(false, true);
+    assert_eq!(p.world_action(), "FUTO27");
+    while p.world_frame() < 50 { p.step(false, false); }
     p.step(false, true);
-    assert_eq!(p.world_action(), "AT_E01");
-    for _ in 0..20 { p.step(false, false); }
-    p.step(false, true);
-    assert_eq!((p.state, p.world_action()), (State::Attack, "KICK_J01"));
+    assert_eq!((p.state, p.world_action()), (State::Attack, "AT_D01"));
 }
 
 #[test]
@@ -1625,4 +1614,19 @@ fn hanging_with_the_stick_away_and_jump_kicks_off_the_wall() {
     assert_eq!(p.world_action(), "TRI_J01");
     for _ in 0..200 { p.step_on(&t, false, false); }
     assert!(p.pos[2] < z - 0.5 && p.pos[1] < 0.01, "jumped off and landed: {:?}", p.pos);
+}
+
+#[test]
+fn crouched_back_and_square_together_is_the_low_kick() {
+    // Attacks video 26 s: R1 + Back + Square -> SOCCER01, through the pad layer (stick and Square on the same tick).
+    use super::{input::Input, player::Player, terrain::Terrain};
+    let t = Terrain::default();
+    let mut p = Player::new();
+    let mut i = Input { crouch: true, ..Default::default() };
+    for _ in 0..10 { i.apply(&mut p, &t, 0.0); p.step_on(&t, false, false); }
+    i.stick = [0.0, -1.0];
+    i.attack = true;
+    i.apply(&mut p, &t, 0.0);
+    p.step_on(&t, true, true);
+    assert_eq!(p.world_action(), "SOCCER01");
 }

@@ -1,0 +1,10 @@
+# Toward the stone wall ahead: hold R1 (hide) and push into it for 4 s, then stick left, then right, then release.
+20 down r1
+30 down lup
+270 up lup
+290 down lleft
+380 up lleft
+400 down lright
+490 up lright
+520 up r1
+580 shot

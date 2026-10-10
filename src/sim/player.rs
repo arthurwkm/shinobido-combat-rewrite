@@ -139,8 +139,10 @@ pub enum AttackMod {
     Plain,
     Forward,
     Back,
-    /// R1 held: rising uppercut.
-    Lock,
+    /// R1 (hide/crouch) held: rising uppercut (FUTO27).
+    Crouch,
+    /// R1 held + stick back: low kick (SOCCER01).
+    CrouchBack,
     /// Circle held while running: leap forward and slash.
     Dash,
 }
@@ -760,23 +762,16 @@ impl Player {
             };
             return self.start(State::Attack, clip);
         }
-        // R1 is held while the uppercut is pressed, so the guard stance is already up: Square leaves it.
-        if self.state == State::Guard && self.attack_mod == AttackMod::Lock {
-            return self.start(State::Attack, "AT_E01");
-        }
-        // ESTIMATE: "R1 + Square x2" (PAL) follows the uppercut with the downward strike; AT_E01 has no cancel list, so
-        // the second press after its hit window (frame 19) plays KICK_J01 directly.
-        if self.state == State::Attack && self.attack_mod == AttackMod::Lock
-            && self.world.action.name == "AT_E01" && self.world.frame >= 19 {
-            return self.start(State::Attack, "KICK_J01");
-        }
         let f = self.world.frame;
-        // ESTIMATE: pairing of rows to motions by cancel graph and clip names (AT_CA = forward power slash, SOCCER =
-        // kick, AT_E = uppercut, AT_DASH05 = dash leap); not frame-matched against the attack video.
+        // Matched against `videos/shinobido all attacks.mp4` (2026-10-10, docs/controls.md): Back + Square is the
+        // somersault kick KICK27 (20.5 s), R1 + Square the rising uppercut FUTO27 (21.75 s; its cancel to AT_D01 is the
+        // "uppercut to downward strike"), R1 + Back + Square the low kick SOCCER01 (26 s). AT_CA = forward power slash,
+        // AT_DASH05 = dash leap (cancel graph, not yet frame-matched).
         let want: Option<&str> = match self.attack_mod {
             AttackMod::Forward => Some("AT_CA01"),
-            AttackMod::Back => Some("SOCCER01"),
-            AttackMod::Lock if self.state != State::Attack => Some("AT_E01"),
+            AttackMod::Back => Some("KICK27"),
+            AttackMod::CrouchBack => Some("SOCCER01"),
+            AttackMod::Crouch if self.state != State::Attack => Some("FUTO27"),
             AttackMod::Dash if self.state != State::Attack => Some("AT_DASH05"),
             _ => None,
         };
@@ -788,7 +783,7 @@ impl Player {
             // 27-set kicks (FUTO27, KICK27) that AT_C01's cancel list offers.
             let prefs: &[&str] = match self.attack_mod {
                 AttackMod::Forward => &["AT_DA01", "AT_CA01"],
-                AttackMod::Lock => &["FUTO27", "KICK27"],
+                AttackMod::Crouch => &["FUTO27", "KICK27"],
                 _ => want.as_slice(),
             };
             let preferred = prefs.iter().filter_map(|n| by_name(n)).find_map(|w| open.clone().find(|c| c.0 == w.id));

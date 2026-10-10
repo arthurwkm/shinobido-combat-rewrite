@@ -51,13 +51,13 @@ each row plays is still to be matched (motion names are not evidence of inputs).
 | Square ×2, Forward + Square, R1 + Triangle | Double Slash to Jumping Strike to Power Slash |
 | Square ×2, Forward + Square ×2 | Double Slash, Jumping Strike to Power Slash (PAL only) |
 | Square ×2, Forward + Square, Square ×2 | Double Slash, Jumping Strike, Slash to Kick (PAL only) |
-| Back + Square | Kick |
+| Back + Square | Kick (KICK27 somersault kick; attacks video 20.5 s) |
 | Square in the air | Downward Strike |
 | Square while dashing (Circle held) | Leap forward and slash |
 | Square near a downed enemy | Low Kick |
-| R1 + Back + Square | Low Kick |
-| R1 + Square | Rising Uppercut |
-| R1 + Square ×2 | Rising Uppercut to Downward Strike (PAL only) |
+| R1 + Back + Square | Low Kick (SOCCER01; video 26 s) |
+| R1 + Square | Rising Uppercut (FUTO27; video 21.75 s) |
+| R1 + Square ×2 | Rising Uppercut to Downward Strike (FUTO27 → AT_D01 by its cancel; video 24 s) |
 | R1 + Triangle | Throws the enemy overhead, leaving him downed |
 | R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind |
 | Triangle | Grab the enemy; mash Square / Triangle for a chance at a forced stealth kill (easiest from behind or on a low-HP enemy) |
