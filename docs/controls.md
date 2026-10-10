@@ -59,7 +59,8 @@ each row plays is still to be matched (motion names are not evidence of inputs).
 | R1 + Square | Rising Uppercut (FUTO27; video 21.75 s) |
 | R1 + Square ×2 | Rising Uppercut to Downward Strike (FUTO27 → AT_D01 by its cancel; video 24 s) |
 | R1 + Triangle | Throws the enemy overhead, leaving him downed |
-| R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind |
+| R1 + Cross (stick optional) | Forward dive roll toward the stick, comes up turned round (JUMP_F02; emulator 2026-10-10, docs/emucompare.md) |
+| R1 + Forward + Cross | Forward roll into the enemy, flips over him: attack or grab from behind (the same roll; it ends facing back) |
 | Triangle | Grab the enemy; mash Square / Triangle for a chance at a forced stealth kill (easiest from behind or on a low-HP enemy) |
 | Cross with the stick pulled back (pressed together; a flick after Cross is a plain jump) | Backward somersault |
 | Cross while dashing (Circle held) | Front flip (JUMP_D05 into LAND_D05; emulator 2026-10-10) |
@@ -73,7 +74,7 @@ animation names as evidence of button assignments.
 | Context | Proposed input | Intended request / reason for estimate |
 |---|---|---|
 | Guard | Lock-on held, no attack/jump/dash | Defensive stance; guard combination not shown |
-| Evasion / roll | Hide/Crouch + Jump + movement | Direction selects evade; combination not shown |
+| Evasion / roll | Hide/Crouch + Jump (+ stick) | **Confirmed in PCSX2**: a forward dive roll toward the stick, see the attack table |
 | High jump / wall ascent | Jump by a reachable wall | Geometry selects action; activation not shown |
 | Ledge | Move into ledge; Jump to climb, Hide/Crouch to drop | Context navigation; inputs not shown |
 | Wall hug / corner peek | Hide/Crouch toward wall; lateral movement at corner | Shares stealth modifier; inputs not shown |

@@ -90,7 +90,7 @@ def shot(p, dest):
 def load(p):
     """Load the current save-state slot (F3; F2 cycles slots, the OSD shows which)."""
     tap(p, "f3")
-    time.sleep(1.0)
+    time.sleep(3.0)  # the state loads over ~2 s of black frames; front() would read them as paused
 
 
 def play(p, script, name):

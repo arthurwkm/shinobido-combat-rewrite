@@ -109,16 +109,32 @@ fn guard_goes_a_then_b_while_held_and_ends_with_y() {
 }
 
 #[test]
-fn dodges_move_by_their_root_motion_then_return_to_idle() {
-    use super::player::{Player, State};
-    for (dir, axis, want) in [("FRONT01", 2, 1.5), ("BACK01", 2, -1.6), ("RIGHT01", 0, -1.6), ("LEFT01", 0, 1.6)] {
-        let mut p = Player::new();
-        p.dodge(dir);
-        for _ in 0..31 {
-            p.step(false, false);
+fn crouch_and_jump_rolls_toward_the_stick_like_the_emulator() {
+    // PCSX2 2026-10-10 (`tools/scripts/emu/rollA`, `roll2`, `rollR`, `rollBk`, `roll3`): R1 + Cross dives into a forward roll; with
+    // the stick held he first turns to it (right, back toward the camera), never a side or back variant; he comes up turned
+    // round, facing where he came from (three rolls in a row shuttle back and forth); R1 still held ends crouched.
+    use super::{input::Input, player::State, terrain::Terrain};
+    let t = Terrain::default();
+    for (stick, heading) in [([0.0, 0.0], 0.0), ([1.0, 0.0], -std::f32::consts::FRAC_PI_2), ([0.0, -1.0], std::f32::consts::PI)] {
+        let mut p = super::player::Player::new();
+        Input { crouch: true, ..Default::default() }.apply(&mut p, &t, 0.0);
+        let start = p.pos;
+        Input { crouch: true, jump: true, stick, ..Default::default() }.apply(&mut p, &t, 0.0);
+        assert_eq!((p.state, p.world_action()), (State::Dodge, super::data::ROLL_CLIP), "{stick:?}");
+        assert!((p.heading - heading).sin().abs() < 1e-4 && (p.heading - heading).cos() > 0.0, "{stick:?}: turned to the stick at once, heading {}", p.heading);
+        for _ in 0..45 {
+            Input { crouch: true, ..Default::default() }.apply(&mut p, &t, 0.0);
         }
-        assert_eq!(p.state, State::Idle, "{dir}");
-        assert!((p.pos[axis] - want).abs() < 0.05, "{dir} {:?}", p.pos);
+        assert_eq!(p.state, State::Crouch, "{stick:?}");
+        assert!((p.heading - heading).cos() < -0.999, "{stick:?}: comes up turned round, heading {}", p.heading);
+        let (s, c) = heading.sin_cos();
+        let along = (p.pos[0] - start[0]) * s + (p.pos[2] - start[2]) * c;
+        assert!((along - 3.23).abs() < 0.1, "{stick:?}: rolled {along} m along the heading");
+        Input { crouch: true, jump: true, ..Default::default() }.apply(&mut p, &t, 0.0);
+        for _ in 0..45 {
+            Input { crouch: true, ..Default::default() }.apply(&mut p, &t, 0.0);
+        }
+        assert!((p.pos[0] - start[0]).hypot(p.pos[2] - start[2]) < 0.1, "{stick:?}: a second roll comes back, {:?}", p.pos);
     }
 }
 
@@ -1330,8 +1346,8 @@ fn roll_passes_the_soldier_and_ends_facing_his_back() {
     let mut f = Fight::new(p, Enemy::new([0.0, 0.0, 3.0]));
     f.enemy.heading = 0.0;
     assert!(f.roll());
-    assert_eq!(f.player.world_action(), "FRONT01");
-    for _ in 0..40 {
+    assert_eq!(f.player.world_action(), super::data::ROLL_CLIP);
+    for _ in 0..45 {
         f.step_enemy();
         f.player.step(false, false);
     }
@@ -1340,13 +1356,13 @@ fn roll_passes_the_soldier_and_ends_facing_his_back() {
     assert!((f.player.heading.cos() + 1.0).abs() < 0.2, "facing -z, back toward him");
 
     let mut g = Player::new();
-    g.guard_held = true;
-    let mut guard = Fight::new(g, Enemy::new([0.0, 0.0, 3.0]));
+    g.crouch_held = true;
+    let mut crouched = Fight::new(g, Enemy::new([0.0, 0.0, 3.0]));
     for _ in 0..20 {
-        guard.step(false, false);
+        crouched.step(false, false);
     }
-    assert_eq!(guard.player.state, PS::Guard);
-    assert!(guard.roll(), "R1 is held when the roll is pressed");
+    assert_eq!(crouched.player.state, PS::Crouch);
+    assert!(crouched.roll(), "R1 (crouch) is held when the roll is pressed");
 
     let mut far = Fight::new(Player::new(), Enemy::new([0.0, 0.0, 9.0]));
     assert!(!far.roll());

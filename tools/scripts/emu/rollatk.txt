@@ -1,0 +1,7 @@
+# Run after `pcsx2.py load`: R1 held, Cross (forward roll), Square 0.4 s into the roll (JUMP_F02 cancels to AT02 from frame 22).
+30 shot
+60 down r1
+120 tap cross
+146 tap square
+200 up r1
+300 shot

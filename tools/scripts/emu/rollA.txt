@@ -1,0 +1,6 @@
+# R1 held, Cross with no stick (start of the roll probe; run after `pcsx2.py load`).
+30 shot
+60 down r1
+120 tap cross
+240 up r1
+300 shot

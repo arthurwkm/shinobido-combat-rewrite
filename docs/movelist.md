@@ -31,7 +31,7 @@ This file is the working list: every move, its input, the motion it plays, and i
 | Fall / landing from height | Walk off without R1 | matches (~2 m drop) |
 | Crouch / crouch walk | R1 held | partly (seen in edge grab) |
 | Wall hug, corner peek | R1 into or beside a tall wall; sideways stick slides; R1 release lets go | hug matches; corner peek todo (no wall end at the PCSX2 test spot) |
-| Roll / evade | todo: input per owner's table ("R1 + Forward + Cross") needs re-check now R1 is crouch | todo |
+| Roll / evade | R1 + Cross: forward dive roll (JUMP_F02, 3.2 m) toward the stick, straight ahead with it centred; comes up turned round. R1 + Forward + Cross at a soldier rolls past him to his back. L1 + Cross is a plain jump (no target) | matches |
 | Attacks and chains | Square, Forward/Back + Square, air Square, dash Square (owner's table) | todo |
 | Lock-on, strafe, guard | L1 | todo |
 | Grab, throw, mash kill | Triangle (+ R1/L1 per owner's table, re-check) | todo |

@@ -1,0 +1,9 @@
+# Run after `pcsx2.py load`: R1 held, three Cross presses with no stick 1.7 s apart. Does each roll end turned round
+# (back and forth) or facing on (three rolls the same way)?
+30 shot
+60 down r1
+120 tap cross
+220 tap cross
+320 tap cross
+420 up r1
+480 shot

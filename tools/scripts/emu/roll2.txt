@@ -1,0 +1,24 @@
+# Roll/evade input probe (run after `pcsx2.py load`, castle bridge): R1 held, then stick forward / back / left / right
+# with Cross 2 frames after the stick, 2.5 s apart; then L1 + Cross and L1 + left + Cross.
+30 shot
+60 down r1
+120 down lup
+122 tap cross
+140 up lup
+270 down ldown
+272 tap cross
+290 up ldown
+420 down lleft
+422 tap cross
+440 up lleft
+570 down lright
+572 tap cross
+590 up lright
+680 up r1
+740 down l1
+800 tap cross
+920 down lleft
+922 tap cross
+940 up lleft
+1040 up l1
+1100 shot

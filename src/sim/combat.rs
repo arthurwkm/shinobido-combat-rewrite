@@ -14,7 +14,7 @@ pub struct Fight {
     pub player_hp: i32,
     /// One hit per swing: set when the current swing has landed, cleared when it ends.
     player_landed: bool,
-    /// Roll into the enemy: extra metres per frame along the roll heading on top of FRONT01's root motion.
+    /// Roll into the enemy: extra metres per frame along the roll heading on top of the roll's root motion.
     roll: Option<[f32; 2]>,
     pub carry: carry::Carry,
     pub items: items::Items,
@@ -134,17 +134,18 @@ impl Fight {
         e.pos[2] += nz * push;
     }
 
-    /// R1 + Forward + Cross: roll (FRONT01) through the soldier ahead and come up behind him, facing his back.
+    /// R1 + Forward + Cross: roll (`data::ROLL_CLIP`) through the soldier ahead and come up behind him, facing his back.
     pub fn roll(&mut self) -> bool {
         let (p, e) = (&mut self.player, &self.enemy);
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
         let dist = dx.hypot(dz);
         if e.state == EnemyState::Dead || (p.pos[1] - e.pos[1]).abs() >= data::BODY_HEIGHT || dist > data::ROLL_REACH || dist < 1e-3 || !in_cone(p.heading, dx, dz, data::ROLL_CONE)
-            || !p.start_dodge("FRONT01") {
+            || !p.dodge() {
             return false;
         }
-        // FRONT01 carries 1.5 m forward; the rest is spread over its frames to land ROLL_BEHIND past him.
-        let extra = (dist + data::ROLL_BEHIND - 1.5) / p.world_len() as f32;
+        // The roll's own root motion carries it forward; any shortfall is spread over its frames to land ROLL_BEHIND past him.
+        let carried = super::extracted::ACTIONS.iter().find(|a| a.name == data::ROLL_CLIP).and_then(|a| a.root.last()).map_or(0.0, |r| r.1[2]);
+        let extra = ((dist + data::ROLL_BEHIND - carried) / p.world_len() as f32).max(0.0);
         p.heading = dx.atan2(dz);
         self.roll = Some([dx / dist * extra, dz / dist * extra]);
         true
@@ -154,9 +155,7 @@ impl Fight {
         let Some(step) = self.roll else { return };
         let p = &mut self.player;
         if p.state != State::Dodge {
-            self.roll = None;
-            p.heading += std::f32::consts::PI; // turn round to his back
-            p.target_heading = p.heading;
+            self.roll = None; // the roll itself ends turned round, facing his back
             return;
         }
         p.pos[0] += step[0];

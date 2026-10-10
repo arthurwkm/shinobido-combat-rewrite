@@ -149,8 +149,11 @@ pub const GRAB_HOLD: u32 = 180;
 pub const GRAB_MASH: u32 = 4;
 pub const THROW_DAMAGE: i32 = 30;
 
-// ESTIMATE: roll into the enemy (R1 + Forward + Cross, docs/controls.md). No roll-over clip exists beyond FRONT01, so the
-// forward evade is stretched to pass him: starts within ROLL_REACH m and ROLL_CONE rad of the heading, ends ROLL_BEHIND m past him.
+// R1 + Cross is a forward dive roll toward the stick (PCSX2 2026-10-10, docs/emucompare.md): JUMP_F02, 38 f, 3.23 m root motion.
+// FRONT01/BACK01/RIGHT01/LEFT01 and their 05 variants are upright steps, not what the pad plays.
+pub const ROLL_CLIP: &str = "JUMP_F02";
+// ESTIMATE: roll into the enemy (R1 + Forward + Cross, docs/controls.md): the roll is stretched to pass him when he stands
+// within ROLL_REACH m and ROLL_CONE rad of the heading, ending ROLL_BEHIND m past him.
 pub const ROLL_REACH: f32 = 4.0;
 pub const ROLL_CONE: f32 = 0.8;
 pub const ROLL_BEHIND: f32 = 1.0;

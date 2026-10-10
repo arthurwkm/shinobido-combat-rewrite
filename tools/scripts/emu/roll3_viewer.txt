@@ -1,0 +1,6 @@
+# Viewer copy of roll3.txt: R1 held, three Cross presses with no stick 100 ticks apart.
+60 crouch 1
+120 jump
+220 jump
+320 jump
+420 crouch 0

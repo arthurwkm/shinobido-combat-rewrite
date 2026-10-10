@@ -1,0 +1,8 @@
+# Run after `pcsx2.py load` (castle bridge, facing away from the camera): R1 held, stick right + Cross.
+30 shot
+60 down r1
+120 down lright
+122 tap cross
+140 up lright
+200 up r1
+240 shot

@@ -15,7 +15,7 @@ pub struct Input {
     pub item: bool,
     /// Edge: select the next item (the viewer's tick takes `item` and this before `apply`, `Fight::use_item`).
     pub item_next: bool,
-    /// Held: lock-on (R1) guards when idle; crouch (L1) with `jump` dodges (ESTIMATE combinations, docs/controls.md).
+    /// Held: lock-on (L1) guards when idle; crouch (R1) with `jump` rolls toward the stick (emulator, docs/emucompare.md).
     pub lock: bool,
     pub crouch: bool,
     /// Held: dash (Circle); runs with RUN_D05 (set 05 `_D`, ~5.5 m/s against RUN01 3.4).
@@ -65,8 +65,7 @@ impl Input {
             _ => AttackMod::Plain,
         };
         if self.jump && self.crouch {
-            let dir = if !moving || y >= x.abs() { "FRONT01" } else if y <= -x.abs() { "BACK01" } else if x > 0.0 { "RIGHT01" } else { "LEFT01" };
-            p.dodge(dir);
+            p.dodge();
         } else if self.jump {
             p.jump();
         }
@@ -102,7 +101,7 @@ mod tests {
         assert!(!i.jump, "edge consumed");
         let mut d = Player::new();
         Input { jump: true, crouch: true, stick: [0.0, -1.0], ..Default::default() }.apply(&mut d, &t, 0.0);
-        assert_eq!(d.world_action(), "BACK01");
+        assert_eq!(d.world_action(), crate::sim::data::ROLL_CLIP);
     }
 }
 

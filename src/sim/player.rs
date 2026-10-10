@@ -16,7 +16,7 @@ pub enum State {
     Guard,
     /// GU_Y01 (hypothesis: guard release).
     GuardEnd,
-    /// FRONT01 / BACK01 / RIGHT01 / LEFT01 (hypothesis: evasive steps; 30 frames, 1.5-1.6 m of root motion each).
+    /// R1 + Cross: the forward dive roll (`data::ROLL_CLIP`) toward the stick; ends turned round.
     Dodge,
     /// JUMP01 animation; height from the game's gravity update (jump launch velocity and unit scale are ESTIMATE).
     Jump,
@@ -361,6 +361,9 @@ impl Player {
             return self.advance();
         }
         if self.state == State::Dodge && self.world.done() {
+            // The roll comes up turned round, facing where it started (emulator: rolls in a row shuttle back and forth).
+            self.heading += std::f32::consts::PI;
+            self.target_heading = self.heading;
             self.start(State::Idle, self.idle_clip);
         }
         if matches!(self.state, State::Hit | State::Special) && self.world.done() {
@@ -598,9 +601,11 @@ impl Player {
         self.world.frame
     }
 
-    /// Start an evasive step from idle/run/halt. `dir`: "FRONT01", "BACK01", "RIGHT01" or "LEFT01".
-    pub fn dodge(&mut self, dir: &str) {
-        self.request(State::Dodge, dir);
+    /// R1 + Cross: turn to the stick (`target_heading`) at once and dive-roll forward (emulator 2026-10-10).
+    pub fn dodge(&mut self) -> bool {
+        let ok = self.request(State::Dodge, super::data::ROLL_CLIP);
+        if ok { self.heading = self.target_heading; }
+        ok
     }
 
     /// Take a hit: interrupts any state and plays the given reaction (`HI_BS01`, `HI_US01`, ...) to its end.
@@ -659,15 +664,6 @@ impl Player {
         self.carrying = false;
         self.start(State::Special, clip);
         true
-    }
-
-    /// Start a dodge now from the guard stance too (the roll into the enemy is R1 + Forward + Cross, R1 is the guard).
-    pub fn start_dodge(&mut self, name: &str) -> bool {
-        if matches!(self.state, State::Guard | State::GuardEnd) {
-            self.start(State::Dodge, name);
-            return true;
-        }
-        self.request(State::Dodge, name)
     }
 
     /// The stick points away from the heading the jump or fall started with (backward air kick).

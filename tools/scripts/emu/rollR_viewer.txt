@@ -1,0 +1,6 @@
+# Viewer copy of rollR.txt: R1 held, stick + Cross 2 ticks later.
+60 crouch 1
+120 stick 1 0
+122 jump
+140 stick 0 0
+200 crouch 0

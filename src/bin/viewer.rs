@@ -1,4 +1,4 @@
-//! Capsule rig driven by the sim. WASD move (Alt walk), LMB attack, Space jump, Q item, RMB guard, Ctrl+Space dodge; pad per docs/controls.md.
+//! Capsule rig driven by the sim. WASD move (Alt walk), LMB attack, Space jump, Q item, RMB guard, Ctrl+Space roll; pad per docs/controls.md.
 //! The sim stays engine-free: this only feeds `Player::step` at 60 Hz and draws `pos`/`heading`.
 
 use bevy::prelude::*;
@@ -505,7 +505,7 @@ fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, ca
     if pad.0.item {
         sim.0.use_item();
     }
-    if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.with_target(target, |f| f.roll()) {
+    if pad.0.crouch && pad.0.jump && pad.0.stick[1] > 0.5 && sim.0.with_target(target, |f| f.roll()) {
         pad.0.jump = false;
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);

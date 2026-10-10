@@ -93,6 +93,8 @@ Little-endian. Replaces the earlier ".nmt hypothesis" above for everything liste
     tiling and unit length hold for tracks 3..20 in 1285 files.
   - Root motion check: `RUN01` track 0 ends 1.69 m in +z after 30 frames (3.38 m/s), `STOP01` 0 m, `AT_A01` 0.60 m,
     `FRONT01` +1.5 m, `BACK01` −1.6 m, `LEFT01` +1.6 m x, `RIGHT01` −1.6 m x (forward is +z).
+    These four (and their `05` variants, 42 f, 1.6-1.8 m) are upright evasive steps with no hips flip; the R1 + Cross roll
+    is `JUMP_F02` (38 f, +3.23 m, hips turn through 360 degrees), **confirmed** by PCSX2 A/B 2026-10-10 (docs/emucompare.md).
 - 91 files do not end at EOF (e.g. `ALARM07`, `AT_A05`, `AT_A19`, mostly other characters) and 12 have no
   tracks; the player's (suffix 01) files parsed so far are fine.
 

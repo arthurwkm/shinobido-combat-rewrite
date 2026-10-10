@@ -1,0 +1,9 @@
+# R1 + Forward + Cross with a soldier 3 m ahead: the dive roll passes him and turns to his back (owner's table, docs/controls.md).
+0 at 0 0
+0 face 0
+0 soldier 0 3 0
+30 crouch 1
+60 stick 0 1
+62 jump
+80 stick 0 0
+150 crouch 0

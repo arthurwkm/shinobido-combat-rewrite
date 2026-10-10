@@ -253,6 +253,19 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [x] Tall wall A/B: run-up (KABE_U01) → cling (KABE_E01, 0.88 s, new State::Cling) → mid-cling Cross second jump (TRI_A01) catches the edge; Cross during the run-up no longer kicks off (emulator). TRI_J01 kick-off kept on cling + stick away (ESTIMATE, not seen). Evidence: test `tall_wall_run_up_clings_and_a_mid_cling_jump_reaches_the_ledge`, `target/pcsx2/tallwall3.mov`, `target/cmp/tallwall_viewer.jpg`.
 - [x] Off a ledge A/B: stick away + Cross while hanging kicks off backwards (TRI_J01, ESTIMATE motion); R1/Circle/stick alone do nothing in the game. Test `hanging_with_the_stick_away_and_jump_kicks_off_the_wall`, `target/cmp/ledgedrop_viewer.jpg`.
 - [ ] Every remaining `todo` row of `docs/movelist.md` (the complete move list) gets an emulator A/B. (needs emulator check, for Claude)
+- [x] Roll / evade A/B (castle-bridge save; `tools/scripts/emu/rollA`, `roll2`, `rollR`, `rollBk`, `roll3`, `rollatk`, viewer copies
+  `*_viewer.txt`): PCSX2 shows R1 + Cross as a forward dive roll toward the stick (straight ahead with it centred; he turns to the
+  stick first), coming up turned round (three rolls shuttle back and forth); never a side/back variant; Square mid-roll does
+  nothing; L1 + Cross (no target) is a plain jump. The sim played FRONT01/BACK01/RIGHT01/LEFT01 by camera-relative stick: upright
+  1.5 m steps (FRONT05 etc. too). Now JUMP_F02 (`data::ROLL_CLIP`, 38 f, 3.23 m, the only player clip with this dive), heading
+  snapped to the stick, turned round at the end; the roll past a soldier (R1 + Forward + Cross, was wired to L1) uses it.
+  Evidence: test `crouch_and_jump_rolls_toward_the_stick_like_the_emulator` (failed before: FRONT01, then no turn-round),
+  `cargo test -q` 111 passed, clippy clean, compare 240/240; `target/debug/viewer --record target/rec/rollR --script
+  tools/scripts/emu/rollR_viewer.txt --solo --every 2 --ticks 220` (and `rollBk`, `roll3`) beside `target/pcsx2/rollR.mov` etc.
+  (`target/cmp/roll_ab.jpg`, `roll3_ab.jpg`): dive, invert, tuck, crouch at the same ticks within ~0.1 s, same shuttle;
+  `target/rec/rollthrough` (`tools/scripts/rollthrough.txt --one`): passes a soldier 3 m ahead, faces his back. Still differs:
+  the reference camera does not swing behind him after the roll (owner camera decision); his turn to the stick is instant
+  (game ~0.1 s). `pcsx2.py load` now waits 3 s (front() read the black loading frames as a pause and paused the game).
 - [x] Camera: the reference project's (`ELDEN-RING-Combat-Rewrite/src/camera.rs`), not Shinobido's (owner, 2026-10-09):
   4.3 m at 1.5 m pivot, tight horizontal / lazy vertical follow with snap, idle drift to sideways movement, lock-on eases
   yaw and pitch, lock with no target recentres; hug/exec/climb framings kept on top. Evidence: `cargo test -q` 78 passed
@@ -500,3 +513,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-10 (Claude): crouch walk-off ledge grab A/B checked in the viewer beside edgegrab.mov; fixed a held stick cutting the TWO06 catch on frame 0 (shimmy now waits for its cancel frame 9); flip row's viewer evidence recorded.
 - 2026-10-10 (Claude): soldier first contact checked (no soldiers in the PCSX2 yard, so vs stealth/lock clips): start unaware, sneak stays unaware, run-up alerts in 1-2 s; eye icon fixed from a teal block to the clips' grey/red `<O>` in an olive box with a red meter bar.
 - 2026-10-10 (Claude): wall hug A/B in PCSX2 (hug2-5): R1 beside a wall hugs, only a sideways stick slides (cone ESTIMATE), R1 release turns along the wall, hug camera square-on; the old side camera came from a misread clip. PCSX2 found in Edit Garden; loaded the next save slot (castle mission). Decision: corner peek left todo with a Request rather than navigating the mission.
+- 2026-10-10 (Claude): roll A/B in PCSX2: R1 + Cross is the JUMP_F02 dive roll toward the stick, ending turned round (was FRONT01-family steps); roll-through moved from L1 to R1.
