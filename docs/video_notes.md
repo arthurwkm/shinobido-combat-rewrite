@@ -7,8 +7,9 @@ coarse observation (hypothesis), not a frame-exact timing. Motion names are gues
 - Health: red bar top-left, small spiked emblem at its left end. Always drawn.
 - Ki compass: spiked ring top-right with an orange needle; the needle turns with the camera/enemy bearing.
 - Eye awareness icon: top-centre, small red rectangle with an eye, only in combat (enemy aware) and stealth
-  clips; absent in the movement clip (no enemies). Red in combat; stealth 8–16 s shows it green/teal-ish when unseen
-  (hypothesis, colours not sampled).
+  clips; absent in the movement clip (no enemies). Sampled 2026-10-10 from full-res crops: a `<O>` eye glyph in a dark olive
+  box with a light olive top border; glyph grey when unaware (stealth 4–14 s), red when alerted (lock clip 0–8 s); a red bar
+  under the box in the stealth clip from 6 s.
 - Tutorial text box (movement 0 s): "To jump, press the X button" — controls come from the PS2 pad (X = jump).
 - Katana drawn in combat/stealth (held low in the right hand, blade back); no sword in movement clip.
 

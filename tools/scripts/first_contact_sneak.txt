@@ -1,0 +1,7 @@
+# --one: wait five seconds behind the unaware soldier, then crouch-walk up behind him (stealth clip 4-14 s) and stay.
+# He should stay unaware (grey eye) the whole way, as in the clip.
+0 stick 0 0
+300 crouch 1
+310 stick 0 1
+560 stick 0 0
+750 stick 0 0

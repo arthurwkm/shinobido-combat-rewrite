@@ -260,8 +260,14 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   --script tools/scripts/emu/loco_viewer.txt --solo --every 60 --ticks 720` beside `videos/eldenring viewer.mp4` 8 s
   (`target/cmp/cam_ref.jpg`): same follow and vertical lag; differs: the reference frames its taller dummy fight closer.
 - Mannequin: owner decision 2026-10-09, the player model is fine as is.
-- [ ] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
-  unaware. A/B the first contact. (needs viewer check, for Claude) (needs emulator check, for Claude)
+- [x] Soldier behaviour at start: in the viewer he walks up and attacks at once; in the game soldiers start
+  unaware. A/B the first contact. Claude 2026-10-10: the PCSX2 spot has no soldiers (`target/pcsx2/fc_start.png`, training
+  yard, no eye HUD), so compared with the clips. Viewer `--one` (`target/rec/first_contact`, `first_contact_sneak`) and default
+  (`first_contact3`): soldiers idle facing away, grey eye; crouch-walk from behind stays unaware with the cue as in stealth 4–14 s;
+  a run-up turns him amber at 1.0 s and red + AT_B19 at 2.0 s, like the alerted soldier walking up to swing in the lock clip
+  4.5–6 s. Difference found and fixed: the eye was a teal block; the clips show a grey (unaware) / red (alerted) `<O>` glyph in a dark
+  olive box with a light olive top border and a red bar under it (`target/cmp/eye_ab.jpg`); `hud::eye_colour` test pins grey/red.
+  Still ESTIMATE: hearing range of a run (no clip shows it).
   - Codex 2026-10-10: startup was Idle already, but all three soldiers faced the player's spawn inside sight range (meter +0.0125 on tick 1). Keep the sandbox positions and face the stationary soldiers away; perception and attack rules unchanged. Spawn layout remains ESTIMATE, not a recovered game parameter. `Sim::new(args)` lets the headless regression exercise the real default/`--one` setup without changing process arguments. Regression failed before the heading fix, then passed: 600 ticks idle with meter 0/no damage, then entering view leads to alert and damage. Existing `exec`, `hit`, `react`, `react2`, `lock`, `roll`, `grab`, `flee` scripts explicitly restore their frontal encounter setup.
   - Next in Claude: `target/debug/viewer --record target/rec/first_contact --script tools/scripts/first_contact.txt --one --every 30 --ticks 750`; repeat without `--one` for the default three-soldier setup. Five seconds idle, then pad-driven approach; compare first notice/attack against a real soldier encounter in PCSX2 (or combat clip if the open-area save has no soldier). Fill the pending row in `docs/emucompare.md`; no live recording or measurement was made by Codex.
   - Validation: `cargo test -q` → 110 library tests + 1 viewer startup test passed, 0 failed; `cargo clippy -q --all-targets` and `cargo build -q --bin viewer` → exit 0, no output; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Diff reviewed; no staging/commit (runner owns it).
@@ -479,3 +485,4 @@ Answered 2026-10-09 by the owner:
 - 2026-10-09 (Claude): soldier reactions seen (react4/behind3); HEAVY_HIT 4->12 ESTIMATE since every swing exceeded 4 and light reactions were unreachable; soldier action shown in the target bar, `soldier x z deg` script command.
 - 2026-10-09 (Claude): executions front and above seen from the pad (execfront/execabove records, script commands wound/rise); no dive approach, pairs ESTIMATE.
 - 2026-10-10 (Claude): crouch walk-off ledge grab A/B checked in the viewer beside edgegrab.mov; fixed a held stick cutting the TWO06 catch on frame 0 (shimmy now waits for its cancel frame 9); flip row's viewer evidence recorded.
+- 2026-10-10 (Claude): soldier first contact checked (no soldiers in the PCSX2 yard, so vs stealth/lock clips): start unaware, sneak stays unaware, run-up alerts in 1-2 s; eye icon fixed from a teal block to the clips' grey/red `<O>` in an olive box with a red meter bar.

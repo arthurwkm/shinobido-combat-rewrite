@@ -548,17 +548,20 @@ fn setup_game_hud(mut commands: Commands) {
     // Health: red bar, top-left.
     let outer = commands.spawn((abs(Some(px(28)), None, px(8), 300.0, 14.0), BackgroundColor(back))).id();
     commands.spawn((Node { width: percent(100), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.75, 0.1, 0.08)), Game::Health, ChildOf(outer)));
-    // Eye icon with the stealth meter under it, top-centre.
-    commands.spawn((abs(Some(percent(50)), None, px(8), 44.0, 22.0), UiTransform::from_xy(px(-22), px(0)), BackgroundColor(Color::WHITE), Game::Eye));
-    let meter = commands.spawn((abs(Some(percent(50)), None, px(34), 60.0, 6.0), UiTransform::from_xy(px(-30), px(0)), BackgroundColor(back))).id();
-    commands.spawn((Node { width: percent(0), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.9, 0.9, 0.8)), Game::Meter, ChildOf(meter)));
+    // Eye icon with the stealth meter under it, top-centre: dark olive box, light olive border, `<O>` glyph in the alert colour.
+    let eye = commands.spawn((Node { border: UiRect::top(px(2)), justify_content: JustifyContent::Center, align_items: AlignItems::Center, ..abs(Some(percent(50)), None, px(8), 44.0, 24.0) },
+        UiTransform::from_xy(px(-22), px(0)), BorderColor::all(Color::srgb(0.55, 0.53, 0.38)), BackgroundColor(Color::srgb(0.1, 0.1, 0.06)))).id();
+    commands.spawn((Text::new("<O>"), TextFont { font_size: FontSize::Px(17.0), ..default() }, TextColor(Color::WHITE), Game::Eye, ChildOf(eye)));
+    // Meter: red bar the box's width right under it (stealth clip 6-14 s).
+    let meter = commands.spawn((abs(Some(percent(50)), None, px(33), 44.0, 5.0), UiTransform::from_xy(px(-22), px(0)), BackgroundColor(back))).id();
+    commands.spawn((Node { width: percent(0), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.75, 0.1, 0.08)), Game::Meter, ChildOf(meter)));
     // Ki compass: ring with an orange needle, top-right under the readout.
     let ring = commands.spawn((Node { border: UiRect::all(px(3)), border_radius: BorderRadius::MAX, ..abs(None, Some(px(24)), px(170), 64.0, 64.0) }, BorderColor::all(Color::srgb(0.8, 0.8, 0.75)), BackgroundColor(back))).id();
     let needle = commands.spawn((Node { width: percent(100), height: percent(100), justify_content: JustifyContent::Center, ..default() }, Game::Needle, ChildOf(ring))).id();
     commands.spawn((Node { width: px(5), height: px(26), ..default() }, BackgroundColor(Color::srgb(1.0, 0.55, 0.1)), ChildOf(needle)));
 }
 
-type GameParts = (&'static Game, Option<&'static mut Node>, Option<&'static mut BackgroundColor>, Option<&'static mut UiTransform>);
+type GameParts = (&'static Game, Option<&'static mut Node>, Option<&'static mut TextColor>, Option<&'static mut UiTransform>);
 
 fn update_game_hud(
     sim: Res<Sim>,
@@ -568,13 +571,13 @@ fn update_game_hud(
 ) {
     let f = &sim.0;
     let bearing = hud::compass(f, cam.0.yaw);
-    for (kind, node, bg, tr) in &mut q {
-        match (kind, node, bg, tr) {
+    for (kind, node, text, tr) in &mut q {
+        match (kind, node, text, tr) {
             (Game::Health, Some(mut n), ..) => n.width = percent(100.0 * hud::player_bar(f)),
             (Game::Meter, Some(mut n), ..) => n.width = percent(100.0 * aware.0.meter),
-            (Game::Eye, _, Some(mut b), ..) => {
+            (Game::Eye, _, Some(mut tc), ..) => {
                 let c = hud::eye_colour(aware.0.level());
-                b.0 = Color::srgb(c[0], c[1], c[2]);
+                tc.0 = Color::srgb(c[0], c[1], c[2]);
             }
             (Game::Needle, Some(mut n), _, Some(mut t)) => {
                 n.display = if bearing.is_some() { Display::Flex } else { Display::None };

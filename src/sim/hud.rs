@@ -61,12 +61,13 @@ pub fn enemy_bar(f: &Fight) -> f32 {
     f.enemies().nth(f.focus).map_or(0, |e| e.hp.max(0)) as f32 / data::ENEMY_HP as f32
 }
 
-/// Eye awareness icon colour (RGB). ESTIMATE: calm teal as seen in the stealth clip, amber, red (docs/video_notes.md).
+/// Eye awareness glyph colour (RGB). Grey and red from full-res crops (stealth clip 10 s unaware, lock clip 4 s alerted;
+/// brightest pixels 61,61,63 and 112,33,28, scaled to red 0.85). Amber for Suspicious is an ESTIMATE (not seen in a clip).
 pub fn eye_colour(a: Alert) -> [f32; 3] {
     match a {
-        Alert::Unaware => [0.2, 0.7, 0.6],
+        Alert::Unaware => [0.47, 0.47, 0.48],
         Alert::Suspicious => [0.95, 0.7, 0.15],
-        Alert::Alerted => [0.85, 0.12, 0.1],
+        Alert::Alerted => [0.85, 0.25, 0.21],
     }
 }
 
@@ -104,7 +105,9 @@ mod tests {
         assert!(r.contains("queued  jump") && r.contains("lock-on held") && r.contains("frame   0/"));
         assert!(compass(&f, 0.0).unwrap().abs() < 1e-5, "enemy dead ahead");
         assert!((compass(&f, std::f32::consts::FRAC_PI_2).unwrap() + std::f32::consts::FRAC_PI_2).abs() < 1e-5, "camera turned right: enemy to the left");
-        assert_ne!(eye_colour(Alert::Unaware), eye_colour(Alert::Alerted));
+        let [r, g, b] = eye_colour(Alert::Unaware);
+        assert!((r - g).abs() < 0.02 && (g - b).abs() < 0.02, "unaware eye is grey, as in the stealth clip");
+        assert!(eye_colour(Alert::Alerted)[0] > 2.0 * eye_colour(Alert::Alerted)[1], "alerted eye is red");
         f.enemy.hp = 0;
         assert!(compass(&f, 0.0).is_none());
         f.enemy.hp = 95;
