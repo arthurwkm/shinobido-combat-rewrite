@@ -439,6 +439,20 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
 #[allow(clippy::too_many_arguments)]
 fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>, mut prev: ResMut<Prev>) {
     prev.0 = placements(&sim.0);
+    // L1 held: lock the soldier ahead (none when out of range or dead); released or gone drops it.
+    // One entry per soldier so a lock index is a soldier index; the dead sit at infinity (never in range).
+    let targets: Vec<[f32; 3]> = sim.0.enemies().map(|e| if e.state == EnemyState::Dead { [f32::INFINITY; 3] } else { e.pos }).collect();
+    lock.0.position(sim.0.player.pos, &targets);
+    if !pad.0.lock {
+        lock.0.release();
+    } else if lock.0.target.is_none() {
+        lock.0.select(sim.0.player.pos, sim.0.player.heading, &targets);
+    }
+    let sw = std::mem::take(&mut pad.0.switch);
+    if sw != 0 {
+        lock.0.switch(sim.0.player.pos, &targets, sw > 0);
+    }
+    pad.0.lock_target = lock.0.position(sim.0.player.pos, &targets);
     // Triangle: put down what is carried, else grab/execute, else lift a crate or body; Square throws the load.
     // Actions on a soldier go to the locked one, else the nearest.
     let target = lock.0.target.unwrap_or_else(|| sim.0.nearest());
@@ -460,22 +474,6 @@ fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, ca
     }
     if pad.0.lock && pad.0.jump && !pad.0.crouch && pad.0.stick[1] > 0.5 && sim.0.with_target(target, |f| f.roll()) {
         pad.0.jump = false;
-    }
-    // R1 held: lock the soldier ahead (none when out of range or dead); released or gone drops it.
-    // One entry per soldier so a lock index is a soldier index; the dead sit at infinity (never in range).
-    let targets: Vec<[f32; 3]> = sim.0.enemies().map(|e| if e.state == EnemyState::Dead { [f32::INFINITY; 3] } else { e.pos }).collect();
-    if !pad.0.lock {
-        lock.0.release();
-    } else if lock.0.target.is_none() {
-        lock.0.select(sim.0.player.pos, sim.0.player.heading, &targets);
-    }
-    let sw = std::mem::take(&mut pad.0.switch);
-    if sw != 0 {
-        lock.0.switch(sim.0.player.pos, &targets, sw > 0);
-    }
-    pad.0.lock_target = lock.0.target.and_then(|i| targets.get(i)).copied();
-    if pad.0.lock_target.is_none() {
-        lock.0.release();
     }
     pad.0.apply(&mut sim.0.player, &world.0, cam.0.yaw);
     sim.0.step_enemy();

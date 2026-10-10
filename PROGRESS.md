@@ -283,6 +283,30 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   common blend length in the transition events) instead of snapping; characters and camera are drawn between sim ticks by
   the fixed clock's overstep (as the reference). Evidence: test `clip_change_fades_over_blend_time_then_follows_the_clip`,
   `target/rec/fade` run→HALT01 frames ease. Per-transition blend lengths from the type-3 arg1 high half not used yet.
+- [x] Bugfix + responsiveness sweep (Codex, 2026-10-10; viewer-checked by Claude: `target/rec/sweep_double`, `target/rec/sweep_tall` replay the double slash and tall-wall sequence unchanged)
+  - Export header +0x14 categories and apply type-5 OR/type-6 clear masks alongside type-3/4 cancels; jump/dodge and locomotion now obey authored recovery permissions. Tests: `category_masks_open_recovery_cancels_on_the_authored_frame`, `category_mask_close_events_remove_only_their_permissions`.
+  - Held movement leaves AT_A01 at frame 40, SHEATH01 at 16, LAND01 at 2 and LAND_D05 at its mask; LAND_A01 no longer inherits LAND01's frame-2 escape. Preserve fall6's measured LAND_B01 run-on via `LAND_B_RUN_FRAME = 6` ESTIMATE in data.rs. Test: `recovery_movement_uses_each_clips_permissions`; existing fall6/front-flip regressions retained.
+  - Unknown motion requests return false without mutation; invalid caller-selected walk clips fall back to WALK_F02. Tests: `unknown_player_requests_are_refused_without_mutating_state`, `invalid_walk_clip_falls_back_to_forward_walk`.
+  - Unlocking resets lateral/backward walk selection. Test: `unlocked_walk_resets_the_strafe_clip`.
+  - Neutral stick clears the old directional jump intent, preventing accidental backflips/kick-offs. Test: `neutral_jump_does_not_reuse_a_released_backward_stick`.
+  - Queued Square retains the modifier sampled with the press. Test: `queued_attack_keeps_the_modifier_from_the_press`.
+  - Wall kicks retain launch momentum without feeding root motion back or applying momentum twice on the Fall transition. Test: `wall_kick_keeps_launch_momentum_without_root_feedback` (45 ticks, across clip end).
+  - Wall run/cling retain the wall normal when root motion stops touching the wall, so away+Cross kicks outward. Test: `cling_keeps_wall_normal_for_an_away_jump`.
+  - Wall run adds rise for exactly the 36 motion frames, not the transition tick too. Test: `wall_run_rise_is_spread_over_exactly_the_clip_length`.
+  - Refused pickup preserves the load flag, and landing with a load returns to Carry rather than idle with unusable hands. Test: `carrying_survives_a_landing_and_a_refused_pick`.
+  - AirAct hit windows now participate in combat. Test: `airborne_attack_uses_its_hit_window`.
+  - Melee/grab/throw/roll require vertical body overlap; separation ignores other floors and corpses. Test: `melee_and_separation_do_not_reach_other_floors_or_push_corpses`.
+  - Body pickup uses the same height gate as crate pickup. Test: `body_pickup_requires_the_same_floor`.
+  - Thrown loads continue falling after wall contact and land on crossed platform tops. Test: `thrown_crate_lands_on_a_platform_without_freezing_or_falling_through`.
+  - Thrown crates damage only once per flight, rather than every tick while dropping beside a soldier. Test: `a_thrown_crate_hits_only_once_per_flight`.
+  - Execution availability rejects upward teleportation, player hit recovery and occupied hands. Test: `executions_cannot_teleport_upwards_or_interrupt_hit_or_carry`.
+  - Interrupting an execution dive clears the pending kill. Test: `interrupted_execution_dive_does_not_kill_on_a_later_landing`.
+  - Viewer validates retained locks and applies target switching before target-dependent input; shared lock lookup rejects dead/distant/missing/nonfinite targets. Test: `target_position_releases_dead_distant_and_missing_targets`.
+  - Camera recenter waits for pitch as well as yaw, including already-aligned yaw. Test: `camera_recentre_finishes_pitch_when_yaw_is_already_aligned`.
+  - Sight rays interpolate actor heights and sample vertical distance too. Test: `sight_rays_follow_actor_elevation`.
+  - Reviewed player/input/combat/carry/items/enemy/lockon/camera/terrain/viewer. TRI_A01's `f32::from_bits` is correct (type-9 float scaling); HALT01 already resumes immediately. No blanket start() resets: Jump/Fall/AirAct need carried velocity and Hang needs its latch. No new jump buffer or turn-rate tuning without emulator evidence; controller word +0x180 remains unresolved (mask 0x8 is not assumed to grant arbitrary attacks).
+  - Remaining concerns: soldiers still lack terrain collision/gravity in their viewer update; item effects are immediate and caltrops lack height; rooted Special clips assume valid grounded/pair placement. These require separate mechanics work and viewer/emulator checks. No viewer/PCSX2 run or commit by Codex.
+  - Validation: `cargo test -q` → `test result: ok. 110 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out`; `cargo clippy -q --all-targets` → exit 0, no output/warnings; `.venv/bin/python tools/compare.py` → `240/240 actions within tolerance`. Output saved in `target/logs/bugfix-sweep-{test,clippy,compare}.log`; `git diff --check` clean. Next: Claude records the affected pad sequences, checks pose/trajectory and combat feel, and adds emulator comparisons before checking this item.
 - [ ] Acceptance review 2 (emulator): when every other M18 item and every `docs/movelist.md` row is done, play each
   move in PCSX2 and the viewer once more (Loop step 9), fill `docs/acceptance.md` again, turn every gap into an item
   above this one. Check this only after a full pass finds no gap.
@@ -302,6 +326,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Codex: bugfix/responsiveness sweep; authored recovery masks, input intent, wall momentum/contact, carry/projectile/combat height, execution interruption, lock validation, camera pitch and elevated sight fixed with regressions; retained fall6 landing evidence; viewer/emulator checks pending, no commit.
 - 2026-10-10 Claude: four-hit chain and air strike checked against the attacks video.
 - 2026-10-10 Claude: attack press held until the chain window; sword stays drawn 3 s (clunky chains fixed).
 - 2026-10-10 Claude: crouch attacks matched to the attacks video (FUTO27/KICK27/SOCCER01); viewer `clip` script command.

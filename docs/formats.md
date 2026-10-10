@@ -332,6 +332,14 @@ The category word tested by the checker at `0x1c1268` is the motion header word 
 - Mask `0x8` (all attack chains) and `0x4` (DRINK01) match **no** player header word, so they must hit the controller word `+0x180` instead (**hypothesis**: attack-chain/“combo” permission, set elsewhere).
 - Names stay **hypothesis**: `0x20000` attack, `0x80` hit reaction, `0x4000` air/jump, `0x8000`/`0x40000000` ground locomotion.
 
+Implementation check (2026-10-10): `tools/extract.py` now exports header +0x14 as `Action.category`.
+The sim folds type-5 OR/type-6 AND-complement events through the current frame and intersects the target
+header, alongside type-3/4 ID windows (**confirmed** against the handler semantics above; Rust regressions
+pin opening and closing frames). AT_A01 permits RUN01/JUMP01 at frame 40, SHEATH01 at 16, LAND01 at 2;
+LAND_A01/B01 have no such events. LAND_B01 retains an explicit frame-6 ESTIMATE based on the prior fall6
+emulator observation. Controller +0x180 remains unresolved; no synthetic mapping for mask 0x8 was added.
+Viewer/emulator verification of the newly enabled recovery transitions is pending.
+
 ## Input buffering — partial executable lookup (2026-10-08)
 
 - **Confirmed (code read):** the motion controller keeps **no input buffer**. Request function

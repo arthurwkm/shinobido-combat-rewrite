@@ -34,6 +34,7 @@ impl Input {
         let moving = mag >= STICK_DEAD;
         let (s, c) = cam_yaw.sin_cos();
         let mut strafe = false;
+        p.walk_clip = "WALK_F02";
         if let (Some(t), false) = (self.lock_target, self.dash) {
             // the lock camera looks at the target, so the stick is relative to the bearing
             let b = (t[0] - p.pos[0]).atan2(t[2] - p.pos[2]);
@@ -42,7 +43,9 @@ impl Input {
                 p.walk_clip = if y.abs() >= x.abs() { if y > 0.0 { "WALK_F02" } else { "WALK_B02" } } else if x > 0.0 { "WALK_R02" } else { "WALK_L02" };
                 strafe = true;
             }
-        } else if moving {
+        } else if !moving {
+            p.target_heading = p.heading;
+        } else {
             // right of a camera looking along +z is -x
             p.target_heading = (s * y - c * x).atan2(c * y + s * x);
         }

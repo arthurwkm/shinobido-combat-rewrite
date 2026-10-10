@@ -55,10 +55,10 @@ impl Terrain {
 
     /// Eye-height line between two points is not cut by a solid box (sampled every 0.25 m).
     pub fn sight_clear(&self, a: [f32; 3], b: [f32; 3]) -> bool {
-        let n = (((b[0] - a[0]).hypot(b[2] - a[2])) / 0.25).ceil() as i32;
+        let n = ((0..3).map(|i| (b[i] - a[i]).powi(2)).sum::<f32>().sqrt() / 0.25).ceil() as i32;
         (1..n).all(|i| {
             let t = i as f32 / n as f32;
-            !self.blocked([a[0] + (b[0] - a[0]) * t, 1.5, a[2] + (b[2] - a[2]) * t])
+            !self.blocked([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t + 1.5, a[2] + (b[2] - a[2]) * t])
         })
     }
 

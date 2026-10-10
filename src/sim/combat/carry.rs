@@ -23,6 +23,7 @@ pub struct Carry {
     /// Bottom centre of the load while it is in the arms or in the air.
     pub at: [f32; 3],
     release: Option<Release>,
+    struck: bool,
     /// Position and velocity (m, m/s) of a thrown load.
     flight: Option<[[f32; 3]; 2]>,
 }
@@ -47,7 +48,7 @@ impl Fight {
             .min_by(|&a, &b| dist(a).total_cmp(&dist(b)));
         let load = match crate_ {
             Some(i) => Load::Crate(i),
-            None => match self.enemies().position(|e| e.state == EnemyState::Dead && near(e.pos, data::PICK_REACH)) {
+            None => match self.enemies().position(|e| e.state == EnemyState::Dead && (e.pos[1] - p.pos[1]).abs() < 0.3 && near(e.pos, data::PICK_REACH)) {
                 Some(i) => Load::Body(i),
                 None => return false,
             },
@@ -113,14 +114,17 @@ impl Fight {
 
     fn fly(&mut self, t: &mut Terrain, load: Load, [mut pos, mut vel]: [[f32; 3]; 2]) {
         let next = [pos[0] + vel[0] * crate::sim::DT, pos[1] + vel[1] * crate::sim::DT, pos[2] + vel[2] * crate::sim::DT];
-        if t.blocked([next[0], next[1] + 0.5, next[2]]) {
+        let old_y = pos[1];
+        if t.blocked([next[0], pos[1] + 0.5, next[2]]) {
             vel[0] = 0.0; // hit a wall: drop straight down
             vel[2] = 0.0;
         } else {
             pos = next;
         }
+        pos[1] = next[1];
+        let floor = t.ground_height([pos[0], old_y, pos[2]]);
         vel[1] -= data::GRAVITY_MS2 * crate::sim::DT;
-        let mut struck = false;
+        let mut struck = self.carry.struck;
         if !matches!(load, Load::Body(_)) {
             self.for_each(|f, _| {
                 let e = &mut f.enemy;
@@ -135,9 +139,11 @@ impl Fight {
             vel[0] = 0.0;
             vel[2] = 0.0;
         }
+        self.carry.struck = struck;
         self.carry.at = pos;
         self.follow(load);
-        if vel[1] < 0.0 && pos[1] <= t.ground_height([pos[0], pos[1] + 0.3, pos[2]]) {
+        if vel[1] < 0.0 && pos[1] <= floor {
+            pos[1] = floor;
             self.carry.flight = None;
             return self.land(t, load, pos);
         }
@@ -157,5 +163,35 @@ impl Fight {
     /// Where the viewer draws crate collider `i`: in the arms or in the air while it is the load, else at rest.
     pub fn crate_base(&self, t: &Terrain, i: usize) -> [f32; 3] {
         if self.carry.load == Some(Load::Crate(i)) { self.carry.at } else { t.crate_base(i) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sim::{enemy::Enemy, player::Player, terrain::Collider};
+
+    #[test]
+    fn thrown_crate_lands_on_a_platform_without_freezing_or_falling_through() {
+        let mut t = Terrain { colliders: vec![
+            Collider::new([-0.5, -5.0, -0.5], [0.5, -4.0, 0.5], false),
+            Collider::new([-2.0, 0.0, -2.0], [2.0, 2.0, 2.0], false),
+        ], crates: vec![0] };
+        let mut f = Fight::new(Player::new(), Enemy::new([20.0, 0.0, 0.0]));
+        f.carry.load = Some(Load::Crate(0));
+        f.carry.flight = Some([[0.0, 3.0, 0.0], [0.0, -10.0, 0.0]]);
+        for _ in 0..120 { f.carry_step(&mut t); }
+        assert!(f.carry.load.is_none(), "throw must terminate");
+        assert_eq!(t.crate_base(0)[1], 2.0, "lands on the platform");
+    }
+
+    #[test]
+    fn a_thrown_crate_hits_only_once_per_flight() {
+        let mut t = Terrain { colliders: vec![Collider::new([-0.5, -5.0, -0.5], [0.5, -4.0, 0.5], false)], crates: vec![0] };
+        let mut f = Fight::new(Player::new(), Enemy::new([0.0; 3]));
+        f.carry.load = Some(Load::Crate(0));
+        f.carry.flight = Some([[0.0, 1.0, 0.0], [0.0; 3]]);
+        for _ in 0..60 { f.carry_step(&mut t); }
+        assert_eq!(f.enemy.hp, data::ENEMY_HP - data::THROWN_DAMAGE);
     }
 }

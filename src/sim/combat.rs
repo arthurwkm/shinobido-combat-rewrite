@@ -25,7 +25,7 @@ pub struct Fight {
 /// True when `to` lies inside the frontal cone of something at `from` facing `heading`, within reach.
 fn in_front(from: [f32; 3], heading: f32, to: [f32; 3]) -> bool {
     let (dx, dz) = (to[0] - from[0], to[2] - from[2]);
-    if dx.hypot(dz) > data::MELEE_REACH { return false; }
+    if (to[1] - from[1]).abs() >= data::BODY_HEIGHT || dx.hypot(dz) > data::MELEE_REACH { return false; }
     let d = (dx.atan2(dz) - heading + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
     d.abs() <= data::FRONT_CONE
 }
@@ -116,7 +116,8 @@ impl Fight {
     /// Push the two apart (half each) until their bodies no longer overlap; execution pairs stay put.
     fn separate(&mut self) {
         let (p, e) = (&mut self.player, &mut self.enemy);
-        if p.state == State::Special || self.roll.is_some() || matches!(self.carry.load, Some(carry::Load::Body(_))) {
+        if e.state == EnemyState::Dead || (p.pos[1] - e.pos[1]).abs() >= data::BODY_HEIGHT
+            || p.state == State::Special || self.roll.is_some() || matches!(self.carry.load, Some(carry::Load::Body(_))) {
             return;
         }
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
@@ -138,7 +139,7 @@ impl Fight {
         let (p, e) = (&mut self.player, &self.enemy);
         let (dx, dz) = (e.pos[0] - p.pos[0], e.pos[2] - p.pos[2]);
         let dist = dx.hypot(dz);
-        if e.state == EnemyState::Dead || dist > data::ROLL_REACH || dist < 1e-3 || !in_cone(p.heading, dx, dz, data::ROLL_CONE)
+        if e.state == EnemyState::Dead || (p.pos[1] - e.pos[1]).abs() >= data::BODY_HEIGHT || dist > data::ROLL_REACH || dist < 1e-3 || !in_cone(p.heading, dx, dz, data::ROLL_CONE)
             || !p.start_dodge("FRONT01") {
             return false;
         }
@@ -177,6 +178,10 @@ impl Fight {
     /// Finish a from-above kill once the player has dropped to the soldier's height (the drop is the game's approach, clip 4-30 s).
     fn land_dive(&mut self) {
         let Some(i) = self.dive else { return };
+        if !matches!(self.player.state, State::Fall | State::Land) {
+            self.dive = None;
+            return;
+        }
         let (py, ey) = (self.player.pos[1], self.with_target(i, |f| f.enemy.pos[1]));
         if self.with_target(i, |f| f.enemy.state == EnemyState::Dead) {
             self.dive = None;

@@ -1662,3 +1662,250 @@ fn early_presses_play_the_four_hit_chain_from_the_attacks_video() {
     let chain: Vec<_> = seen.into_iter().filter(|a| a.starts_with("AT_")).collect();
     assert_eq!(chain, ["AT_A01", "AT_C01", "AT_DA01", "AT_CA01"]);
 }
+
+#[test]
+fn category_masks_open_recovery_cancels_on_the_authored_frame() {
+    use super::player::{Player, State};
+    for (clip, frame) in [("AT_A01", 40), ("LAND01", 2), ("SHEATH01", 16)] {
+        let mut p = Player::new();
+        assert!(p.request(State::Special, clip));
+        for _ in 0..frame - 1 { p.step(false, false); }
+        assert!(!p.request(State::Jump, "JUMP01"), "{clip} too early");
+        p.step(false, false);
+        assert!(p.request(State::Jump, "JUMP01"), "{clip} category gate");
+    }
+}
+
+#[test]
+fn recovery_movement_uses_each_clips_permissions() {
+    use super::player::{Player, State};
+    for (clip, state, frame) in [("AT_A01", State::Attack, 40), ("SHEATH01", State::Special, 16), ("LAND01", State::Land, 2)] {
+        let mut p = Player::new();
+        p.request(state, clip);
+        for _ in 0..frame { p.step(true, false); }
+        assert_eq!(p.world_action(), clip, "{clip} holds until gate");
+        p.step(true, false);
+        assert_eq!(p.state, State::Run, "{clip} resumes on gate");
+    }
+    for clip in ["LAND_A01"] {
+        let mut p = Player::new();
+        p.request(State::Land, clip);
+        for _ in 0..action(clip).frames { p.step(true, false); }
+        assert_eq!(p.world_action(), clip, "heavy landing has no early cancel");
+    }
+}
+
+#[test]
+fn unknown_player_requests_are_refused_without_mutating_state() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    assert!(!p.request(State::Special, "missing_clip"));
+    assert_eq!((p.state, p.world_action()), (State::Idle, "STOP01"));
+}
+
+#[test]
+fn unlocked_walk_resets_the_strafe_clip() {
+    use super::{input::Input, player::Player, terrain::Terrain};
+    let mut p = Player::new();
+    let mut i = Input { lock: true, lock_target: Some([0.0, 0.0, 5.0]), stick: [1.0, 0.0], ..Default::default() };
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    i.lock = false;
+    i.lock_target = None;
+    i.stick = [0.0, 0.3];
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    assert_eq!(p.world_action(), "WALK_F02");
+}
+
+#[test]
+fn wall_kick_keeps_launch_momentum_without_root_feedback() {
+    use super::{player::{Player, State}, terrain::Terrain};
+    let mut p = Player::new();
+    p.pos[1] = 20.0;
+    p.request(State::Hang, "STOP_A06");
+    p.target_heading = std::f32::consts::PI;
+    p.jump();
+    let mut root = super::World::new("TRI_J01");
+    let start = p.pos[2];
+    for _ in 0..45 { p.step_on(&Terrain::default(), false, false); root.step(); }
+    let expected = start - root.pos[2] - 45.0 * super::data::KICK_SPEED;
+    assert!((p.pos[2] - expected).abs() < 1e-4, "{} vs {expected}", p.pos[2]);
+}
+
+#[test]
+fn cling_keeps_wall_normal_for_an_away_jump() {
+    use super::{player::{Player, State}, terrain::Terrain};
+    let mut p = Player::new();
+    p.pos[1] = 10.0;
+    p.wall_normal = Some([0.0, 0.0, -1.0]);
+    p.request(State::Cling, "KABE_E01");
+    for _ in 0..20 { p.step_on(&Terrain::default(), false, false); }
+    p.target_heading = std::f32::consts::PI;
+    p.jump();
+    assert_eq!(p.state, State::WallKick);
+    assert!(p.heading.cos() < -0.99);
+}
+
+#[test]
+fn carrying_survives_a_landing_and_a_refused_pick() {
+    use super::{player::{Player, State}, terrain::Terrain};
+    let mut p = Player::new();
+    assert!(p.begin_pick());
+    assert!(!p.begin_pick());
+    assert!(p.carrying, "refused request must not drop a load");
+    for _ in 0..100 { p.step(false, false); }
+    assert_eq!(p.state, State::Carry);
+    p.pos[1] = 1.0;
+    for _ in 0..180 { p.step_on(&Terrain::default(), false, false); }
+    assert_eq!(p.state, State::Carry, "landing must restore the carry stance");
+    assert!(p.unload("PUT_K05"));
+}
+
+#[test]
+fn camera_recentre_finishes_pitch_when_yaw_is_already_aligned() {
+    use super::{camera::Camera, data, DT};
+    let mut c = Camera { pitch: data::CAM_PITCH_MAX, ..Default::default() };
+    c.recenter_on(c.yaw);
+    for _ in 0..120 { c.look([0.0; 2], DT); }
+    assert!((c.pitch - data::CAM_PITCH).abs() < 0.01);
+}
+
+#[test]
+fn melee_and_separation_do_not_reach_other_floors_or_push_corpses() {
+    use super::{combat::Fight, enemy::Enemy, player::{Player, State}, data};
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 5.0, 0.8]));
+    f.step(false, true);
+    for _ in 0..30 { f.step(false, false); }
+    assert_eq!(f.enemy.hp, data::ENEMY_HP, "sword must not hit a roof above");
+    for dead in [false, true] {
+        let mut f = Fight::new(Player::new(), Enemy::new([0.0, if dead { 0.0 } else { 5.0 }, 0.0]));
+        if dead { f.enemy.execute("DIE_A07"); }
+        f.step_enemy();
+        assert_eq!(f.player.pos, [0.0; 3]);
+    }
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 5.0, 0.8]));
+    f.enemy.heading = std::f32::consts::PI;
+    assert!(!f.grab(false), "no grab across floors");
+    assert!(!f.roll(), "no roll toward another floor");
+    assert_eq!(f.player.state, State::Idle);
+}
+
+#[test]
+fn body_pickup_requires_the_same_floor() {
+    use super::{combat::Fight, enemy::Enemy, player::Player, terrain::Terrain};
+    let mut f = Fight::new(Player::new(), Enemy::new([0.0, 5.0, 0.8]));
+    f.enemy.execute("DIE_A07");
+    assert!(!f.pick(&mut Terrain::default()));
+}
+
+#[test]
+fn sight_rays_follow_actor_elevation() {
+    use super::terrain::{Terrain, Collider};
+    let mut t = Terrain { colliders: vec![Collider::new([-1.0, 0.0, 1.0], [1.0, 2.0, 2.0], false)], ..Default::default() };
+    assert!(t.sight_clear([0.0, 4.0, 0.0], [0.0, 4.0, 3.0]));
+    t.colliders[0] = Collider::new([-1.0, 4.0, 1.0], [1.0, 6.0, 2.0], false);
+    assert!(!t.sight_clear([0.0, 4.0, 0.0], [0.0, 4.0, 3.0]));
+    assert!(!t.sight_clear([0.0, 0.0, 1.5], [0.0, 7.0, 1.5]), "vertical ray crosses the platform");
+}
+
+#[test]
+fn wall_run_rise_is_spread_over_exactly_the_clip_length() {
+    use super::{player::{Player, State}, data};
+    let mut p = Player::new();
+    p.request(State::WallRun, "KABE_U01");
+    for _ in 0..=action("KABE_U01").frames { p.step(false, false); }
+    assert_eq!(p.state, State::Cling);
+    assert!((p.pos[1] - data::WALL_RUN_RISE).abs() < 1e-4, "{}", p.pos[1]);
+}
+
+#[test]
+fn neutral_jump_does_not_reuse_a_released_backward_stick() {
+    use super::{input::Input, player::Player, terrain::Terrain};
+    let mut p = Player::new();
+    let mut i = Input { stick: [0.0, -1.0], ..Default::default() };
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    i.stick = [0.0; 2];
+    i.jump = true;
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    assert_eq!(p.world_action(), "JUMP01");
+}
+
+#[test]
+fn airborne_attack_uses_its_hit_window() {
+    use super::{player::{Player, State}, terrain::Terrain};
+    let mut p = Player::new();
+    p.pos[1] = 20.0;
+    p.request(State::AirAct, "KICK_J01");
+    let mut active = false;
+    for _ in 0..p.world_len() {
+        p.step_on(&Terrain::default(), false, false);
+        if action("KICK_J01").hits.iter().any(|&(a, b)| (a..b).contains(&p.world_frame())) {
+            assert!(p.attack_active());
+            active = true;
+        }
+    }
+    assert!(active);
+}
+
+#[test]
+fn executions_cannot_teleport_upwards_or_interrupt_hit_or_carry() {
+    use super::{execution, enemy::Enemy, player::{Player, State}};
+    let mut p = Player::new();
+    let mut e = Enemy::new([0.0, 5.0, 1.0]);
+    assert_eq!(execution::available(&p, &e), None);
+    e.pos[1] = 0.0;
+    p.hit("HI_BS01");
+    assert_eq!(execution::available(&p, &e), None);
+    p = Player::new();
+    p.request(State::Carry, "STOP_K05");
+    p.carrying = true;
+    assert_eq!(execution::available(&p, &e), None);
+}
+
+#[test]
+fn queued_attack_keeps_the_modifier_from_the_press() {
+    use super::{input::Input, player::Player, terrain::Terrain};
+    let mut p = Player::new();
+    let mut i = Input { attack: true, ..Default::default() };
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    for _ in 0..5 { i.apply(&mut p, &Terrain::default(), 0.0); }
+    i.attack = true;
+    i.stick = [0.0, 1.0];
+    i.apply(&mut p, &Terrain::default(), 0.0);
+    i.stick = [0.0; 2];
+    for _ in 0..15 { i.apply(&mut p, &Terrain::default(), 0.0); }
+    assert_eq!(p.world_action(), "AT_CA01");
+}
+
+#[test]
+fn interrupted_execution_dive_does_not_kill_on_a_later_landing() {
+    use super::{combat::Fight, enemy::{Enemy, State}, player::Player};
+    let mut p = Player::new();
+    p.pos = [0.0, 3.0, 0.0];
+    let mut f = Fight::new(p, Enemy::new([0.0, 0.0, 0.8]));
+    assert!(f.execute());
+    f.player.hit("HI_BS01");
+    f.player.pos[1] = 0.0;
+    f.step_enemy();
+    assert_ne!(f.enemy.state, State::Dead);
+}
+
+#[test]
+fn category_mask_close_events_remove_only_their_permissions() {
+    use super::player::{Player, State};
+    for (frame, allowed) in [(3, true), (4, false)] {
+        let mut p = Player::new();
+        p.request(State::Special, "GU_Y01");
+        for _ in 0..frame { p.step(false, false); }
+        assert_eq!(p.request(State::Special, "UP_BA01"), allowed, "frame {frame}");
+    }
+}
+
+#[test]
+fn invalid_walk_clip_falls_back_to_forward_walk() {
+    use super::player::{Player, State};
+    let mut p = Player::new();
+    p.walk = true;
+    p.walk_clip = "missing_clip";
+    p.step(true, false);
+    assert_eq!((p.state, p.world_action()), (State::Walk, "WALK_F02"));
+}

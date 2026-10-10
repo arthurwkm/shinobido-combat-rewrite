@@ -190,3 +190,6 @@ pub const GIVE_UP: u32 = 300;
 // ESTIMATE: every GUARD_EVERY-th time he is in range he blocks for GUARD_HOLD frames instead of swinging.
 pub const GUARD_EVERY: usize = 3;
 pub const GUARD_HOLD: u32 = 90;
+
+// ESTIMATE: fall6 A/B resumes running 2–3 PAL frames after a ~2 m drop; LAND_B01 has no mask event.
+pub const LAND_B_RUN_FRAME: u32 = 6;

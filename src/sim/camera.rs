@@ -60,7 +60,7 @@ impl Camera {
             let k = ease(CAM_RECENTER_RATE, dt);
             self.yaw = wrap(self.yaw + wrap(goal - self.yaw) * k);
             self.pitch += (CAM_PITCH - self.pitch) * k;
-            if wrap(goal - self.yaw).abs() < 0.01 {
+            if wrap(goal - self.yaw).abs() < 0.01 && (CAM_PITCH - self.pitch).abs() < 0.01 {
                 self.recenter = None;
             }
         } else if self.idle > CAM_DRIFT_IDLE && self.vel[0].hypot(self.vel[1]) > CAM_DRIFT_SPEED {

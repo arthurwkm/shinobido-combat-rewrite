@@ -23,7 +23,7 @@ impl Kind {
 
 /// The execution the player could start now, if any. Shows as the cue.
 pub fn available(p: &Player, e: &Enemy) -> Option<Kind> {
-    if e.state == State::Dead || p.state == super::player::State::Special {
+    if e.state == State::Dead || p.carrying || matches!(p.state, super::player::State::Special | super::player::State::Hit) {
         return None;
     }
     let (dx, dz) = (p.pos[0] - e.pos[0], p.pos[2] - e.pos[2]);
@@ -34,6 +34,8 @@ pub fn available(p: &Player, e: &Enemy) -> Option<Kind> {
     let unaware = matches!(e.state, State::Idle | State::Patrol);
     if unaware && p.pos[1] - e.pos[1] >= data::EXEC_ABOVE_MIN {
         Some(Kind::Above)
+    } else if (p.pos[1] - e.pos[1]).abs() >= data::BODY_HEIGHT {
+        None
     } else if unaware && off >= data::EXEC_BEHIND_MIN {
         Some(Kind::Back)
     } else if e.state == State::Hit && (e.hp as f32) <= data::EXEC_FRONT_HP * data::ENEMY_HP as f32 && off <= data::FRONT_CONE {

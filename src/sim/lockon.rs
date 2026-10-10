@@ -48,15 +48,19 @@ impl LockOn {
         self.target = None;
     }
 
+    /// Validate the retained target before feeding facing, camera or combat.
+    pub fn position(&mut self, from: [f32; 3], targets: &[[f32; 3]]) -> Option<[f32; 3]> {
+        let t = self.target.and_then(|i| targets.get(i)).copied()
+            .filter(|t| t.iter().all(|x| x.is_finite()) && (t[0] - from[0]).hypot(t[2] - from[2]) <= data::LOCK_RANGE);
+        if t.is_none() { self.release(); }
+        t
+    }
+
     /// Drop the lock when the target is gone or out of range, else face it and strafe by `input`
     /// (x right, z forward, relative to the facing; zero stands still). Returns the `forward` flag for `Player::step`.
     pub fn drive(&mut self, p: &mut Player, targets: &[[f32; 3]], input: [f32; 2]) -> bool {
-        let Some(t) = self.target.and_then(|i| targets.get(i)) else { self.release(); return false };
-        if (t[0] - p.pos[0]).hypot(t[2] - p.pos[2]) > data::LOCK_RANGE {
-            self.release();
-            return false;
-        }
-        p.target_heading = bearing(p.pos, *t);
+        let Some(t) = self.position(p.pos, targets) else { return false };
+        p.target_heading = bearing(p.pos, t);
         if input == [0.0; 2] {
             return false;
         }
@@ -69,5 +73,26 @@ impl LockOn {
             "WALK_L02"
         };
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn target_position_releases_dead_distant_and_missing_targets() {
+        let mut lock = LockOn { target: Some(0) };
+        for targets in [vec![[f32::INFINITY; 3]], vec![[0.0, 0.0, data::LOCK_RANGE + 1.0]], vec![]] {
+            lock.target = Some(0);
+            let mut p = Player::new();
+            assert!(!lock.drive(&mut p, &targets, [0.0; 2]));
+            assert_eq!(lock.target, None);
+        }
+        lock.target = Some(0);
+        let mut p = Player::new();
+        assert!(!lock.drive(&mut p, &[[f32::NAN; 3]], [0.0; 2]));
+        assert_eq!(lock.target, None);
+        assert!(p.target_heading.is_finite());
     }
 }

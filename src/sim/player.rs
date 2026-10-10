@@ -72,8 +72,6 @@ const CLING_JUMP_MIN: u32 = 12;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
 /// matching the emulator's jump (feet about his own height up); the old 9.8/450 guess gave 0.57 m.
 const UNIT_M: f32 = 0.84 / 9.5;
-/// LAND01's first event frame (type 5, mask 0x4100); a held stick leaves the landing from here.
-const LAND_RUN_FRAME: u32 = 2;
 /// JUMP01 event (5, 7, ...) marks take-off.
 const TAKEOFF_FRAME: u32 = 5;
 /// KABE_U01 length in frames (extracted.rs).
@@ -134,7 +132,7 @@ pub struct Player {
     /// Ticks spent clinging to the wall (State::Cling).
     pub cling: u32,
     /// Square pressed in an attack before its chain window opened; fires when it opens.
-    queued_attack: bool,
+    queued_attack: Option<AttackMod>,
     /// Ticks since the sword last had a reason to be out (update_drawn).
     calm: u32,
 }
@@ -162,7 +160,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0, queued_attack: false, calm: 0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0, queued_attack: None, calm: 0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -246,11 +244,11 @@ impl Player {
         }
         let (pos, wall, ceiling) = terrain.move_body(before, self.pos, grounded && !jumping);
         // Air actions add root motion too; feeding it back into momentum accelerates every tick.
-        if !matches!(self.state, State::Jump | State::Fall | State::AirAct) {
+        if !matches!(self.state, State::Jump | State::Fall | State::AirAct | State::WallKick) {
             self.air_vel = [pos[0] - before[0], pos[2] - before[2]];
         }
         self.pos = pos;
-        self.wall_normal = wall;
+        if wall.is_some() || !matches!(self.state, State::WallRun | State::Cling) { self.wall_normal = wall; }
         if ceiling { self.vy = 0.0; }
         if !rooted && self.vy <= 0.0 && (pos[1] - terrain.ground_height(pos)).abs() <= super::data::SUPPORT_EPS {
             self.vy = 0.0;
@@ -266,9 +264,11 @@ impl Player {
     fn step_action(&mut self, forward: bool, attack: bool) {
         // Keep caller-selected clips within their supported locomotion families.
         if !super::data::RUN_CLIPS.contains(&self.run_clip) { self.run_clip = "RUN01"; }
+        if !matches!(self.walk_clip, "WALK_F02" | "WALK_B02" | "WALK_R02" | "WALK_L02") { self.walk_clip = "WALK_F02"; }
         if !super::data::IDLE_CLIPS.contains(&self.idle_clip) { self.idle_clip = "STOP01"; }
-        if attack || (self.queued_attack && self.state == State::Attack) {
-            self.queued_attack = false;
+        let queued = self.queued_attack.take();
+        if attack || (queued.is_some() && self.state == State::Attack) {
+            if !attack { self.attack_mod = queued.unwrap_or(self.attack_mod); }
             self.press_attack();
         }
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch | State::Jump | State::Fall | State::Carry) {
@@ -314,13 +314,15 @@ impl Player {
             return self.advance();
         }
         if self.state == State::WallRun {
-            self.pos[1] += super::data::WALL_RUN_RISE / ACTIONS_KABE_U_FRAMES;
             if self.world.done() {
                 self.cling = 0;
                 self.vy = 0.0;
                 self.fall_from = self.pos[1];
                 self.start(State::Cling, "KABE_E01");
-            } else { self.advance(); }
+            } else {
+                self.pos[1] += super::data::WALL_RUN_RISE / ACTIONS_KABE_U_FRAMES;
+                self.advance();
+            }
             return;
         }
         if self.state == State::Cling {
@@ -329,20 +331,26 @@ impl Player {
             return;
         }
         if self.state == State::WallKick {
-            if self.world.done() { self.start(State::Fall, "FALL01"); } else { self.advance(); }
+            if self.world.done() { self.start(State::Fall, "FALL01"); return; }
+            self.advance();
             self.pos[0] += self.air_vel[0];
             self.pos[2] += self.air_vel[1];
             return;
         }
+        let loco = if self.walk { State::Walk } else { State::Run };
+        let clip = if self.walk { self.walk_clip } else { self.run_clip };
+        if forward && (matches!(self.state, State::Attack | State::Land) || self.world.action.name == "SHEATH01")
+            && !self.carrying && self.request(loco, clip) {
+            return self.advance();
+        }
         if self.state == State::Land {
-            // A held stick runs on out of the landing from LAND01's type-5 event (frame 2), as in the emulator
-            // (tools/scripts/emu/loco.txt: running again ~2 game frames after touchdown).
-            // LAND_D05 (dash front flip) rolls on until its own type-5 event (frame 14).
-            let run_on = if self.world.action.name == "LAND_D05" {
-                self.world.action.events.iter().find(|e| e.1 == 5).map_or(LAND_RUN_FRAME, |e| e.0 as u32)
-            } else { LAND_RUN_FRAME };
-            if self.world.done() || (forward && self.world.frame >= run_on) {
-                self.start(State::Idle, self.idle_clip);
+            if forward && self.world.action.name == "LAND_B01" && self.world.frame >= super::data::LAND_B_RUN_FRAME && !self.carrying {
+                self.start(loco, clip);
+                return self.advance();
+            }
+            if self.world.done() {
+                if self.carrying { self.start(State::Carry, "STOP_K05"); }
+                else { self.start(State::Idle, self.idle_clip); }
             }
             return self.advance();
         }
@@ -557,7 +565,7 @@ impl Player {
     }
 
     pub fn attack_active(&self) -> bool {
-        self.state == State::Attack && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
+        matches!(self.state, State::Attack | State::AirAct) && self.world.action.hits.iter().any(|h| (h.0..h.1).contains(&self.world.frame))
     }
 
     /// Damage argument of the current attack clip's first type-35 event, if any.
@@ -627,8 +635,9 @@ impl Player {
 
     /// Reach for a load: PICK01 from free locomotion, then `State::Carry` once it ends.
     pub fn begin_pick(&mut self) -> bool {
-        self.carrying = self.request(State::Special, "PICK01");
-        self.carrying
+        if !self.request(State::Special, "PICK01") { return false; }
+        self.carrying = true;
+        true
     }
 
     /// Put down or throw what is carried: play `clip` (PUT_K05 / NAGE_K05), then back to idle.
@@ -726,12 +735,18 @@ impl Player {
     }
 
     /// The one gate for player-chosen actions: free locomotion may start anything; any other state only what the
-    /// current clip's open cancel window (event types 3/4) names. Returns whether the action started.
+    /// current clip's open cancel window (types 3/4) or category mask (types 5/6) permits. Returns whether the action started.
     pub fn request(&mut self, state: State, name: &str) -> bool {
         let f = self.world.frame;
-        let id = ACTIONS.iter().find(|x| x.name == name).map(|x| x.id);
+        let Some(target) = ACTIONS.iter().find(|x| x.name == name) else { return false };
+        let mask = self.world.action.events.iter().filter(|e| e.0 <= f as i32).fold(0, |mask, e| match e.1 {
+            5 => mask | e.2,
+            6 => mask & !e.2,
+            _ => mask,
+        });
         let free = matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch);
-        let ok = free || self.world.action.cancels.iter().any(|c| Some(c.0) == id && c.1 <= f && f < c.2);
+        let ok = free || mask & target.category != 0
+            || self.world.action.cancels.iter().any(|c| c.0 == target.id && c.1 <= f && f < c.2);
         if ok {
             self.start(state, name);
         }
@@ -739,7 +754,7 @@ impl Player {
     }
 
     fn start(&mut self, state: State, name: &str) {
-        self.queued_attack = false;
+        self.queued_attack = None;
         self.state = state;
         self.world = World::new(name);
     }
@@ -806,7 +821,7 @@ impl Player {
         } else if self.state == State::Attack && self.world.action.cancels.iter().any(|c| c.1 > f) {
             // Pressed before the chain window opens: hold it and fire when the window opens (attacks video 5.75 s:
             // both Square icons appear together and the second slash still follows).
-            self.queued_attack = true;
+            self.queued_attack = Some(self.attack_mod);
         }
     }
 }
