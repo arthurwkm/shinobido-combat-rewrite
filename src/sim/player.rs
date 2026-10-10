@@ -437,9 +437,15 @@ impl Player {
         let d = self.target_heading - self.heading;
         let side = if forward && d.sin().abs() > 0.5 { d.sin().signum() } else { 0.0 };
         let name = self.world.action.name;
-        let clip = if side < 0.0 { "HANG_R06" } else if side > 0.0 { "HANG_L06" } else if name == "TWO06" && !self.world.done() { "TWO06" } else { "STOP_A06" };
-        if name != clip || self.world.done() {
-            self.start(State::Hang, clip);
+        let shimmy = if side < 0.0 { Some("HANG_R06") } else if side > 0.0 { Some("HANG_L06") } else { None };
+        if name == "TWO06" && !self.world.done() {
+            // The catch plays on; its cancel window opens the shimmy at frame 9.
+            if let Some(clip) = shimmy { self.request(State::Hang, clip); }
+        } else {
+            let clip = shimmy.unwrap_or("STOP_A06");
+            if name != clip || self.world.done() {
+                self.start(State::Hang, clip);
+            }
         }
         let before = self.pos;
         self.advance();

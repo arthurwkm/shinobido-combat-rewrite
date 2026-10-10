@@ -999,6 +999,14 @@ fn crouched_roof_walk_off_catches_turns_and_shimmies() {
         assert!(p.heading.sin().abs() < 0.001 && p.heading.cos() > 0.999);
         assert!((p.pos[1] + super::data::HANG_REACH - height).abs() < 0.001);
         assert!(p.pos[2] < 6.0 && p.pos[1] > 0.0);
+        // TWO06's cancel table opens the shimmy (HANG_R06/L06) at frame 9, not before.
+        let facing = p.heading;
+        p.target_heading = facing - std::f32::consts::FRAC_PI_2;
+        for _ in 0..7 { p.step_on(&t, true, false); }
+        assert_eq!(p.world_action(), "TWO06", "no shimmy before the catch's cancel frame");
+        for _ in 0..4 { p.step_on(&t, true, false); }
+        assert_eq!(p.world_action(), "HANG_R06");
+        p.target_heading = facing;
         for _ in 0..120 { p.step_on(&t, false, false); }
         assert_eq!(p.state, State::Hang, "holding crouch must keep the caught ledge");
         p.target_heading = p.heading - std::f32::consts::FRAC_PI_2;
