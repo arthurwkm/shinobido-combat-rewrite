@@ -265,6 +265,10 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
 - [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
 - [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
 
+- [x] Smoothness (owner 2026-10-10: "clunky compared to the game"): clips cross-fade over 6 frames (`pose::Fade`, the most
+  common blend length in the transition events) instead of snapping; characters and camera are drawn between sim ticks by
+  the fixed clock's overstep (as the reference). Evidence: test `clip_change_fades_over_blend_time_then_follows_the_clip`,
+  `target/rec/fade` run→HALT01 frames ease. Per-transition blend lengths from the type-3 arg1 high half not used yet.
 - [ ] Acceptance review 2 (emulator): when every other M18 item and every `docs/movelist.md` row is done, play each
   move in PCSX2 and the viewer once more (Loop step 9), fill `docs/acceptance.md` again, turn every gap into an item
   above this one. Check this only after a full pass finds no gap.
@@ -284,6 +288,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Claude: animation cross-fade + render interpolation for smoothness (owner: clunky).
 - 2026-10-10 Claude: tall wall run-up/cling/second jump from the emulator; KABE_E01 is a cling, not a kick-off.
 - 2026-10-10 Claude: dash front flip (JUMP_D05/LAND_D05) from the emulator; DASH_FLIP_V0 76 ESTIMATE.
 - 2026-10-09 Claude: closed the fall item the night run left measured but unrecorded (it looped on re-recording).

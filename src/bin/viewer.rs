@@ -16,7 +16,7 @@ use shinobido_combat_rewrite::sim::enemy::{Enemy, State as EnemyState};
 use shinobido_combat_rewrite::sim::execution;
 use shinobido_combat_rewrite::sim::stealth::{Alert, Stealth};
 use shinobido_combat_rewrite::sim::player::{Player, State};
-use shinobido_combat_rewrite::sim::pose::{Clips, Skeleton, NODES};
+use shinobido_combat_rewrite::sim::pose::{Clips, Fade, Skeleton, NODES};
 use shinobido_combat_rewrite::sim::terrain::{Terrain, STAIRS_SLOPE};
 
 #[derive(Resource)]
@@ -53,6 +53,28 @@ impl Default for Sim {
 
 #[derive(Resource)]
 struct World(Terrain);
+
+/// Each character's (position, heading) at the start of the last sim tick: drawing interpolates from these to the
+/// current tick by the fixed clock's overstep, so motion is smooth at any display rate (as the reference does).
+#[derive(Resource, Default)]
+struct Prev(Vec<([f32; 3], f32)>);
+
+fn placements(f: &Fight) -> Vec<([f32; 3], f32)> {
+    std::iter::once((f.player.pos, f.player.heading)).chain(f.enemies().map(|e| (e.pos, e.heading))).collect()
+}
+
+/// Where to draw character `i` (0 = player) between the previous and current tick; `alpha` 1 is the current tick.
+fn shown(prev: &Prev, i: usize, now: ([f32; 3], f32), alpha: f32) -> ([f32; 3], f32) {
+    let Some(&(p, h)) = prev.0.get(i) else { return now };
+    if (0..3).map(|k| (now.0[k] - p[k]).powi(2)).sum::<f32>() > 4.0 { return now } // teleport (script `at`, snap)
+    let d = (now.1 - h + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+    (std::array::from_fn(|k| p[k] + (now.0[k] - p[k]) * alpha), h + d * alpha)
+}
+
+/// Interpolation factor for drawing: the fixed clock's overstep live, the current tick in a record.
+fn alpha(fixed: &Time<Fixed>, rec: &Option<Res<Record>>) -> f32 {
+    if rec.is_some() { 1.0 } else { fixed.overstep_fraction() }
+}
 
 /// A movable crate, drawn where the sim says (in the arms, in the air, or at rest).
 #[derive(Component)]
@@ -260,6 +282,7 @@ fn main() {
         .init_resource::<Lock>()
         .init_resource::<Dbg>()
         .init_resource::<Aware>()
+        .init_resource::<Prev>()
         .insert_resource(load_anim())
         .add_systems(Startup, (setup, setup_hud, setup_game_hud))
         .add_systems(FixedUpdate, tick.run_if(|s: Option<Res<Shot>>, r: Option<Res<Record>>| s.is_none() && r.is_none()))
@@ -412,7 +435,8 @@ fn read_pad(keys: Res<ButtonInput<KeyCode>>, mouse: Res<ButtonInput<MouseButton>
 }
 
 #[allow(clippy::too_many_arguments)]
-fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>) {
+fn tick(mut lock: ResMut<Lock>, mut pad: ResMut<Pad>, mut exec: ResMut<Exec>, cam: Res<Cam>, mut sim: ResMut<Sim>, mut world: ResMut<World>, mut dbg: ResMut<Dbg>, mut aware: ResMut<Aware>, mut prev: ResMut<Prev>) {
+    prev.0 = placements(&sim.0);
     // Triangle: put down what is carried, else grab/execute, else lift a crate or body; Square throws the load.
     // Actions on a soldier go to the locked one, else the nearest.
     let target = lock.0.target.unwrap_or_else(|| sim.0.nearest());
@@ -560,6 +584,8 @@ fn orbit(
     mut was_locking: Local<bool>,
     mut was_hanging: Local<bool>,
     rec: Option<Res<Record>>,
+    fixed: Res<Time<Fixed>>,
+    prev: Res<Prev>,
 ) {
     // A record steps the sim one tick per rendered frame; the camera keeps to that clock.
     let dt = if rec.is_some() { DT } else { time.delta_secs() };
@@ -589,7 +615,9 @@ fn orbit(
     cam.0.follow_exec(p.world_action().starts_with("KIME").then_some(p.heading), dt);
     let a = p.world_action();
     cam.0.follow_climb(matches!(a, "CLIMB06" | "STOP_A06" | "TWO06") || a.starts_with("HANG"), dt);
-    let pivot = cam.0.track(p.focus_pos(), dt);
+    let (pos, _) = shown(&prev, 0, (p.pos, p.heading), alpha(&fixed, &rec));
+    let focus = p.focus_pos();
+    let pivot = cam.0.track([pos[0], pos[1] + focus[1] - p.pos[1], pos[2]], dt);
     let (e, f) = cam.0.eye(pivot);
     let e = world.0.camera_clip(f, e);
     **eye = Transform::from_translation(Vec3::from(e)).looking_at(Vec3::from(f), Vec3::Y);
@@ -612,16 +640,22 @@ fn draw(sim: Res<Sim>, mut rig: Option<Single<&mut Transform, With<Rig>>>) {
 
 /// Poses both sets of bone cuboids with the sim's current clips and frames (clips that were not exported keep the last pose).
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
-fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>) {
+fn pose_bones(sim: Res<Sim>, anim: Res<Anim>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, fixed: Res<Time<Fixed>>, prev: Res<Prev>, rec: Option<Res<Record>>, mut fades: Local<Vec<Fade>>, mut debug: Local<bool>, mut bones: Query<(&Bone, &mut Transform, &mut Visibility), (Without<Part>, Without<Katana>)>, mut parts: Query<(&Part, &mut Transform), (Without<Bone>, Without<Katana>)>, mut katanas: Query<(&Katana, &mut Transform), (Without<Bone>, Without<Part>)>) {
     if keys.just_pressed(KeyCode::KeyB) {
         *debug = !*debug;
     }
     let Some((skel, clips)) = &anim.0 else { return };
     let p = &sim.0.player;
-    let rows = std::iter::once(clips.row(p.world_action(), p.world_frame()).map(|r| (r, p.pos, p.heading)))
-        .chain(sim.0.enemies().map(|e| clips.row(e.action(), e.frame()).map(|r| (r, e.pos, e.heading))));
-    let poses: Vec<_> = rows.map(|r| r.map(|(row, pos, heading)| {
-        let (joints, rotations) = skel.pose(row);
+    let dt = if rec.is_some() { DT } else { time.delta_secs() };
+    let a = alpha(&fixed, &rec);
+    let rows: Vec<_> = std::iter::once(clips.row(p.world_action(), p.world_frame()).map(|r| (p.world_action(), r, p.pos, p.heading)))
+        .chain(sim.0.enemies().map(|e| clips.row(e.action(), e.frame()).map(|r| (e.action(), r, e.pos, e.heading))))
+        .enumerate().map(|(i, r)| r.map(|(clip, row, pos, heading)| { let (pos, heading) = shown(&prev, i, (pos, heading), a); (clip, row, pos, heading) }))
+        .collect();
+    fades.resize_with(rows.len(), Fade::default);
+    // Cross-fade each character into a newly started clip instead of snapping (pose::BLEND_S).
+    let poses: Vec<_> = rows.into_iter().zip(fades.iter_mut()).map(|(r, fade)| r.map(|(clip, row, pos, heading)| {
+        let (joints, rotations) = skel.pose(fade.update(clip, row, dt));
         let turn = Quat::from_rotation_y(heading);
         (joints.map(|j| Vec3::from(pos) + turn * Vec3::from(j)), turn * Quat::from_array(rotations[10]))
     })).collect();

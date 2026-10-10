@@ -119,3 +119,62 @@ pub(super) fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
     let t2 = c(u, t);
     std::array::from_fn(|i| v[i] + q[3] * t[i] + t2[i])
 }
+
+/// Seconds to cross-fade into a new clip: 6 frames, the most common blend in the transition events (type-3 arg1
+/// high half is 6 or 10; formats.md "Transition-category bits"). Without it every clip change snaps.
+pub const BLEND_S: f32 = 6.0 / 60.0;
+
+/// Cross-fades a character's displayed pose from whatever was on screen into a newly started clip.
+#[derive(Default)]
+pub struct Fade {
+    clip: &'static str,
+    from: Vec<f32>,
+    shown: Vec<f32>,
+    t: f32,
+}
+
+impl Fade {
+    /// The row to draw this render frame for `row` of `clip`; `dt` is elapsed render (or record-tick) time.
+    pub fn update(&mut self, clip: &'static str, row: &[f32], dt: f32) -> &[f32] {
+        if clip != self.clip {
+            self.from = if self.shown.len() == row.len() { self.shown.clone() } else { row.to_vec() };
+            self.clip = clip;
+            self.t = 0.0;
+        }
+        self.t = (self.t + dt).min(BLEND_S);
+        let k = self.t / BLEND_S;
+        self.shown = blend(&self.from, row, k);
+        &self.shown
+    }
+}
+
+/// Hips position lerped, quaternions nlerped along the shorter arc.
+fn blend(a: &[f32], b: &[f32], k: f32) -> Vec<f32> {
+    let mut out: Vec<f32> = a.iter().zip(b).map(|(x, y)| x + (y - x) * k).collect();
+    for q in (3..a.len()).step_by(4) {
+        let dot: f32 = (0..4).map(|i| a[q + i] * b[q + i]).sum();
+        let s = if dot < 0.0 { -1.0 } else { 1.0 };
+        let v: [f32; 4] = std::array::from_fn(|i| a[q + i] * (1.0 - k) + s * b[q + i] * k);
+        let n = v.iter().map(|x| x * x).sum::<f32>().sqrt().max(1e-6);
+        out[q..q + 4].copy_from_slice(&v.map(|x| x / n));
+    }
+    out
+}
+
+#[cfg(test)]
+mod fade_tests {
+    use super::*;
+
+    #[test]
+    fn clip_change_fades_over_blend_time_then_follows_the_clip() {
+        let mut f = Fade::default();
+        let a = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
+        let b = [1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+        assert_eq!(f.update("A", &a, 1.0 / 60.0), a.as_slice(), "first clip shows as is");
+        let mid = f.update("B", &b, BLEND_S / 2.0).to_vec();
+        assert!((mid[0] - 0.5).abs() < 1e-4, "hips halfway: {}", mid[0]);
+        let n: f32 = mid[3..7].iter().map(|x| x * x).sum();
+        assert!((n - 1.0).abs() < 1e-4, "quaternion stays unit");
+        assert_eq!(f.update("B", &b, BLEND_S), b.as_slice(), "fully in after the blend time");
+    }
+}
