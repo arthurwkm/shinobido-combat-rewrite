@@ -64,6 +64,9 @@ const FLIP_V0: f32 = 67.0;
 const DASH_FLIP_V0: f32 = 76.0;
 /// Emulator (tools/scripts/emu/tallwall2.txt): after the run-up he clings ~22 game frames (0.88 s), then drops.
 const CLING_TICKS: u32 = 53;
+/// ESTIMATE: the sword stays drawn this long (3 s) after the last attack/alert before SHEATH01; the attacks video keeps
+/// the stance between moves (~3 s apart) instead of sheathing at once.
+const SHEATH_DELAY: u32 = 180;
 /// ESTIMATE: Cross at the very start of the cling was ignored, mid-cling (~0.4 s in) it jumped (tallwall.txt vs tallwall3.txt).
 const CLING_JUMP_MIN: u32 = 12;
 /// Metres per game unit = model units (hips 9.5) per motion metres (hips 0.84), formats.md. Gives a 1.49 m apex,
@@ -130,6 +133,10 @@ pub struct Player {
     pub carrying: bool,
     /// Ticks spent clinging to the wall (State::Cling).
     pub cling: u32,
+    /// Square pressed in an attack before its chain window opened; fires when it opens.
+    queued_attack: bool,
+    /// Ticks since the sword last had a reason to be out (update_drawn).
+    calm: u32,
 }
 
 /// Modifier held with Square (docs/controls.md "Attack and move list").
@@ -155,7 +162,7 @@ impl Default for Player {
 
 impl Player {
     pub fn new() -> Self {
-        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0 }
+        Player { world: World::new("STOP01"), state: State::Idle, guard_held: false, crouch_held: false, walk: false, walk_clip: "WALK_F02", run_clip: "RUN01", idle_clip: "STOP01", drawn: false, pos: [0.0; 3], heading: 0.0, target_heading: 0.0, wall_normal: None, wall_tall: false, hug_edge: 0.0, hug_dir: 0.0, vy: 0.0, fall_from: 0.0, air_vel: [0.0; 2], hang_top: 0.0, grab_lock: false, vault_top: None, vault_base: 0.0, vault_h: 0.0, air_heading: 0.0, attack_mod: AttackMod::Plain, carrying: false, cling: 0, queued_attack: false, calm: 0 }
     }
 
     /// `attack` is true on the frame the button goes down.
@@ -260,7 +267,8 @@ impl Player {
         // Keep caller-selected clips within their supported locomotion families.
         if !super::data::RUN_CLIPS.contains(&self.run_clip) { self.run_clip = "RUN01"; }
         if !super::data::IDLE_CLIPS.contains(&self.idle_clip) { self.idle_clip = "STOP01"; }
-        if attack {
+        if attack || (self.queued_attack && self.state == State::Attack) {
+            self.queued_attack = false;
             self.press_attack();
         }
         if matches!(self.state, State::Idle | State::Run | State::Walk | State::Halt | State::Crouch | State::Jump | State::Fall | State::Carry) {
@@ -592,9 +600,10 @@ impl Player {
     /// Follow whether the blade should be out: drawing is instant (the swing itself draws it), sheathing waits for
     /// standing idle and plays SHEATH01.
     pub fn update_drawn(&mut self, want: bool) {
+        self.calm = if want { 0 } else { self.calm.saturating_add(1) };
         if want {
             self.drawn = true;
-        } else if self.drawn && self.state == State::Idle && self.request(State::Special, "SHEATH01") {
+        } else if self.drawn && self.calm >= SHEATH_DELAY && self.state == State::Idle && self.request(State::Special, "SHEATH01") {
             self.drawn = false;
         }
         if self.state == State::Idle || self.state == State::Special {
@@ -730,6 +739,7 @@ impl Player {
     }
 
     fn start(&mut self, state: State, name: &str) {
+        self.queued_attack = false;
         self.state = state;
         self.world = World::new(name);
     }
@@ -793,6 +803,10 @@ impl Player {
         };
         if let Some(t) = target {
             self.request(State::Attack, t.name);
+        } else if self.state == State::Attack && self.world.action.cancels.iter().any(|c| c.1 > f) {
+            // Pressed before the chain window opens: hold it and fire when the window opens (attacks video 5.75 s:
+            // both Square icons appear together and the second slash still follows).
+            self.queued_attack = true;
         }
     }
 }

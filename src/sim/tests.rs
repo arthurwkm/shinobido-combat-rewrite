@@ -1432,6 +1432,8 @@ fn blade_is_sheathed_with_sheath01_and_idles_in_the_drawn_set() {
     assert!(p.drawn);
     assert_eq!(p.world_action(), "STOP02");
     p.update_drawn(false);
+    assert!(p.drawn, "stays drawn a while after the last reason (SHEATH_DELAY)");
+    for _ in 0..180 { p.step(false, false); p.update_drawn(false); }
     assert!(!p.drawn);
     assert_eq!(p.world_action(), "SHEATH01");
     for _ in 0..45 { p.step(false, false); p.update_drawn(false); }
@@ -1629,4 +1631,16 @@ fn crouched_back_and_square_together_is_the_low_kick() {
     i.apply(&mut p, &t, 0.0);
     p.step_on(&t, true, true);
     assert_eq!(p.world_action(), "SOCCER01");
+}
+
+#[test]
+fn square_pressed_early_in_a_slash_is_held_until_the_chain_window() {
+    // Attacks video 5.75 s: Square x2 pressed together still gives the double slash (AT_A01 -> AT_C01).
+    use super::player::Player;
+    let mut p = Player::new();
+    p.step(false, true);
+    for _ in 0..5 { p.step(false, false); }
+    p.step(false, true); // frame ~6, window opens at 20
+    while p.world_action() == "AT_A01" && p.world_frame() < 30 { p.step(false, false); }
+    assert_eq!(p.world_action(), "AT_C01");
 }

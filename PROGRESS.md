@@ -268,6 +268,11 @@ Every item: the same pad script in PCSX2 (`tools/pcsx2.py video <script> <name>`
   SOCCER01 (low kick); lock-on no longer picks attacks. Matched by `target/cmp/kicks_grid.jpg` (video 20.5/21.75/26 s vs
   clips via the new viewer script command `clip <motion>`); tests updated + `crouched_back_and_square_together_is_the_low_kick`;
   viewer `tools/scripts/crouchattacks.txt` readout shows FUTO27, FUTO27→AT_D01, KICK27, SOCCER01.
+- [x] Slash chain responsiveness (attacks video 5.75 s, Square x2 pressed together): a Square pressed in an attack
+  before its chain window opens is held and fires when the window opens (AT_A01's windows are only frames 20-24); the sword
+  stays drawn 3 s (SHEATH_DELAY, ESTIMATE) instead of sheathing the moment the attack ends. Evidence: tests
+  `square_pressed_early_in_a_slash_is_held_until_the_chain_window`, updated sheath test; `target/cmp/double_ab.jpg`:
+  AT_A01 horizontal → AT_C01 raised diagonal like the video, ~1.4 s vs 1.6 s, ends in STOP02.
 - [ ] Combat A/B: attack chains, guard, rolls, hit reactions, lock-on strafe and side roll arc.
 - [ ] Stealth and executions A/B: awareness meter rise, eye colours, cue and kills.
 
@@ -294,6 +299,7 @@ Answered 2026-10-09 by the owner:
 (none)
 
 ## Log
+- 2026-10-10 Claude: attack press held until the chain window; sword stays drawn 3 s (clunky chains fixed).
 - 2026-10-10 Claude: crouch attacks matched to the attacks video (FUTO27/KICK27/SOCCER01); viewer `clip` script command.
 - 2026-10-10 Claude: ledge kick-off from the emulator (stick away + Cross). Owner action suggested: PCSX2 PauseOnFocusLoss=false.
 - 2026-10-10 Claude: animation cross-fade + render interpolation for smoothness (owner: clunky).

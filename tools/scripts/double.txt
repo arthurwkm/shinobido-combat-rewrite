@@ -1,0 +1,4 @@
+# Attacks video 5.75 s: Square x2 pressed close together (double slash).
+0 yaw 200
+10 attack
+18 attack
